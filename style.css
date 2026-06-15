@@ -81,11 +81,19 @@ nav a {
     color: var(--white);
     text-decoration: none;
     font-weight: bold;
+    padding-bottom: 6px;
+    border-bottom: 3px solid transparent;
+    transition: all 0.25s ease;
 }
 
 nav a:hover {
-    text-decoration: underline;
     color: #ecffef;
+    border-bottom: 3px solid rgba(255, 255, 255, 0.5);
+}
+
+nav a.active {
+    color: var(--white);
+    border-bottom: 3px solid var(--green-bright);
 }
 
 /* =========================
