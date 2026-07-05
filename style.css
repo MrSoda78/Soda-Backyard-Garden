@@ -720,3 +720,32 @@ footer {
     margin: 12px auto;
     display: block;
 }
+
+.about {
+    padding: 60px 20px;
+}
+
+.about .container {
+    text-align: center;
+}
+
+.about-slideshow {
+    margin-bottom: 30px;
+}
+
+.about-slideshow img {
+    width: 100%;
+    max-width: 600px;
+    height: 400px;
+    object-fit: cover;
+
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+
+    transition: opacity 0.8s ease-in-out;
+}
+
+.about .text-content {
+    max-width: 800px;
+    margin: 0 auto;
+}
