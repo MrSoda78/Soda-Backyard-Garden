@@ -4,8 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
         "images/Artichoke.jpg",
         "images/Baby Bok Choy.jpg",
         "images/Carrot Bed.jpg"
-        "images/Container Garden",
-        "images/Flower #2",
+        "images/Herbs.jpg",
     ];
 
     let currentImage = 0;
