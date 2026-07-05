@@ -1,58 +1,11 @@
 document.addEventListener("DOMContentLoaded", function () {
 
-    // Order Form Elements
-    const orderForm = document.getElementById("orderForm");
-    const totalDisplay = document.getElementById("orderTotal");
-    const formMessage = document.getElementById("formMessage");
-    const quantityInputs = document.querySelectorAll(".product-row input[type='number']");
-
-    // Calculate Order Total
-    function updateTotal() {
-        let total = 0;
-
-        quantityInputs.forEach(function (input) {
-            const price = parseFloat(input.dataset.price) || 0;
-            const quantity = parseInt(input.value, 10) || 0;
-
-            total += price * quantity;
-        });
-
-        if (totalDisplay) {
-            totalDisplay.textContent = "Total: $" + total.toFixed(2);
-        }
-    }
-
-    // Update Total When Quantities Change
-    quantityInputs.forEach(function (input) {
-        input.addEventListener("input", updateTotal);
-    });
-
-    // Order Form Submission Message
-    if (orderForm && formMessage) {
-        orderForm.addEventListener("submit", function () {
-            formMessage.textContent =
-                "Thank you. Your order request has been submitted.";
-        });
-    }
-
-    // Initial Total Calculation
-    updateTotal();
-
-    console.log("Garden website loaded.");
-
-    // =====================================
-    // About Our Garden Slideshow
-    // =====================================
-
     const images = [
+        "images/Lettuce #2.jpg",
         "images/Cabbage Row.jpg",
-        "images/Artichoke.jpg",
-        "images/Baby Bok Choy.jpg",
-        "images/Back Row View.jpg",
-        "images/Cabbage Row.jpg",
-        "images/Carrot Bed.jpg",
         "images/Container Garden #2.jpg",
-        "images/Container Garden.jpg",
+        "images/Herbs.jpg",
+        "images/Vertical Planter.jpg"
     ];
 
     let currentImage = 0;
@@ -61,23 +14,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (aboutImage) {
 
-        aboutImage.style.opacity = 1;
-
         setInterval(function () {
 
-            aboutImage.style.opacity = 0;
+            currentImage++;
 
-            setTimeout(function () {
+            if (currentImage >= images.length) {
+                currentImage = 0;
+            }
 
-                currentImage = (currentImage + 1) % images.length;
+            aboutImage.src = images[currentImage];
 
-                aboutImage.src = images[currentImage];
-
-                aboutImage.style.opacity = 1;
-
-            }, 500);
-
-        }, 4000);
+        }, 3000);
 
     }
 
