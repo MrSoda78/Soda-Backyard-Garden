@@ -1,11 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
 
     const images = [
-        "images/Lettuce #2.jpg",
-        "images/Cabbage Row.jpg",
-        "images/Container Garden #2.jpg",
-        "images/Herbs.jpg",
-        "images/Vertical Planter.jpg"
         "images/Artichoke.jpg",
         "images/Baby Bok Choy.jpg",
         "images/Carrot Bed.jpg"
