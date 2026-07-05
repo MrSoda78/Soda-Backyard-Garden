@@ -45,10 +45,10 @@ document.addEventListener("DOMContentLoaded", function () {
     // =====================================
 
     const images = [
-        "images/Cabbage Row.jpg",
-        "images/Vertical Planter.jpg",
-        "images/Bok Choy.jpg",
-        "images/Lettuce.jpg"
+        "images/artichoke.jpg",
+        "images/baby bok choy.jpg",
+        "images/backrowview.jpg",
+        "images/cabbage row.jpg"
     ];
 
     let currentImage = 0;
