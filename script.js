@@ -6,6 +6,11 @@ document.addEventListener("DOMContentLoaded", function () {
         "images/Container Garden #2.jpg",
         "images/Herbs.jpg",
         "images/Vertical Planter.jpg"
+        "images/Artichoke.jpg",
+        "images/Baby Bok Choy.jpg",
+        "images/Carrot Bed.jpg"
+        "images/Container Garden",
+        "images/Flower #2",
     ];
 
     let currentImage = 0;
