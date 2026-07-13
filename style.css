@@ -38,37 +38,12 @@ html {
     scroll-behavior: smooth;
 }
 
-<<<<<<< HEAD
-/* =========================
-   Base
-========================= */
-body {
-    font-family: Arial, sans-serif;
-    line-height: 1.6;
-    background-color: var(--green-light);
-    color: var(--text-dark);
-}
-
-img {
-    max-width: 100%;
-}
-
-a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-    outline: 3px solid #ffffff;
-    outline-offset: 3px;
-}
-=======
 body {
     font-family: Arial, Helvetica, sans-serif;
     line-height: 1.6;
     background: var(--green-light);
     color: var(--text-dark);
 }
->>>>>>> 8cc8e582e4aba353c5c378b5dd027279b3382936
 
 .container {
     width: 90%;
@@ -164,46 +139,9 @@ nav a.active {
     background: linear-gradient(180deg, #eefcf0, white);
 }
 
-<<<<<<< HEAD
-.hero-content {
-    max-width: 700px;
-}
-
-.hero-action-row {
-    display: flex;
-    align-items: center;
-    gap: 28px;
-    margin-top: 28px;
-}
-
-.produce-carousel {
-    position: relative;
-    flex: 0 0 230px;
-    height: 160px;
-    overflow: hidden;
-    border-radius: 12px;
-    box-shadow: var(--shadow-strong);
-    background: var(--white);
-}
-
-.carousel-image {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    opacity: 0;
-    transition: opacity 0.7s ease;
-}
-
-.carousel-image.active {
-    opacity: 1;
-}
-=======
 .hero-content {
     max-width: 600px;
 }
->>>>>>> 8cc8e582e4aba353c5c378b5dd027279b3382936
 
 .hero-layout {
     display: grid;
@@ -335,6 +273,8 @@ nav a.active {
 .dot {
     width: 12px;
     height: 12px;
+    padding: 0;
+    border: 0;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.55);
     cursor: pointer;
@@ -1103,121 +1043,14 @@ footer a:hover {
    ORDER PAGE RESPONSIVE
 ========================================================== */
 
-<<<<<<< HEAD
-.donate-card {
-    max-width: 750px;
-    margin: 0 auto;
-    padding: 35px;
-    text-align: center;
-}
-
-.donate-card p {
-    margin-bottom: 18px;
-    color: var(--text-soft);
-}
-
-.donate-buttons {
-    margin-top: 25px;
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-
-.donate-note {
-    margin-top: 20px;
-    font-style: italic;
-    color: var(--text-soft);
-}
-
-.support-images {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-top: 28px;
-}
-
-.support-images img {
-    width: 100%;
-    height: 220px;
-    object-fit: cover;
-    border-radius: 10px;
-}
-
-/* =========================
-   Footer
-========================= */
-footer {
-    background: linear-gradient(135deg, var(--green-deep), var(--green-dark));
-    color: var(--white);
-    text-align: center;
-    padding: 20px 0;
-    margin-top: 30px;
-}
-
-/* =========================
-   Responsive
-========================= */
-=======
->>>>>>> 8cc8e582e4aba353c5c378b5dd027279b3382936
 @media (max-width: 900px) {
     .order-layout {
         grid-template-columns: 1fr;
     }
 }
 
-<<<<<<< HEAD
-@media (max-width: 768px) {
-    nav ul {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .floating-home-image {
-        top: -28px;
-        right: 6%;
-    }
-
-    .floating-home-image img {
-        width: 125px;
-    }
-
-    .split-section,
-    .split-section.reverse {
-        flex-direction: column;
-        text-align: center;
-    }
-
-    .text-content,
-    .image-content {
-        max-width: 100%;
-        flex: 1 1 100%;
-    }
-
-    .image-content img {
-        max-width: 320px;
-    }
-
-    .hero {
-        padding: 58px 0 45px;
-    }
-
-    .hero-action-row {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .produce-carousel {
-        width: min(100%, 360px);
-        flex-basis: 220px;
-    }
-
-    .form-row,
-    .product-row {
-=======
 @media (max-width: 600px) {
     .form-row {
->>>>>>> 8cc8e582e4aba353c5c378b5dd027279b3382936
         grid-template-columns: 1fr;
     }
 
@@ -1226,52 +1059,6 @@ footer {
         gap: 8px;
     }
 
-<<<<<<< HEAD
-    .floating-home-image {
-        top: -18px;
-        right: 6%;
-    }
-
-    .floating-home-image img,
-    .image-content img {
-        width: 105px;
-        max-width: 100%;
-    }
-
-    .hero {
-        padding-top: 45px;
-    }
-
-    .questions-card,
-    .order-info,
-    .order-form-wrap,
-    .donate-card {
-        padding: 22px;
-    }
-
-    .support-images {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        scroll-behavior: auto !important;
-        transition-duration: 0.01ms !important;
-    }
-}
-/* Product Images */
-.card img {
-    width: 100%;
-    max-width: 180px;
-    height: 140px;
-    object-fit: cover;
-    border-radius: 8px;
-    margin: 12px auto;
-    display: block;
-=======
     .order-form {
         padding: 22px;
     }
@@ -1285,7 +1072,6 @@ footer {
     grid-template-columns: 1fr 1fr;
     gap: 50px;
     align-items: start;
->>>>>>> 8cc8e582e4aba353c5c378b5dd027279b3382936
 }
 
 .questions-form-wrap h2,
@@ -1310,12 +1096,6 @@ footer {
     padding-top: 8px;
 }
 
-<<<<<<< HEAD
-.about .text-content {
-    max-width: 800px;
-    margin: 0 auto;
-}
-=======
 /* ==========================================================
    QUESTIONS PAGE RESPONSIVE
 ========================================================== */
@@ -1326,4 +1106,3 @@ footer {
         gap: 40px;
     }
 }
->>>>>>> 8cc8e582e4aba353c5c378b5dd027279b3382936
