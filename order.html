@@ -7,14 +7,20 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
     <header>
         <div class="container">
-            <h1>Place an Order Request</h1>
-            <p class="tagline">Place your order for fresh, home grown produce.</p>
+            <div class="header-top">
+                <div class="header-copy">
+                    <h1>Place an Order</h1>
+                    <p class="tagline">Request fresh, homegrown produce from our garden.</p>
+                </div>
+            </div>
+
             <nav>
                 <ul>
                     <li><a href="index.html">Home</a></li>
-                    <li><a href="available.html">What’s Available</a></li>
+                    <li><a href="available.html">What's Available</a></li>
                     <li><a href="order.html" class="active">Order</a></li>
                     <li><a href="videos.html">Videos</a></li>
                     <li><a href="donate.html">Support the Garden</a></li>
@@ -27,27 +33,27 @@
     <main>
         <section class="order-section">
             <div class="container">
-                <h2>Place an Order Request</h2>
+                <h2>Order Request</h2>
                 <p class="order-intro">
-                    Use the form below to request your order. We will review availability and follow up to confirm your order and pickup details.
+                    Use the form below to request your order. We'll review availability and follow up to confirm your order and pickup details.
                 </p>
 
                 <div class="order-layout">
+
                     <div class="order-info">
                         <h3>Before You Order</h3>
-                        <p>Please review the current availability before submitting your request.</p>
+                        <p>Please review current availability before submitting your request.</p>
                         <ul>
                             <li>Availability may change depending on weather and harvest conditions.</li>
                             <li>Orders are confirmed after we review your request.</li>
                             <li>Pickup details will be shared after confirmation.</li>
-                            <li>Please submit one form per household or order request.</li>
+                            <li>Please submit one form per household.</li>
                         </ul>
-
-                        <a href="available.html" class="button secondary">View What’s Available</a>
+                        <a href="available.html" class="button secondary">View What's Available</a>
                     </div>
 
-                    <div class="order-form-wrap">
-                        <form id="orderForm" action="https://formsubmit.co/sodabackyardgarden@outlook.com" method="POST">
+                    <div class="order-form">
+                        <form id="orderForm" action="[formsubmit.co](https://formsubmit.co/sodabackyardgarden@outlook.com)" method="POST">
                             <input type="hidden" name="_subject" value="New Garden Order Request">
                             <input type="hidden" name="_captcha" value="false">
                             <input type="hidden" name="_template" value="table">
@@ -82,17 +88,22 @@
                                 </div>
                             </div>
 
-                            <div class="form-group product-box">
+                            <div class="product-box">
                                 <h3 class="product-box-title">Select Items</h3>
 
                                 <div class="product-row">
+<<<<<<< HEAD
                                     <label for="largebokchoyQty">Large Bok Choy ($5)</label>
                                     <input type="number" id="largebokchoyQty" name="largebokchoyQty" min="0" value="0" data-price="5">
+=======
+                                    <label for="largeBokChoyQty">Large Bok Choy ($5)</label>
+                                    <input type="number" id="largeBokChoyQty" name="largeBokChoyQty" min="0" value="0" data-price="5">
+>>>>>>> 8cc8e582e4aba353c5c378b5dd027279b3382936
                                 </div>
 
                                 <div class="product-row">
-                                    <label for="smallbokchoyQty">Small Bok Choy ($4)</label>
-                                    <input type="number" id="smallbokchoyQty" name="smallbokchoyQty" min="0" value="0" data-price="4">
+                                    <label for="smallBokChoyQty">Small Bok Choy ($4)</label>
+                                    <input type="number" id="smallBokChoyQty" name="smallBokChoyQty" min="0" value="0" data-price="4">
                                 </div>
 
                                 <div class="product-row">
@@ -110,13 +121,14 @@
 
                             <div class="form-group">
                                 <label for="notes">Additional Notes</label>
-                                <textarea id="notes" name="notes" rows="5" placeholder="Add any questions, preferred pickup timing, or special notes here."></textarea>
+                                <textarea id="notes" name="notes" rows="4" placeholder="Questions, preferred pickup time, or special requests..."></textarea>
                             </div>
 
                             <button type="submit" class="button">Submit Order Request</button>
                             <p id="formMessage" class="form-message"></p>
                         </form>
                     </div>
+
                 </div>
             </div>
         </section>
@@ -129,5 +141,10 @@
     </footer>
 
     <script src="script.js"></script>
+
 </body>
+<<<<<<< HEAD
 </html>
+=======
+</html>
+>>>>>>> 8cc8e582e4aba353c5c378b5dd027279b3382936

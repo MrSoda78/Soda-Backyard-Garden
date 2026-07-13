@@ -9,70 +9,116 @@
 
 <body>
 
-    <header>
-        <div class="container">
+<header>
+
+    <div class="container">
+
+        <div class="header-top">
 
             <div class="header-copy">
+
                 <h1>Welcome to Our Garden</h1>
 
                 <p class="tagline">
-                    Fresh home grown produce grown with care, right in our garden.
+                    Fresh homegrown produce grown with care, right in our backyard.
                 </p>
+
             </div>
 
-            <nav>
-                <ul>
-                    <li><a href="index.html" class="active">Home</a></li>
-                    <li><a href="available.html">What's Available</a></li>
-                    <li><a href="order.html">Order</a></li>
-                    <li><a href="videos.html">Videos</a></li>
-                    <li><a href="donate.html">Support the Garden</a></li>
-                    <li><a href="questions.html">Questions</a></li>
-                </ul>
-            </nav>
-
         </div>
-    </header>
 
-    <main class="home-page">
+        <nav>
 
-        <!-- Hero Section -->
-        <section class="hero">
-            <div class="container">
+            <ul>
 
-                <div class="hero-content">
+                <li><a href="index.html" class="active">Home</a></li>
+                <li><a href="available.html">What's Available</a></li>
+                <li><a href="order.html">Order</a></li>
+                <li><a href="videos.html">Videos</a></li>
+                <li><a href="donate.html">Support the Garden</a></li>
+                <li><a href="questions.html">Questions</a></li>
+
+            </ul>
+
+        </nav>
+
+    </div>
+
+</header>
+
+<main>
+
+    <!-- ======================================
+         HERO
+    ======================================= -->
+
+    <section class="hero">
+
+        <div class="container">
+
+            <div class="hero-layout">
+
+                <!-- Left Side -->
+
+                <div class="hero-text">
+
                     <h2>Fresh from the Garden</h2>
 
                     <p>
-                        We are a small homegrown garden offering fresh produce,
-                        seasonal updates, and a closer look at what is growing
-                        throughout the year.
+                        Welcome to our backyard garden!
+                        We grow fresh vegetables using sustainable gardening
+                        practices and enjoy sharing our harvest with family,
+                        friends, and our local community.
                     </p>
 
-                    <div class="hero-action-row">
-                        <a class="button" href="available.html">
-                            View This Week's Produce
-                        </a>
+                    <p>
+                        Browse what's available, watch our garden videos,
+                        and follow along as we plant, grow and harvest
+                        throughout the season.
+                    </p>
 
+                    <a href="available.html" class="button">
+                        View This Week's Produce
+                    </a>
+
+<<<<<<< HEAD
                         <div class="produce-carousel">
                             <img src="images/Artichoke.jpg" alt="Artichoke" class="carousel-image active">
                             <img src="images/Bok Choy.jpg" alt="Bok choy" class="carousel-image">
                             <img src="images/Lettuce.jpg" alt="Lettuce" class="carousel-image">
                         </div>
                     </div>
+=======
+>>>>>>> 8cc8e582e4aba353c5c378b5dd027279b3382936
                 </div>
 
-            </div>
-        </section>
+                <!-- Right Side -->
 
-        <!-- Available Products -->
-        <section class="featured">
-            <div class="container">
+                <div class="carousel">
 
-                <h2>What's Available This Week</h2>
+                    <div class="slides">
 
-                <div class="card-grid">
+                        <img src="images/Vertical Planter.jpg"
+                             class="slide active"
+                             alt="Vertical planter">
 
+                        <img src="images/Lettuce #2.jpg"
+                             class="slide active"
+                             alt="Fresh lettuce">
+
+                        <img src="images/Cabbage Row.jpg"
+                             class="slide active"
+                             alt="Cabbage">
+
+                        <img src="images/Container Garden #2.jpg"
+                             class="slide active"
+                             alt="Container garden">
+
+                        <img src="images/Herbs.jpg"
+                             class="slide active"
+                             alt="Fresh herbs">
+
+<<<<<<< HEAD
                     <div class="card">
                         <h3>Large Bok Choy</h3>
                         <p>$5</p>
@@ -89,42 +135,128 @@
                         <h3>Lettuce</h3>
                         <p>$3 per head</p>
                         <span class="status available">Available</span>
+=======
+                    </div>
+
+                    <button class="carousel-btn prev">
+                        &#10094;
+                    </button>
+
+                    <button class="carousel-btn next">
+                        &#10095;
+                    </button>
+
+                    <div class="carousel-dots">
+                        <span class="dot active"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+>>>>>>> 8cc8e582e4aba353c5c378b5dd027279b3382936
                     </div>
 
                 </div>
 
             </div>
-        </section>
 
-        <!-- About Section -->
-        <section class="about">
-            <div class="container">
+        </div>
+
+    </section>
+
+    <!-- ======================================
+         FEATURED PRODUCTS
+    ======================================= -->
+
+    <section class="featured">
+
+        <div class="container">
+
+            <h2>What's Available This Week</h2>
+
+            <div class="card-grid">
+
+                <div class="card">
+                    <img src="images/Bok Choy.jpg" alt="Large Bok Choy">
+                    <h3>Large Bok Choy</h3>
+                    <p>$5 each</p>
+                    <span class="status limited">Limited</span>
+                </div>
+
+                <div class="card">
+                    <img src="images/Baby Bok Choy.jpg" alt="Baby Bok Choy">
+                    <h3>Baby Bok Choy</h3>
+                    <p>$4 per bunch</p>
+                    <span class="status limited">Limited</span>
+                </div>
+
+                <div class="card">
+                    <img src="images/Lettuce.jpg" alt="Fresh Lettuce">
+                    <h3>Lettuce</h3>
+                    <p>$8 per head</p>
+                    <span class="status available">Available</span>
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ======================================
+         ABOUT
+    ======================================= -->
+
+    <section class="about">
+
+        <div class="container">
+
+            <div class="split-section">
 
                 <div class="text-content">
 
                     <h2>About Our Garden</h2>
 
                     <p>
-                        Our garden is built with care, patience, and love for growing
-                        fresh food. We want to make it easier for our customers to know
-                        what is available, when orders are being accepted, and what is
-                        happening in the garden each week.
+                        Our garden is built with patience, hard work,
+                        and a passion for growing fresh food.
+                    </p>
+
+                    <p>
+                        Every season brings new crops, new ideas,
+                        and new opportunities to learn while sharing
+                        healthy, homegrown vegetables with our community.
+                    </p>
+
+                    <p>
+                        We hope you enjoy following our journey as much
+                        as we enjoy growing it.
                     </p>
 
                 </div>
 
             </div>
-        </section>
 
-    </main>
-
-    <footer>
-        <div class="container">
-            <p>&copy; 2026 Our Garden. All rights reserved.</p>
         </div>
-    </footer>
 
-    <script src="script.js"></script>
+    </section>
+
+</main>
+
+<footer>
+
+    <div class="container">
+
+        <p>&copy; 2026 Our Garden. All rights reserved.</p>
+
+    </div>
+
+</footer>
+
+<script src="script.js"></script>
 
 </body>
+<<<<<<< HEAD
 </html>
+=======
+</html>
+>>>>>>> 8cc8e582e4aba353c5c378b5dd027279b3382936
