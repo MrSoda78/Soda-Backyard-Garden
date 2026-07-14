@@ -91,8 +91,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
         function updateOrderTotal() {
             const total = quantityInputs.reduce(function (sum, input) {
-                const quantity = Math.max(0, Number.parseInt(input.value, 10) || 0);
+                const requestedQuantity = Math.max(0, Number.parseInt(input.value, 10) || 0);
+                const maximumQuantity = Number.parseInt(input.max, 10);
+                const quantity = Number.isNaN(maximumQuantity)
+                    ? requestedQuantity
+                    : Math.min(requestedQuantity, maximumQuantity);
                 const price = Number.parseFloat(input.dataset.price) || 0;
+
+                if (quantity !== requestedQuantity) {
+                    input.value = quantity;
+                }
+
                 return sum + (quantity * price);
             }, 0);
 
@@ -102,10 +111,33 @@ document.addEventListener("DOMContentLoaded", function () {
             if (orderTotalInput) {
                 orderTotalInput.value = formattedTotal;
             }
+
+            const formMessage = document.getElementById("formMessage");
+
+            if (formMessage && total > 0) {
+                formMessage.textContent = "";
+                formMessage.classList.remove("error");
+            }
         }
 
         quantityInputs.forEach(function (input) {
             input.addEventListener("input", updateOrderTotal);
+        });
+
+        orderForm.addEventListener("submit", function (event) {
+            const itemCount = quantityInputs.reduce(function (sum, input) {
+                return sum + (Number.parseInt(input.value, 10) || 0);
+            }, 0);
+
+            if (itemCount === 0) {
+                event.preventDefault();
+                const formMessage = document.getElementById("formMessage");
+
+                if (formMessage) {
+                    formMessage.textContent = "Please select at least one item before submitting your order request.";
+                    formMessage.classList.add("error");
+                }
+            }
         });
 
         updateOrderTotal();
