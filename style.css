@@ -538,6 +538,20 @@ textarea:focus-visible {
     object-fit: cover;
 }
 
+.product-photo-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+}
+
+.product-photo-strip img {
+    height: 180px;
+    border-right: 2px solid var(--white);
+}
+
+.product-photo-strip img:last-child {
+    border-right: none;
+}
+
 .product-card-content {
     padding: 20px;
     display: flex;
