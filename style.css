@@ -130,6 +130,16 @@ nav a.active {
     border-bottom: 3px solid var(--green-bright);
 }
 
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid #f7c948;
+    outline-offset: 3px;
+}
+
 /* ==========================================================
    HERO
 ========================================================== */
@@ -284,6 +294,92 @@ nav a.active {
 .dot.active {
     background: white;
     transform: scale(1.25);
+}
+
+/* ==========================================================
+   HOME JOURNEY
+========================================================== */
+
+.home-guide {
+    padding: 72px 0;
+    background: var(--white);
+    text-align: center;
+}
+
+.section-kicker {
+    margin-bottom: 8px;
+    color: var(--green-main);
+    font-size: 0.85rem;
+    font-weight: bold;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.home-guide h2 {
+    margin-bottom: 14px;
+    color: var(--green-dark);
+    font-size: 2rem;
+}
+
+.section-lead {
+    max-width: 760px;
+    margin: 0 auto 34px;
+    color: var(--text-soft);
+    text-align: center;
+}
+
+.journey-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+
+.journey-card {
+    padding: 30px 26px;
+    border: 1px solid var(--green-border);
+    border-radius: 16px;
+    background: linear-gradient(180deg, var(--green-light), var(--white));
+    box-shadow: var(--shadow);
+    text-align: left;
+}
+
+.journey-number {
+    display: inline-grid;
+    width: 42px;
+    height: 42px;
+    margin-bottom: 18px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--green-dark);
+    color: var(--white);
+    font-weight: bold;
+}
+
+.journey-card h3 {
+    margin-bottom: 8px;
+    color: var(--green-dark);
+}
+
+.journey-card p {
+    color: var(--text-soft);
+}
+
+.home-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 34px;
+}
+
+.about .split-section {
+    display: block;
+}
+
+.about .text-content {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
 }
 
 /* ==========================================================
@@ -582,6 +678,11 @@ textarea {
     justify-content: space-between;
     align-items: center;
     transition: 0.3s;
+    list-style: none;
+}
+
+.faq-question::-webkit-details-marker {
+    display: none;
 }
 
 .faq-question:hover {
@@ -596,7 +697,7 @@ textarea {
     transition: 0.3s;
 }
 
-.faq-item.open .faq-question::after {
+.faq-item[open] .faq-question::after {
     content: "−";
 }
 
@@ -606,7 +707,7 @@ textarea {
     transition: max-height 0.4s ease, padding 0.4s ease;
 }
 
-.faq-item.open .faq-answer {
+.faq-item[open] .faq-answer {
     max-height: 500px;
     padding: 0 24px 20px;
 }
@@ -1094,6 +1195,7 @@ footer a:hover {
 
 .faq-wrap {
     padding-top: 8px;
+    order: -1;
 }
 
 /* ==========================================================
@@ -1101,6 +1203,10 @@ footer a:hover {
 ========================================================== */
 
 @media (max-width: 900px) {
+    .journey-grid {
+        grid-template-columns: 1fr;
+    }
+
     .questions-layout {
         grid-template-columns: 1fr;
         gap: 40px;

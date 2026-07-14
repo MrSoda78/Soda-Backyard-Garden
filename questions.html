@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Our Garden | Questions</title>
+    <title>Our Garden | Questions & Answers</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,15 +12,15 @@
         <div class="container">
             <div class="header-top">
                 <div class="header-copy">
-                    <h1>Questions</h1>
-                    <p class="tagline">Have a question? We're here to help.</p>
+                    <h1>Questions & Answers</h1>
+                    <p class="tagline">Find a quick answer or send us a message.</p>
                 </div>
             </div>
 
             <nav>
                 <ul>
                     <li><a href="index.html">Home</a></li>
-                    <li><a href="available.html">What's Available</a></li>
+                    <li><a href="available.html">Fresh Produce</a></li>
                     <li><a href="order.html">Order</a></li>
                     <li><a href="videos.html">Videos</a></li>
                     <li><a href="donate.html">Support the Garden</a></li>
@@ -39,7 +39,7 @@
                     <div class="questions-form-wrap">
                         <h2>Ask a Question</h2>
                         <p class="questions-intro">
-                            Have a question about produce, pickup, availability, or the garden? Send us a message and we'll get back to you.
+                            Still have a question after reading the answers? Send us a message and we'll get back to you.
                         </p>
 
                         <div class="questions-card">
@@ -94,40 +94,47 @@
 
                         <div class="faq-list">
 
-                            <div class="faq-item">
-                                <button class="faq-question">How do I place an order?</button>
+                            <details class="faq-item" open>
+                                <summary class="faq-question">How do I place an order?</summary>
                                 <div class="faq-answer">
                                     <p>Visit our <a href="order.html">Order page</a>, fill out the form with your contact info and the items you'd like, and submit your request. We'll confirm availability and follow up with pickup details.</p>
                                 </div>
-                            </div>
+                            </details>
 
-                            <div class="faq-item">
-                                <button class="faq-question">When can I pick up my order?</button>
+                            <details class="faq-item">
+                                <summary class="faq-question">When can I pick up my order?</summary>
                                 <div class="faq-answer">
                                     <p>Pickup is available Friday through Sunday. After we confirm your order, we'll arrange a specific time that works for you.</p>
                                 </div>
-                            </div>
+                            </details>
 
-                            <div class="faq-item">
-                                <button class="faq-question">How do I know what's available?</button>
+                            <details class="faq-item">
+                                <summary class="faq-question">Where can I see what is ready?</summary>
                                 <div class="faq-answer">
-                                    <p>Check the <a href="available.html">What's Available</a> page for current produce. Availability updates weekly based on what's ready to harvest.</p>
+                                    <p>Check the <a href="available.html">Fresh Produce</a> page for current prices, produce that is ready to order, and crops that are coming soon.</p>
                                 </div>
-                            </div>
+                            </details>
 
-                            <div class="faq-item">
-                                <button class="faq-question">Do you deliver?</button>
+                            <details class="faq-item">
+                                <summary class="faq-question">Is my order confirmed when I submit the form?</summary>
+                                <div class="faq-answer">
+                                    <p>Not yet. Your form is an order request. We will review the harvest and contact you to confirm the items, total, and pickup details.</p>
+                                </div>
+                            </details>
+
+                            <details class="faq-item">
+                                <summary class="faq-question">Do you deliver?</summary>
                                 <div class="faq-answer">
                                     <p>We currently offer pickup only. Delivery may be available in the future—stay tuned!</p>
                                 </div>
-                            </div>
+                            </details>
 
-                            <div class="faq-item">
-                                <button class="faq-question">How can I support the garden?</button>
+                            <details class="faq-item">
+                                <summary class="faq-question">How can I support the garden?</summary>
                                 <div class="faq-answer">
                                     <p>Visit our <a href="donate.html">Support the Garden</a> page to learn how you can contribute. Every bit helps with seeds, soil, and seasonal upkeep.</p>
                                 </div>
-                            </div>
+                            </details>
 
                         </div>
                     </div>
