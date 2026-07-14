@@ -1,0 +1,12 @@
+.git/**
+.github/**
+.vscode/**
+.agents/**
+node_modules/**
+.wrangler/**
+worker.js
+wrangler.jsonc
+package.json
+package-lock.json
+schema.sql
+readme.md

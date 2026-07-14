@@ -46,7 +46,7 @@
                         <ul>
                             <li>Availability may change depending on weather and harvest conditions.</li>
                             <li>Orders are confirmed after we review your request.</li>
-                            <li>Delivery is available Tuesday through Friday.</li>
+                            <li>Deliveries are made on one scheduled day each week between Tuesday and Friday.</li>
                             <li>Delivery details will be shared after confirmation.</li>
                             <li>Please submit one form per household.</li>
                         </ul>
@@ -54,11 +54,15 @@
                     </div>
 
                     <div class="order-form">
-                        <form id="orderForm" action="https://formsubmit.co/sodabackyardgarden@outlook.com" method="POST">
+                        <form id="orderForm" action="/api/orders" method="POST" data-email-endpoint="https://formsubmit.co/ajax/sodabackyardgarden@outlook.com">
                             <input type="hidden" name="_subject" value="New Garden Order Request">
                             <input type="hidden" name="_captcha" value="false">
                             <input type="hidden" name="_template" value="table">
                             <input type="hidden" id="orderTotalInput" name="estimatedTotal" value="$0.00">
+                            <div class="form-honeypot" aria-hidden="true">
+                                <label for="website">Leave this field blank</label>
+                                <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+                            </div>
 
                             <div class="form-row">
                                 <div class="form-group">
@@ -78,16 +82,6 @@
                                     <input type="email" id="email" name="email">
                                 </div>
 
-                                <div class="form-group">
-                                    <label for="deliveryDay">Preferred Delivery Day</label>
-                                    <select id="deliveryDay" name="deliveryDay" required>
-                                        <option value="">Select a day</option>
-                                        <option value="Tuesday">Tuesday</option>
-                                        <option value="Wednesday">Wednesday</option>
-                                        <option value="Thursday">Thursday</option>
-                                        <option value="Friday">Friday</option>
-                                    </select>
-                                </div>
                             </div>
 
                             <div class="product-box">
@@ -97,13 +91,13 @@
                                     <h4 class="product-group-title">Garden Produce</h4>
 
                                     <div class="product-row">
-                                        <label for="callalooQty">Callaloo, vacuum sealed ($6 per pack) <small>11 available</small></label>
-                                        <input type="number" id="callalooQty" name="callalooQty" min="0" max="11" value="0" data-price="6">
+                                        <label for="callalooQty">Callaloo, vacuum sealed ($6 per pack) <small data-order-stock="callaloo">Checking availability...</small></label>
+                                        <input type="number" id="callalooQty" name="callalooQty" min="0" max="11" value="0" data-price="6" data-product-id="callaloo">
                                     </div>
 
                                     <div class="product-row">
-                                        <label for="beetsQty">Beets ($6 per bunch) <small>2 available</small></label>
-                                        <input type="number" id="beetsQty" name="beetsQty" min="0" max="2" value="0" data-price="6">
+                                        <label for="beetsQty">Beets ($6 per bunch) <small data-order-stock="beets">Checking availability...</small></label>
+                                        <input type="number" id="beetsQty" name="beetsQty" min="0" max="2" value="0" data-price="6" data-product-id="beets">
                                     </div>
                                 </div>
 
@@ -111,23 +105,23 @@
                                     <h4 class="product-group-title">Zucchini <span>$1 each</span></h4>
 
                                     <div class="product-row">
-                                        <label for="yellowZucchiniQty">Yellow <small>8 available</small></label>
-                                        <input type="number" id="yellowZucchiniQty" name="yellowZucchiniQty" min="0" max="8" value="0" data-price="1">
+                                        <label for="yellowZucchiniQty">Yellow <small data-order-stock="yellow-zucchini">Checking availability...</small></label>
+                                        <input type="number" id="yellowZucchiniQty" name="yellowZucchiniQty" min="0" max="8" value="0" data-price="1" data-product-id="yellow-zucchini">
                                     </div>
 
                                     <div class="product-row">
-                                        <label for="greenZucchiniQty">Green <small>6 available</small></label>
-                                        <input type="number" id="greenZucchiniQty" name="greenZucchiniQty" min="0" max="6" value="0" data-price="1">
+                                        <label for="greenZucchiniQty">Green <small data-order-stock="green-zucchini">Checking availability...</small></label>
+                                        <input type="number" id="greenZucchiniQty" name="greenZucchiniQty" min="0" max="6" value="0" data-price="1" data-product-id="green-zucchini">
                                     </div>
 
                                     <div class="product-row">
-                                        <label for="lebaneseZucchiniQty">Lebanese <small>2 available</small></label>
-                                        <input type="number" id="lebaneseZucchiniQty" name="lebaneseZucchiniQty" min="0" max="2" value="0" data-price="1">
+                                        <label for="lebaneseZucchiniQty">Lebanese <small data-order-stock="lebanese-zucchini">Checking availability...</small></label>
+                                        <input type="number" id="lebaneseZucchiniQty" name="lebaneseZucchiniQty" min="0" max="2" value="0" data-price="1" data-product-id="lebanese-zucchini">
                                     </div>
 
                                     <div class="product-row">
-                                        <label for="courgetteQty">Small Courgette <small>2 available</small></label>
-                                        <input type="number" id="courgetteQty" name="courgetteQty" min="0" max="2" value="0" data-price="1">
+                                        <label for="courgetteQty">Small Courgette <small data-order-stock="small-courgette">Checking availability...</small></label>
+                                        <input type="number" id="courgetteQty" name="courgetteQty" min="0" max="2" value="0" data-price="1" data-product-id="small-courgette">
                                     </div>
                                 </div>
 
@@ -135,18 +129,18 @@
                                     <h4 class="product-group-title">Tea Mixes</h4>
 
                                     <div class="product-row">
-                                        <label for="coldFluTeaQty">Cold &amp; Flu ($6)</label>
-                                        <input type="number" id="coldFluTeaQty" name="coldFluTeaQty" min="0" value="0" data-price="6">
+                                        <label for="coldFluTeaQty">Cold &amp; Flu ($6) <small>Made to order</small></label>
+                                        <input type="number" id="coldFluTeaQty" name="coldFluTeaQty" min="0" value="0" data-price="6" data-product-id="cold-flu-tea">
                                     </div>
 
                                     <div class="product-row">
-                                        <label for="menopauseTeaQty">Perimenopause / Menopause ($7)</label>
-                                        <input type="number" id="menopauseTeaQty" name="menopauseTeaQty" min="0" value="0" data-price="7">
+                                        <label for="menopauseTeaQty">Perimenopause / Menopause ($7) <small>Made to order</small></label>
+                                        <input type="number" id="menopauseTeaQty" name="menopauseTeaQty" min="0" value="0" data-price="7" data-product-id="menopause-tea">
                                     </div>
 
                                     <div class="product-row">
-                                        <label for="mulleinTeaQty">Mullein ($6)</label>
-                                        <input type="number" id="mulleinTeaQty" name="mulleinTeaQty" min="0" value="0" data-price="6">
+                                        <label for="mulleinTeaQty">Mullein ($6) <small>Made to order</small></label>
+                                        <input type="number" id="mulleinTeaQty" name="mulleinTeaQty" min="0" value="0" data-price="6" data-product-id="mullein-tea">
                                     </div>
                                 </div>
                             </div>
@@ -161,6 +155,31 @@
                             <button type="submit" class="button">Submit Order Request</button>
                             <p id="formMessage" class="form-message"></p>
                         </form>
+
+                        <section id="orderConfirmation" class="order-confirmation" tabindex="-1" hidden>
+                            <div class="confirmation-check" aria-hidden="true">&#10003;</div>
+                            <p class="confirmation-kicker">Order request received</p>
+                            <h2>Thank you, <span id="confirmationName">friend</span>!</h2>
+                            <p>We have received your order request and reserved the available items you selected.</p>
+
+                            <div class="confirmation-summary">
+                                <p>Your order number</p>
+                                <strong id="confirmationOrderNumber"></strong>
+                                <span id="confirmationTotal"></span>
+                            </div>
+
+                            <div class="confirmation-next-steps">
+                                <h3>What happens next?</h3>
+                                <ol>
+                                    <li>We will review your request and contact you to confirm the details and payment.</li>
+                                    <li>Your order is confirmed once payment is received.</li>
+                                    <li>We will notify you of the scheduled delivery day in advance.</li>
+                                </ol>
+                            </div>
+
+                            <p class="confirmation-help">Need to make a change? Email <a href="mailto:sodabackyardgarden@outlook.com">sodabackyardgarden@outlook.com</a> and include your order number.</p>
+                            <button type="button" class="button secondary" id="placeAnotherOrder">Place Another Order</button>
+                        </section>
                     </div>
 
                 </div>
