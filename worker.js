@@ -1,6 +1,4 @@
 const SCHEMA = `
-PRAGMA foreign_keys = ON;
-
 CREATE TABLE IF NOT EXISTS products (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -49,6 +47,25 @@ BEGIN
     UPDATE products
     SET quantity = quantity - NEW.quantity
     WHERE id = NEW.product_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS restock_inventory_after_order_cancel
+AFTER UPDATE OF status ON orders
+WHEN NEW.status = 'cancelled' AND OLD.status <> 'cancelled'
+BEGIN
+    UPDATE products
+    SET quantity = quantity + COALESCE((
+        SELECT SUM(order_items.quantity)
+        FROM order_items
+        WHERE order_items.order_id = NEW.id
+          AND order_items.product_id = products.id
+    ), 0)
+    WHERE made_to_order = 0
+      AND id IN (
+          SELECT product_id
+          FROM order_items
+          WHERE order_id = NEW.id
+      );
 END;
 
 INSERT INTO products (id, name, unit, price_cents, quantity, made_to_order, sort_order) VALUES
@@ -102,6 +119,69 @@ function createOrderNumber() {
     const date = new Date().toISOString().slice(0, 10).replaceAll("-", "");
     const suffix = crypto.randomUUID().slice(0, 6).toUpperCase();
     return "SBG-" + date + "-" + suffix;
+}
+
+function getCookie(request, name) {
+    const cookieHeader = request.headers.get("Cookie") || "";
+    const cookies = cookieHeader.split(";");
+
+    for (const cookie of cookies) {
+        const [cookieName, ...valueParts] = cookie.trim().split("=");
+
+        if (cookieName === name) {
+            return valueParts.join("=");
+        }
+    }
+
+    return "";
+}
+
+function constantTimeEqual(left, right) {
+    if (left.length !== right.length) {
+        return false;
+    }
+
+    let difference = 0;
+
+    for (let index = 0; index < left.length; index += 1) {
+        difference |= left.charCodeAt(index) ^ right.charCodeAt(index);
+    }
+
+    return difference === 0;
+}
+
+async function createAdminToken(password) {
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(password),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"]
+    );
+    const signature = await crypto.subtle.sign(
+        "HMAC",
+        key,
+        encoder.encode("soda-backyard-garden-admin-v1")
+    );
+    const bytes = new Uint8Array(signature);
+    let binary = "";
+
+    bytes.forEach(function (byte) {
+        binary += String.fromCharCode(byte);
+    });
+
+    return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+}
+
+async function isAdmin(request, env) {
+    if (!env.ADMIN_PASSWORD) {
+        return false;
+    }
+
+    const providedToken = getCookie(request, "sbg_admin");
+    const expectedToken = await createAdminToken(env.ADMIN_PASSWORD);
+    return constantTimeEqual(providedToken, expectedToken);
 }
 
 async function getProducts(db) {
@@ -251,6 +331,142 @@ async function handleOrder(request, db) {
     }, 201);
 }
 
+async function handleAdminLogin(request, env) {
+    if (!env.ADMIN_PASSWORD) {
+        return jsonResponse({
+            error: "The admin password has not been configured in Cloudflare yet."
+        }, 503);
+    }
+
+    let body;
+
+    try {
+        body = await request.json();
+    } catch (_error) {
+        return jsonResponse({ error: "Please enter the admin password." }, 400);
+    }
+
+    const password = cleanText(body.password, 200);
+
+    if (!constantTimeEqual(password, env.ADMIN_PASSWORD)) {
+        return jsonResponse({ error: "That password was not correct." }, 401);
+    }
+
+    const token = await createAdminToken(env.ADMIN_PASSWORD);
+    const response = jsonResponse({ success: true });
+    response.headers.set(
+        "Set-Cookie",
+        "sbg_admin=" + token + "; Path=/; Max-Age=43200; HttpOnly; Secure; SameSite=Strict"
+    );
+    return response;
+}
+
+function handleAdminLogout() {
+    const response = jsonResponse({ success: true });
+    response.headers.set(
+        "Set-Cookie",
+        "sbg_admin=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict"
+    );
+    return response;
+}
+
+async function handleAdminOrders(db) {
+    const result = await db.prepare(`
+        SELECT
+            orders.id,
+            orders.order_number,
+            orders.customer_name,
+            orders.phone,
+            orders.email,
+            orders.delivery_day,
+            orders.notes,
+            orders.total_cents,
+            orders.status,
+            orders.created_at,
+            order_items.product_name,
+            order_items.unit_price_cents,
+            order_items.quantity,
+            order_items.line_total_cents
+        FROM orders
+        LEFT JOIN order_items ON order_items.order_id = orders.id
+        ORDER BY orders.created_at DESC, order_items.id
+        LIMIT 500
+    `).all();
+    const orderMap = new Map();
+
+    result.results.forEach(function (row) {
+        if (!orderMap.has(row.id)) {
+            orderMap.set(row.id, {
+                id: row.id,
+                orderNumber: row.order_number,
+                customerName: row.customer_name,
+                phone: row.phone,
+                email: row.email,
+                deliveryDay: row.delivery_day,
+                notes: row.notes,
+                totalCents: row.total_cents,
+                status: row.status,
+                createdAt: row.created_at,
+                items: []
+            });
+        }
+
+        if (row.product_name) {
+            orderMap.get(row.id).items.push({
+                name: row.product_name,
+                quantity: row.quantity,
+                unitPriceCents: row.unit_price_cents,
+                lineTotalCents: row.line_total_cents
+            });
+        }
+    });
+
+    return jsonResponse({ orders: Array.from(orderMap.values()) });
+}
+
+async function handleAdminOrderAction(request, db, orderId) {
+    let body;
+
+    try {
+        body = await request.json();
+    } catch (_error) {
+        return jsonResponse({ error: "The order action was not valid." }, 400);
+    }
+
+    const action = cleanText(body.action, 20);
+    let result;
+
+    if (action === "confirm") {
+        result = await db.prepare(`
+            UPDATE orders
+            SET status = 'confirmed'
+            WHERE id = ? AND status = 'pending'
+        `).bind(orderId).run();
+    } else if (action === "complete") {
+        result = await db.prepare(`
+            UPDATE orders
+            SET status = 'completed'
+            WHERE id = ? AND status = 'confirmed'
+        `).bind(orderId).run();
+    } else if (action === "cancel") {
+        result = await db.prepare(`
+            UPDATE orders
+            SET status = 'cancelled'
+            WHERE id = ? AND status IN ('pending', 'confirmed')
+        `).bind(orderId).run();
+    } else {
+        return jsonResponse({ error: "That order action is not supported." }, 400);
+    }
+
+    if (!result.meta || result.meta.changes !== 1) {
+        return jsonResponse({
+            error: "The order has already changed status. Refresh the order list and try again."
+        }, 409);
+    }
+
+    return jsonResponse({ success: true });
+}
+
 export default {
     async fetch(request, env) {
         const url = new URL(request.url);
@@ -270,6 +486,14 @@ export default {
         }
 
         try {
+            if (url.pathname === "/api/admin/login" && request.method === "POST") {
+                return handleAdminLogin(request, env);
+            }
+
+            if (url.pathname === "/api/admin/logout" && request.method === "POST") {
+                return handleAdminLogout();
+            }
+
             await ensureDatabase(env.DB);
 
             if (url.pathname === "/api/inventory" && request.method === "GET") {
@@ -278,6 +502,22 @@ export default {
 
             if (url.pathname === "/api/orders" && request.method === "POST") {
                 return handleOrder(request, env.DB);
+            }
+
+            if (url.pathname.startsWith("/api/admin/")) {
+                if (!(await isAdmin(request, env))) {
+                    return jsonResponse({ error: "Admin sign-in required." }, 401);
+                }
+
+                if (url.pathname === "/api/admin/orders" && request.method === "GET") {
+                    return handleAdminOrders(env.DB);
+                }
+
+                const orderActionMatch = url.pathname.match(/^\/api\/admin\/orders\/([^/]+)\/action$/);
+
+                if (orderActionMatch && request.method === "POST") {
+                    return handleAdminOrderAction(request, env.DB, orderActionMatch[1]);
+                }
             }
 
             return jsonResponse({ error: "Not found." }, 404);

@@ -1,5 +1,3 @@
-PRAGMA foreign_keys = ON;
-
 CREATE TABLE IF NOT EXISTS products (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -48,6 +46,25 @@ BEGIN
     UPDATE products
     SET quantity = quantity - NEW.quantity
     WHERE id = NEW.product_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS restock_inventory_after_order_cancel
+AFTER UPDATE OF status ON orders
+WHEN NEW.status = 'cancelled' AND OLD.status <> 'cancelled'
+BEGIN
+    UPDATE products
+    SET quantity = quantity + COALESCE((
+        SELECT SUM(order_items.quantity)
+        FROM order_items
+        WHERE order_items.order_id = NEW.id
+          AND order_items.product_id = products.id
+    ), 0)
+    WHERE made_to_order = 0
+      AND id IN (
+          SELECT product_id
+          FROM order_items
+          WHERE order_id = NEW.id
+      );
 END;
 
 INSERT INTO products (id, name, unit, price_cents, quantity, made_to_order, sort_order) VALUES

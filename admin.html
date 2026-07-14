@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soda Backyard Garden | Manage Orders</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="admin-page">
+    <header>
+        <div class="container admin-header">
+            <div>
+                <h1>Manage Orders</h1>
+                <p class="tagline">Private order management for Soda Backyard Garden.</p>
+            </div>
+            <a href="index.html" class="button secondary">View Website</a>
+        </div>
+    </header>
+
+    <main>
+        <section class="admin-section">
+            <div class="container">
+                <div id="adminLoginPanel" class="admin-login-card">
+                    <h2>Owner Sign In</h2>
+                    <p>Enter the private admin password configured in Cloudflare.</p>
+                    <form id="adminLoginForm">
+                        <div class="form-group">
+                            <label for="adminPassword">Admin Password</label>
+                            <input type="password" id="adminPassword" name="password" required autocomplete="current-password">
+                        </div>
+                        <button type="submit" class="button">Sign In</button>
+                        <p id="adminLoginMessage" class="form-message"></p>
+                    </form>
+                </div>
+
+                <div id="adminDashboard" hidden>
+                    <div class="admin-toolbar">
+                        <div>
+                            <h2>Customer Orders</h2>
+                            <p>Confirm paid orders, cancel and return stock, or mark deliveries complete.</p>
+                        </div>
+                        <div class="admin-toolbar-actions">
+                            <button type="button" class="button secondary" id="refreshOrders">Refresh</button>
+                            <button type="button" class="button secondary" id="adminLogout">Sign Out</button>
+                        </div>
+                    </div>
+
+                    <p id="adminMessage" class="form-message"></p>
+                    <div id="ordersList" class="admin-orders" aria-live="polite"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="admin.js"></script>
+</body>
+</html>
