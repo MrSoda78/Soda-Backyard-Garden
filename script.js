@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
     const carouselImages = Array.from(document.querySelectorAll(".carousel-image"));
     const slides = Array.from(document.querySelectorAll(".slide"));
-    const dots = Array.from(document.querySelectorAll(".carousel-dots .dot"));
+    const dotsContainer = document.querySelector(".carousel-dots");
     const previousButton = document.querySelector(".carousel-btn.prev");
     const nextButton = document.querySelector(".carousel-btn.next");
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -17,8 +17,20 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (slides.length > 0) {
+        const dots = [];
         let currentSlide = 0;
         let slideTimer;
+
+        if (dotsContainer) {
+            slides.forEach(function (_slide, slideIndex) {
+                const dot = document.createElement("button");
+                dot.className = "dot";
+                dot.type = "button";
+                dot.setAttribute("aria-label", "Show garden photo " + (slideIndex + 1));
+                dotsContainer.appendChild(dot);
+                dots.push(dot);
+            });
+        }
 
         function showSlide(index) {
             currentSlide = (index + slides.length) % slides.length;
