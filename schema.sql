@@ -74,9 +74,12 @@ INSERT INTO products (id, name, unit, price_cents, quantity, made_to_order, sort
     ('green-zucchini', 'Green Zucchini', 'each', 100, 6, 0, 40),
     ('lebanese-zucchini', 'Lebanese Zucchini', 'each', 100, 2, 0, 50),
     ('small-courgette', 'Small Courgette', 'each', 100, 2, 0, 60),
-    ('cold-flu-tea', 'Cold & Flu Tea Mix', 'mix', 600, NULL, 1, 70),
-    ('menopause-tea', 'Perimenopause / Menopause Tea Mix', 'mix', 700, NULL, 1, 80),
-    ('mullein-tea', 'Mullein Tea Mix', 'mix', 600, NULL, 1, 90)
+    ('dragon-tongue-beans', 'Dragon Tongue Beans', 'litre', 600, NULL, 1, 70),
+    ('purple-beans', 'Purple Beans', 'litre', 600, NULL, 1, 80),
+    ('green-beans', 'Green Beans', 'litre', 600, NULL, 1, 90),
+    ('cold-flu-tea', 'Cold & Flu Tea Mix', 'mix', 600, NULL, 1, 100),
+    ('menopause-tea', 'Perimenopause / Menopause Tea Mix', 'mix', 700, NULL, 1, 110),
+    ('mullein-tea', 'Mullein Tea Mix', 'mix', 600, NULL, 1, 120)
 ON CONFLICT(id) DO UPDATE SET
     name = excluded.name,
     unit = excluded.unit,
