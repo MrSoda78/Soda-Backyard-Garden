@@ -609,8 +609,8 @@ textarea:focus-visible {
 }
 
 .product-grid-featured .product-card > img {
-    height: clamp(280px, 48vw, 430px);
-    object-position: center 55%;
+    height: clamp(420px, 80vw, 700px);
+    object-position: center center;
 }
 
 .product-section-heading {
