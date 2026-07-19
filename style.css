@@ -604,7 +604,13 @@ textarea:focus-visible {
 }
 
 .product-grid-featured {
-    max-width: 620px;
+    max-width: 760px;
+    margin-inline: auto;
+}
+
+.product-grid-featured .product-card > img {
+    height: clamp(280px, 48vw, 430px);
+    object-position: center 55%;
 }
 
 .section-action {
