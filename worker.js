@@ -33,6 +33,14 @@ const SCHEMA_STATEMENTS = [
         FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
         FOREIGN KEY (product_id) REFERENCES products(id)
     )`,
+    `CREATE TABLE IF NOT EXISTS donations (
+        id TEXT PRIMARY KEY,
+        donor_name TEXT NOT NULL,
+        amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+        note TEXT,
+        received_at TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
     `CREATE TRIGGER IF NOT EXISTS deduct_inventory_before_order_item
     BEFORE INSERT ON order_items
     WHEN (SELECT made_to_order FROM products WHERE id = NEW.product_id) = 0
@@ -528,10 +536,21 @@ async function handleAdminSales(db) {
             WHERE orders.status IN ('confirmed', 'completed')
             GROUP BY order_items.product_name
             ORDER BY revenue_cents DESC, order_items.product_name
+        `),
+        db.prepare(`
+            SELECT COUNT(*) AS donation_count, COALESCE(SUM(amount_cents), 0) AS total_cents
+            FROM donations
+        `),
+        db.prepare(`
+            SELECT id, donor_name, amount_cents, note, received_at
+            FROM donations
+            ORDER BY received_at DESC, created_at DESC
+            LIMIT 100
         `)
     ]);
     const payments = results[0].results;
     const pending = results[1].results[0] || { order_count: 0, total_cents: 0 };
+    const donationSummary = results[3].results[0] || { donation_count: 0, total_cents: 0 };
     const todayKey = torontoDateKey(new Date());
     const monthKey = todayKey.slice(0, 7);
     const weekKey = startOfWeekKey(todayKey);
@@ -542,7 +561,9 @@ async function handleAdminSales(db) {
         monthCents: 0,
         paidOrders: payments.length,
         pendingCents: Number(pending.total_cents) || 0,
-        pendingOrders: Number(pending.order_count) || 0
+        pendingOrders: Number(pending.order_count) || 0,
+        donationsCents: Number(donationSummary.total_cents) || 0,
+        donationCount: Number(donationSummary.donation_count) || 0
     };
 
     payments.forEach(function (payment) {
@@ -579,8 +600,75 @@ async function handleAdminSales(db) {
                 totalCents: Number(payment.total_cents) || 0,
                 paidAt: payment.paid_at
             };
+        }),
+        donations: results[4].results.map(function (donation) {
+            return {
+                id: donation.id,
+                donorName: donation.donor_name,
+                amountCents: Number(donation.amount_cents) || 0,
+                note: donation.note,
+                receivedAt: donation.received_at
+            };
         })
     });
+}
+
+async function handleAdminDonationCreate(request, db) {
+    let body;
+
+    try {
+        body = await request.json();
+    } catch (_error) {
+        return jsonResponse({ error: "The donation information was not valid." }, 400);
+    }
+
+    const donorName = cleanText(body.donorName, 100);
+    const note = cleanText(body.note, 500);
+    const receivedAt = cleanText(body.receivedAt, 10);
+    const amountCents = Number(body.amountCents);
+    const parsedDate = new Date(receivedAt + "T12:00:00Z");
+
+    if (donorName.length < 2) {
+        return jsonResponse({ error: "Enter the donor's name or Anonymous." }, 400);
+    }
+
+    if (!Number.isInteger(amountCents) || amountCents < 1 || amountCents > 100000000) {
+        return jsonResponse({ error: "Enter a valid donation amount." }, 400);
+    }
+
+    if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(receivedAt) ||
+        Number.isNaN(parsedDate.getTime()) ||
+        parsedDate.toISOString().slice(0, 10) !== receivedAt ||
+        receivedAt > torontoDateKey(new Date())
+    ) {
+        return jsonResponse({ error: "Enter a valid donation date that is not in the future." }, 400);
+    }
+
+    await db.prepare(`
+        INSERT INTO donations (id, donor_name, amount_cents, note, received_at)
+        VALUES (?, ?, ?, ?, ?)
+    `).bind(
+        crypto.randomUUID(),
+        donorName,
+        amountCents,
+        note || null,
+        receivedAt
+    ).run();
+
+    return jsonResponse({ success: true }, 201);
+}
+
+async function handleAdminDonationDelete(db, donationId) {
+    const result = await db.prepare("DELETE FROM donations WHERE id = ?")
+        .bind(donationId)
+        .run();
+
+    if (!result.meta || result.meta.changes < 1) {
+        return jsonResponse({ error: "That donation entry was not found." }, 404);
+    }
+
+    return jsonResponse({ success: true });
 }
 
 async function handleAdminInventoryUpdate(request, db) {
@@ -754,6 +842,16 @@ export default {
 
                 if (url.pathname === "/api/admin/sales" && request.method === "GET") {
                     return handleAdminSales(env.DB);
+                }
+
+                if (url.pathname === "/api/admin/donations" && request.method === "POST") {
+                    return handleAdminDonationCreate(request, env.DB);
+                }
+
+                const donationMatch = url.pathname.match(/^\/api\/admin\/donations\/([^/]+)$/);
+
+                if (donationMatch && request.method === "DELETE") {
+                    return handleAdminDonationDelete(env.DB, donationMatch[1]);
                 }
 
                 const orderActionMatch = url.pathname.match(/^\/api\/admin\/orders\/([^/]+)\/action$/);

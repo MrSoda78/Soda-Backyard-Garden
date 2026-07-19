@@ -21,6 +21,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const refreshSalesButton = document.getElementById("refreshSales");
     const salesProductRows = document.getElementById("salesProductRows");
     const recentPaymentRows = document.getElementById("recentPaymentRows");
+    const donationForm = document.getElementById("donationForm");
+    const donationMessage = document.getElementById("donationMessage");
+    const donationRows = document.getElementById("donationRows");
 
     function formatMoney(cents) {
         return "$" + (cents / 100).toFixed(2);
@@ -29,6 +32,19 @@ document.addEventListener("DOMContentLoaded", function () {
     function setMessage(element, message, type) {
         element.textContent = message || "";
         element.className = "form-message" + (type ? " " + type : "");
+    }
+
+    function localDateValue() {
+        const today = new Date();
+        const month = String(today.getMonth() + 1).padStart(2, "0");
+        const day = String(today.getDate()).padStart(2, "0");
+        return today.getFullYear() + "-" + month + "-" + day;
+    }
+
+    function resetDonationForm() {
+        donationForm.reset();
+        donationForm.receivedAt.value = localDateValue();
+        donationForm.receivedAt.max = localDateValue();
     }
 
     function showLogin(message) {
@@ -224,6 +240,9 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("salesPending").textContent = formatMoney(summary.pendingCents);
         document.getElementById("salesPendingOrders").textContent =
             summary.pendingOrders + (summary.pendingOrders === 1 ? " order" : " orders");
+        document.getElementById("salesDonations").textContent = formatMoney(summary.donationsCents);
+        document.getElementById("salesDonationCount").textContent =
+            summary.donationCount + (summary.donationCount === 1 ? " donation" : " donations");
 
         salesProductRows.replaceChildren();
 
@@ -252,6 +271,38 @@ document.addEventListener("DOMContentLoaded", function () {
                     paidAt.toLocaleString(),
                     formatMoney(payment.totalCents)
                 ]);
+            });
+        }
+
+        donationRows.replaceChildren();
+
+        if (result.donations.length === 0) {
+            appendSalesRow(donationRows, 5, "No donations have been recorded yet.");
+        } else {
+            result.donations.forEach(function (donation) {
+                const row = document.createElement("tr");
+                const receivedDate = new Date(donation.receivedAt + "T12:00:00");
+                [
+                    donation.donorName,
+                    receivedDate.toLocaleDateString(),
+                    donation.note || "—",
+                    formatMoney(donation.amountCents)
+                ].forEach(function (value) {
+                    const cell = document.createElement("td");
+                    cell.textContent = value;
+                    row.appendChild(cell);
+                });
+
+                const actionCell = document.createElement("td");
+                const deleteButton = document.createElement("button");
+                deleteButton.type = "button";
+                deleteButton.className = "donation-delete";
+                deleteButton.textContent = "Delete";
+                deleteButton.dataset.donationId = donation.id;
+                deleteButton.setAttribute("aria-label", "Delete donation from " + donation.donorName);
+                actionCell.appendChild(deleteButton);
+                row.appendChild(actionCell);
+                donationRows.appendChild(row);
             });
         }
     }
@@ -481,6 +532,72 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
+    donationForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        const submitButton = donationForm.querySelector('button[type="submit"]');
+        const amount = Number.parseFloat(donationForm.amount.value);
+        submitButton.disabled = true;
+        setMessage(donationMessage, "Recording donation...", "success");
+
+        try {
+            const response = await fetch("/api/admin/donations", {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    donorName: donationForm.donorName.value,
+                    amountCents: Math.round(amount * 100),
+                    receivedAt: donationForm.receivedAt.value,
+                    note: donationForm.note.value
+                })
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The donation could not be recorded.");
+            }
+
+            resetDonationForm();
+            await loadSales();
+            setMessage(donationMessage, "Donation recorded.", "success");
+        } catch (error) {
+            setMessage(donationMessage, error.message, "error");
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+
+    donationRows.addEventListener("click", async function (event) {
+        const button = event.target.closest("button[data-donation-id]");
+
+        if (!button || !window.confirm("Delete this donation entry?")) {
+            return;
+        }
+
+        button.disabled = true;
+        setMessage(donationMessage, "Deleting donation...", "success");
+
+        try {
+            const response = await fetch(
+                "/api/admin/donations/" + encodeURIComponent(button.dataset.donationId),
+                { method: "DELETE", headers: { "Accept": "application/json" } }
+            );
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The donation could not be deleted.");
+            }
+
+            await loadSales();
+            setMessage(donationMessage, "Donation deleted.", "success");
+        } catch (error) {
+            button.disabled = false;
+            setMessage(donationMessage, error.message, "error");
+        }
+    });
+
     saveInventoryButton.addEventListener("click", async function () {
         saveInventoryButton.disabled = true;
         setMessage(inventoryMessage, "Saving changes...", "success");
@@ -513,6 +630,8 @@ document.addEventListener("DOMContentLoaded", function () {
         await fetch("/api/admin/logout", { method: "POST" });
         showLogin();
     });
+
+    resetDonationForm();
 
     loadOrders().catch(function (error) {
         showLogin(error.message);

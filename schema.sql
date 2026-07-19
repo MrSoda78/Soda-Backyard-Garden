@@ -35,6 +35,15 @@ CREATE TABLE IF NOT EXISTS order_items (
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
+CREATE TABLE IF NOT EXISTS donations (
+    id TEXT PRIMARY KEY,
+    donor_name TEXT NOT NULL,
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+    note TEXT,
+    received_at TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TRIGGER IF NOT EXISTS deduct_inventory_before_order_item
 BEFORE INSERT ON order_items
 WHEN (SELECT made_to_order FROM products WHERE id = NEW.product_id) = 0

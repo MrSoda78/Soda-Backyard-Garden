@@ -1713,6 +1713,11 @@ footer a:hover {
     background: #fffaf0;
 }
 
+.sales-stat-donations {
+    border-color: #b9c9e8;
+    background: #f4f7fd;
+}
+
 .sales-details-grid {
     display: grid;
     gap: 24px;
@@ -1729,6 +1734,69 @@ footer a:hover {
 .sales-card h3 {
     margin-bottom: 16px;
     color: var(--green-dark);
+}
+
+.donation-card {
+    margin-bottom: 24px;
+}
+
+.donation-heading p {
+    margin: -10px 0 18px;
+    color: var(--text-soft);
+}
+
+.donation-form {
+    display: grid;
+    max-width: none;
+    grid-template-columns: minmax(170px, 1fr) minmax(130px, 0.55fr) minmax(160px, 0.65fr) minmax(220px, 1.35fr) auto;
+    align-items: end;
+    gap: 14px;
+    margin-bottom: 4px;
+}
+
+.donation-form .form-group {
+    margin-bottom: 0;
+}
+
+.donation-form label span {
+    color: var(--text-soft);
+    font-size: 0.78rem;
+    font-weight: normal;
+}
+
+.donation-form input {
+    padding: 11px 12px;
+}
+
+.donation-form .button {
+    min-height: 48px;
+    white-space: nowrap;
+}
+
+.donation-table {
+    min-width: 720px;
+}
+
+.donation-delete {
+    padding: 7px 10px;
+    border: 1px solid #c96a6a;
+    border-radius: 7px;
+    color: #8b2525;
+    background: white;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.donation-delete:hover {
+    color: white;
+    background: #a43b3b;
+}
+
+.donation-delete:disabled {
+    cursor: wait;
+    opacity: 0.6;
 }
 
 .sales-table-wrap {
@@ -1786,6 +1854,30 @@ footer a:hover {
 
     .admin-tab {
         flex: 1;
+    }
+}
+
+@media (max-width: 1050px) {
+    .donation-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .donation-note-field {
+        grid-column: 1 / -1;
+    }
+
+    .donation-form .button {
+        justify-self: start;
+    }
+}
+
+@media (max-width: 600px) {
+    .donation-form {
+        grid-template-columns: 1fr;
+    }
+
+    .donation-note-field {
+        grid-column: auto;
     }
 }
 
