@@ -551,6 +551,11 @@ textarea:focus-visible {
     object-fit: cover;
 }
 
+.product-card img.product-image-contain {
+    object-fit: contain;
+    background: var(--green-light);
+}
+
 .product-photo-strip {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
