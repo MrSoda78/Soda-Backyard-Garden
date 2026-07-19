@@ -21,6 +21,8 @@
                 <ul>
                     <li><a href="index.html">Home</a></li>
                     <li><a href="available.html">Fresh Produce</a></li>
+                    <li><a href="teas.html">Tea Mixes</a></li>
+                    <li><a href="baked-goods.html">Baked Goods</a></li>
                     <li><a href="order.html" class="active">Order</a></li>
                     <li><a href="videos.html">Videos</a></li>
                     <li><a href="donate.html">Support the Garden</a></li>
@@ -161,6 +163,22 @@
                                         <label for="mulleinTeaQty">Mullein ($6) <small>Made to order</small></label>
                                         <input type="number" id="mulleinTeaQty" name="mulleinTeaQty" min="0" value="0" data-price="6" data-product-id="mullein-tea">
                                     </div>
+
+                                    <div class="product-row product-row-coming-soon">
+                                        <label for="raspberryLeafTeaQty">Red Raspberry Leaf <small>Price to be determined</small></label>
+                                        <input type="number" id="raspberryLeafTeaQty" name="raspberryLeafTeaQty" min="0" max="0" value="0" data-price="0" data-product-id="red-raspberry-leaf-tea" disabled aria-describedby="raspberryLeafTeaNotice">
+                                    </div>
+                                    <p class="product-notice" id="raspberryLeafTeaNotice">Ordering will open when the price is posted.</p>
+                                </div>
+
+                                <div class="product-group">
+                                    <h4 class="product-group-title">Baked Goods</h4>
+
+                                    <div class="product-row product-row-coming-soon">
+                                        <label for="hardoBreadQty">Hardo Bread <small>12 loaves per delivery · limit 1 per household</small></label>
+                                        <input type="number" id="hardoBreadQty" name="hardoBreadQty" min="0" max="1" value="0" data-price="0" data-product-id="hardo-bread" data-order-limit="1" disabled aria-describedby="hardoBreadNotice">
+                                    </div>
+                                    <p class="product-notice" id="hardoBreadNotice">Price to be determined. Ordering will open when the price is posted.</p>
                                 </div>
                             </div>
 

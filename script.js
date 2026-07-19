@@ -146,11 +146,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 input.removeAttribute("max");
                 input.disabled = false;
             } else {
-                input.max = product.quantity.toString();
+                const orderLimit = Number.parseInt(input.dataset.orderLimit, 10);
+                const maximumQuantity = Number.isNaN(orderLimit)
+                    ? product.quantity
+                    : Math.min(product.quantity, orderLimit);
+                input.max = maximumQuantity.toString();
                 input.disabled = product.quantity === 0;
 
-                if (Number.parseInt(input.value, 10) > product.quantity) {
-                    input.value = product.quantity;
+                if (Number.parseInt(input.value, 10) > maximumQuantity) {
+                    input.value = maximumQuantity;
                 }
             }
 

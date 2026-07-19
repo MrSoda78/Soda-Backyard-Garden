@@ -575,6 +575,43 @@ textarea:focus-visible {
     color: var(--text-soft);
 }
 
+.price-placeholder {
+    display: inline-block;
+    width: fit-content;
+    padding: 6px 10px;
+    border-radius: 7px;
+    background: #fff3cd;
+    color: #856404 !important;
+}
+
+.product-note,
+.product-notice {
+    color: var(--text-soft);
+    font-size: 0.9rem;
+}
+
+.product-notice {
+    margin: -4px 0 14px;
+}
+
+.product-row-coming-soon {
+    opacity: 0.75;
+}
+
+.product-row-coming-soon input:disabled {
+    cursor: not-allowed;
+    background: #eeeeea;
+}
+
+.product-grid-featured {
+    max-width: 620px;
+}
+
+.section-action {
+    margin-top: 30px;
+    text-align: center;
+}
+
 .availability-list {
     display: grid;
     gap: 9px;
