@@ -604,17 +604,30 @@ textarea:focus-visible {
 }
 
 .product-grid-featured {
-    max-width: 760px;
-    margin-inline: auto;
+    grid-template-columns: minmax(260px, 360px);
 }
 
 .product-grid-featured .product-card > img {
-    height: clamp(420px, 80vw, 700px);
+    height: 180px;
     object-position: center center;
 }
 
 .product-section-heading {
     margin-top: 48px;
+}
+
+.product-image-placeholder {
+    display: grid;
+    height: 180px;
+    place-items: center;
+    padding: 20px;
+    color: var(--green-dark);
+    background:
+        linear-gradient(135deg, rgba(47, 158, 68, 0.08), rgba(20, 83, 45, 0.18)),
+        var(--green-light);
+    border-bottom: 1px dashed var(--green-border);
+    font-weight: bold;
+    text-align: center;
 }
 
 .section-action {

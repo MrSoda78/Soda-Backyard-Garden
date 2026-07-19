@@ -80,7 +80,11 @@ const SCHEMA_STATEMENTS = [
         ('red-raspberry-leaf-tea', 'Red Raspberry Leaf Tea Mix', 'mix', 0, NULL, 1, 140, 0),
         ('hardo-bread', 'Hardo Bread', 'loaf', 500, 12, 0, 150, 1),
         ('brown-eggs', 'Brown Eggs', 'dozen', 600, 0, 0, 160, 1),
-        ('white-eggs-flat', 'Flat of White Eggs', 'flat', 1000, 0, 0, 170, 1)
+        ('white-eggs-flat', 'Flat of White Eggs', 'flat', 1000, 0, 0, 170, 1),
+        ('pain-rub-oil-2oz', 'Pain Rub Oil - 2 oz', 'bottle', 6000, 0, 0, 180, 1),
+        ('pain-rub-oil-4oz', 'Pain Rub Oil - 4 oz', 'bottle', 8000, 0, 0, 190, 1),
+        ('pain-rub-balm-2oz', 'Pain Rub Balm - 2 oz', 'jar', 6000, 0, 0, 200, 1),
+        ('pain-rub-balm-4oz', 'Pain Rub Balm - 4 oz', 'jar', 8000, 0, 0, 210, 1)
     ON CONFLICT(id) DO NOTHING`,
     `UPDATE products
     SET price_cents = 500, active = 1
