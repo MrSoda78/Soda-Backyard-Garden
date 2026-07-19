@@ -193,11 +193,11 @@ async function isAdmin(request, env) {
     return constantTimeEqual(providedToken, expectedToken);
 }
 
-async function getProducts(db) {
+async function getProducts(db, includeInactive = false) {
     const result = await db.prepare(`
-        SELECT id, name, unit, price_cents, quantity, made_to_order
+        SELECT id, name, unit, price_cents, quantity, made_to_order, active
         FROM products
-        WHERE active = 1
+        ${includeInactive ? "" : "WHERE active = 1"}
         ORDER BY sort_order, name
     `).all();
 
@@ -208,13 +208,14 @@ async function getProducts(db) {
             unit: product.unit,
             priceCents: product.price_cents,
             quantity: product.quantity,
-            madeToOrder: product.made_to_order === 1
+            madeToOrder: product.made_to_order === 1,
+            active: product.active === 1
         };
     });
 }
 
 async function handleInventory(db) {
-    return jsonResponse({ products: await getProducts(db) });
+    return jsonResponse({ products: await getProducts(db, true) });
 }
 
 async function handleOrder(request, db) {

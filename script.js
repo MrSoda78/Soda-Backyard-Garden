@@ -91,6 +91,10 @@ document.addEventListener("DOMContentLoaded", function () {
         : [];
 
     function formatStock(product, element) {
+        if (!product.active) {
+            return product.priceCents > 0 ? "Currently unavailable" : "Ordering not open yet";
+        }
+
         if (product.madeToOrder) {
             return "Made to order";
         }
@@ -107,6 +111,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function formatProductPrice(product) {
+        if (product.priceCents <= 0) {
+            return "Price to be determined";
+        }
+
         const amount = "$" + (product.priceCents / 100).toFixed(2);
         return product.unit === "each" ? amount + " each" : amount + " per " + product.unit;
     }
@@ -128,7 +136,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const productIds = element.dataset.stockStatus.split(",");
             const hasStock = productIds.some(function (productId) {
                 const product = productMap.get(productId);
-                return product && (product.madeToOrder || product.quantity > 0);
+                return product && product.active && (product.madeToOrder || product.quantity > 0);
             });
 
             element.textContent = hasStock ? "Available" : "Sold out";
@@ -138,30 +146,41 @@ document.addEventListener("DOMContentLoaded", function () {
 
         document.querySelectorAll("[data-price-display]").forEach(function (element) {
             const product = productMap.get(element.dataset.priceDisplay);
-            element.textContent = product ? formatProductPrice(product) : "Price to be determined";
-            element.classList.toggle("price-placeholder", !product);
+            const hasKnownPrice = product && product.priceCents > 0;
+            element.textContent = hasKnownPrice ? formatProductPrice(product) : "Price to be determined";
+            element.classList.toggle("price-placeholder", !hasKnownPrice);
         });
 
         document.querySelectorAll("[data-product-status]").forEach(function (element) {
             const product = productMap.get(element.dataset.productStatus);
-            const isAvailable = product && (product.madeToOrder || product.quantity > 0);
-            element.textContent = !product ? "Coming soon" : (isAvailable ? "Available" : "Sold out");
-            element.classList.toggle("coming", !product);
+            const isComingSoon = !product || product.priceCents <= 0;
+            const isUnavailable = product && product.priceCents > 0 && !product.active;
+            const isAvailable = product && product.active && (product.madeToOrder || product.quantity > 0);
+            element.textContent = isComingSoon
+                ? "Coming soon"
+                : (isUnavailable ? "Unavailable" : (isAvailable ? "Available" : "Sold out"));
+            element.classList.toggle("coming", Boolean(isComingSoon || isUnavailable));
             element.classList.toggle("available", Boolean(isAvailable));
-            element.classList.toggle("sold-out", Boolean(product) && !isAvailable);
+            element.classList.toggle("sold-out", Boolean(product && product.active && !isAvailable));
         });
 
         document.querySelectorAll("[data-coming-soon-note]").forEach(function (element) {
-            element.hidden = productMap.has(element.dataset.comingSoonNote);
+            const product = productMap.get(element.dataset.comingSoonNote);
+            element.hidden = Boolean(product && product.active);
         });
 
         quantityInputs.forEach(function (input) {
             const product = productMap.get(input.dataset.productId);
             const stockLabel = document.querySelector('[data-order-stock="' + input.dataset.productId + '"]');
 
-            if (!product) {
+            if (!product || !product.active || product.priceCents <= 0) {
                 input.disabled = true;
                 input.value = "0";
+
+                if (stockLabel && product && product.priceCents > 0) {
+                    stockLabel.textContent = "Currently unavailable";
+                }
+
                 return;
             }
 
