@@ -630,6 +630,24 @@ textarea:focus-visible {
     text-align: center;
 }
 
+.storage-notice {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 14px;
+    margin: 0 0 28px;
+    padding: 16px 18px;
+    border: 1px solid var(--green-border);
+    border-left: 5px solid var(--green-main);
+    border-radius: 10px;
+    color: var(--green-dark);
+    background: var(--green-soft);
+}
+
+.storage-notice p {
+    margin: 0;
+    color: var(--text-dark);
+}
+
 .section-action {
     margin-top: 30px;
     text-align: center;
