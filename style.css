@@ -130,6 +130,19 @@ nav a.active {
     border-bottom: 3px solid var(--green-bright);
 }
 
+.nav-disabled {
+    display: inline-block;
+    padding-bottom: 8px;
+    border-bottom: 3px solid transparent;
+    color: rgba(255, 255, 255, 0.62);
+    font-weight: bold;
+    cursor: not-allowed;
+}
+
+.nav-disabled.active {
+    border-bottom-color: rgba(255, 255, 255, 0.35);
+}
+
 a:focus-visible,
 button:focus-visible,
 summary:focus-visible,
@@ -646,6 +659,40 @@ textarea:focus-visible {
 .storage-notice p {
     margin: 0;
     color: var(--text-dark);
+}
+
+.construction-card {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: clamp(30px, 6vw, 58px);
+    border: 1px solid var(--green-border);
+    border-radius: 16px;
+    background: white;
+    box-shadow: var(--shadow);
+    text-align: center;
+}
+
+.construction-card h2 {
+    margin-bottom: 12px;
+    color: var(--green-dark);
+}
+
+.construction-card p:not(.construction-label) {
+    margin-bottom: 24px;
+    color: var(--text-soft);
+}
+
+.construction-label {
+    display: inline-block;
+    margin-bottom: 12px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    color: #856404;
+    background: #fff3cd;
+    font-size: 0.82rem;
+    font-weight: bold;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
 .section-action {
