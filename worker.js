@@ -95,7 +95,8 @@ const SCHEMA_STATEMENTS = [
         ('pain-rub-balm-2oz', 'Pain Rub Balm - 2 oz', 'jar', 6000, 0, 0, 200, 1),
         ('pain-rub-balm-4oz', 'Pain Rub Balm - 4 oz', 'jar', 8000, 0, 0, 210, 1),
         ('fresh-garlic', 'Fresh Garlic', 'each', 0, 0, 0, 220, 0),
-        ('fresh-onions', 'Fresh Onions', 'each', 0, 0, 0, 230, 0)
+        ('fresh-onions', 'Fresh Onions', 'each', 0, 0, 0, 230, 0),
+        ('sage', 'Sage', 'bunch', 600, 0, 0, 240, 1)
     ON CONFLICT(id) DO NOTHING`,
     `UPDATE products
     SET price_cents = 500, active = 1
