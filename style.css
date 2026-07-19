@@ -625,6 +625,10 @@ textarea:focus-visible {
     grid-template-columns: minmax(260px, 360px);
 }
 
+.product-grid-compact {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 360px));
+}
+
 .product-grid-featured .product-card > img {
     height: 180px;
     object-position: center center;
