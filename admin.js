@@ -9,12 +9,18 @@ document.addEventListener("DOMContentLoaded", function () {
     const logoutButton = document.getElementById("adminLogout");
     const ordersTab = document.getElementById("ordersTab");
     const inventoryTab = document.getElementById("inventoryTab");
+    const salesTab = document.getElementById("salesTab");
     const ordersPanel = document.getElementById("ordersPanel");
     const inventoryPanel = document.getElementById("inventoryPanel");
+    const salesPanel = document.getElementById("salesPanel");
     const inventoryRows = document.getElementById("inventoryRows");
     const inventoryMessage = document.getElementById("inventoryMessage");
     const refreshInventoryButton = document.getElementById("refreshInventory");
     const saveInventoryButton = document.getElementById("saveInventory");
+    const salesMessage = document.getElementById("salesMessage");
+    const refreshSalesButton = document.getElementById("refreshSales");
+    const salesProductRows = document.getElementById("salesProductRows");
+    const recentPaymentRows = document.getElementById("recentPaymentRows");
 
     function formatMoney(cents) {
         return "$" + (cents / 100).toFixed(2);
@@ -54,17 +60,26 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function switchPanel(panelName) {
-        const showInventory = panelName === "inventory";
-        ordersPanel.hidden = showInventory;
-        inventoryPanel.hidden = !showInventory;
-        ordersTab.classList.toggle("active", !showInventory);
-        inventoryTab.classList.toggle("active", showInventory);
-        ordersTab.setAttribute("aria-selected", (!showInventory).toString());
-        inventoryTab.setAttribute("aria-selected", showInventory.toString());
+        const panels = {
+            orders: { tab: ordersTab, panel: ordersPanel },
+            inventory: { tab: inventoryTab, panel: inventoryPanel },
+            sales: { tab: salesTab, panel: salesPanel }
+        };
 
-        if (showInventory) {
+        Object.entries(panels).forEach(function ([name, entry]) {
+            const isActive = name === panelName;
+            entry.panel.hidden = !isActive;
+            entry.tab.classList.toggle("active", isActive);
+            entry.tab.setAttribute("aria-selected", isActive.toString());
+        });
+
+        if (panelName === "inventory") {
             loadInventory().catch(function (error) {
                 setMessage(inventoryMessage, error.message, "error");
+            });
+        } else if (panelName === "sales") {
+            loadSales().catch(function (error) {
+                setMessage(salesMessage, error.message, "error");
             });
         }
     }
@@ -177,6 +192,90 @@ document.addEventListener("DOMContentLoaded", function () {
                 active: row.querySelector(".inventory-active").checked
             };
         });
+    }
+
+    function appendSalesRow(container, values, emptyMessage) {
+        const row = document.createElement("tr");
+
+        if (emptyMessage) {
+            const cell = document.createElement("td");
+            cell.colSpan = values;
+            cell.className = "sales-empty";
+            cell.textContent = emptyMessage;
+            row.appendChild(cell);
+        } else {
+            values.forEach(function (value) {
+                const cell = document.createElement("td");
+                cell.textContent = value;
+                row.appendChild(cell);
+            });
+        }
+
+        container.appendChild(row);
+    }
+
+    function renderSales(result) {
+        const summary = result.summary;
+        document.getElementById("salesAllTime").textContent = formatMoney(summary.allTimeCents);
+        document.getElementById("salesMonth").textContent = formatMoney(summary.monthCents);
+        document.getElementById("salesWeek").textContent = formatMoney(summary.weekCents);
+        document.getElementById("salesToday").textContent = formatMoney(summary.todayCents);
+        document.getElementById("salesPaidOrders").textContent = summary.paidOrders.toString();
+        document.getElementById("salesPending").textContent = formatMoney(summary.pendingCents);
+        document.getElementById("salesPendingOrders").textContent =
+            summary.pendingOrders + (summary.pendingOrders === 1 ? " order" : " orders");
+
+        salesProductRows.replaceChildren();
+
+        if (result.products.length === 0) {
+            appendSalesRow(salesProductRows, 3, "No paid product sales yet.");
+        } else {
+            result.products.forEach(function (product) {
+                appendSalesRow(salesProductRows, [
+                    product.name,
+                    product.quantitySold.toString(),
+                    formatMoney(product.revenueCents)
+                ]);
+            });
+        }
+
+        recentPaymentRows.replaceChildren();
+
+        if (result.recentPayments.length === 0) {
+            appendSalesRow(recentPaymentRows, 4, "No payments have been confirmed yet.");
+        } else {
+            result.recentPayments.forEach(function (payment) {
+                const paidAt = new Date(payment.paidAt.replace(" ", "T") + "Z");
+                appendSalesRow(recentPaymentRows, [
+                    payment.orderNumber,
+                    payment.customerName,
+                    paidAt.toLocaleString(),
+                    formatMoney(payment.totalCents)
+                ]);
+            });
+        }
+    }
+
+    async function loadSales() {
+        setMessage(salesMessage, "Loading sales...", "success");
+        const response = await fetch("/api/admin/sales", {
+            headers: { "Accept": "application/json" },
+            cache: "no-store"
+        });
+
+        if (response.status === 401) {
+            showLogin();
+            return;
+        }
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || "Sales could not be loaded.");
+        }
+
+        renderSales(result);
+        setMessage(salesMessage, "", "");
     }
 
     function renderOrders(orders) {
@@ -353,6 +452,10 @@ document.addEventListener("DOMContentLoaded", function () {
         switchPanel("inventory");
     });
 
+    salesTab.addEventListener("click", function () {
+        switchPanel("sales");
+    });
+
     inventoryRows.addEventListener("change", function (event) {
         if (!event.target.classList.contains("inventory-made-to-order")) {
             return;
@@ -369,6 +472,12 @@ document.addEventListener("DOMContentLoaded", function () {
     refreshInventoryButton.addEventListener("click", function () {
         loadInventory().catch(function (error) {
             setMessage(inventoryMessage, error.message, "error");
+        });
+    });
+
+    refreshSalesButton.addEventListener("click", function () {
+        loadSales().catch(function (error) {
+            setMessage(salesMessage, error.message, "error");
         });
     });
 

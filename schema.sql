@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS orders (
     notes TEXT,
     total_cents INTEGER NOT NULL CHECK (total_cents >= 0),
     status TEXT NOT NULL DEFAULT 'pending',
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    paid_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS order_items (

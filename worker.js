@@ -19,7 +19,8 @@ const SCHEMA_STATEMENTS = [
         notes TEXT,
         total_cents INTEGER NOT NULL CHECK (total_cents >= 0),
         status TEXT NOT NULL DEFAULT 'pending',
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        paid_at TEXT
     )`,
     `CREATE TABLE IF NOT EXISTS order_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -108,16 +109,56 @@ function jsonResponse(body, status = 200) {
 
 function ensureDatabase(db) {
     if (!databaseInitialization) {
-        const statements = SCHEMA_STATEMENTS.map(function (statement) {
-            return db.prepare(statement);
-        });
-        databaseInitialization = db.batch(statements).catch(function (error) {
+        databaseInitialization = (async function () {
+            const statements = SCHEMA_STATEMENTS.map(function (statement) {
+                return db.prepare(statement);
+            });
+            await db.batch(statements);
+
+            const orderColumns = await db.prepare("PRAGMA table_info(orders)").all();
+            const hasPaidAt = orderColumns.results.some(function (column) {
+                return column.name === "paid_at";
+            });
+
+            if (!hasPaidAt) {
+                await db.prepare("ALTER TABLE orders ADD COLUMN paid_at TEXT").run();
+            }
+
+            await db.prepare(`
+                UPDATE orders
+                SET paid_at = created_at
+                WHERE paid_at IS NULL AND status IN ('confirmed', 'completed')
+            `).run();
+        })().catch(function (error) {
             databaseInitialization = undefined;
             throw error;
         });
     }
 
     return databaseInitialization;
+}
+
+function torontoDateKey(timestamp) {
+    const date = timestamp instanceof Date
+        ? timestamp
+        : new Date(String(timestamp).replace(" ", "T") + "Z");
+    const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Toronto",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map(function (part) {
+        return [part.type, part.value];
+    }));
+    return values.year + "-" + values.month + "-" + values.day;
+}
+
+function startOfWeekKey(dateKey) {
+    const date = new Date(dateKey + "T12:00:00Z");
+    const daysSinceMonday = (date.getUTCDay() + 6) % 7;
+    date.setUTCDate(date.getUTCDate() - daysSinceMonday);
+    return date.toISOString().slice(0, 10);
 }
 
 function cleanText(value, maximumLength) {
@@ -460,6 +501,88 @@ async function handleAdminInventory(db) {
     });
 }
 
+async function handleAdminSales(db) {
+    const results = await db.batch([
+        db.prepare(`
+            SELECT
+                order_number,
+                customer_name,
+                total_cents,
+                COALESCE(paid_at, created_at) AS paid_at
+            FROM orders
+            WHERE status IN ('confirmed', 'completed')
+            ORDER BY COALESCE(paid_at, created_at) DESC
+        `),
+        db.prepare(`
+            SELECT COUNT(*) AS order_count, COALESCE(SUM(total_cents), 0) AS total_cents
+            FROM orders
+            WHERE status = 'pending'
+        `),
+        db.prepare(`
+            SELECT
+                order_items.product_name,
+                SUM(order_items.quantity) AS quantity_sold,
+                SUM(order_items.line_total_cents) AS revenue_cents
+            FROM order_items
+            JOIN orders ON orders.id = order_items.order_id
+            WHERE orders.status IN ('confirmed', 'completed')
+            GROUP BY order_items.product_name
+            ORDER BY revenue_cents DESC, order_items.product_name
+        `)
+    ]);
+    const payments = results[0].results;
+    const pending = results[1].results[0] || { order_count: 0, total_cents: 0 };
+    const todayKey = torontoDateKey(new Date());
+    const monthKey = todayKey.slice(0, 7);
+    const weekKey = startOfWeekKey(todayKey);
+    const summary = {
+        allTimeCents: 0,
+        todayCents: 0,
+        weekCents: 0,
+        monthCents: 0,
+        paidOrders: payments.length,
+        pendingCents: Number(pending.total_cents) || 0,
+        pendingOrders: Number(pending.order_count) || 0
+    };
+
+    payments.forEach(function (payment) {
+        const amount = Number(payment.total_cents) || 0;
+        const paymentDateKey = torontoDateKey(payment.paid_at);
+        summary.allTimeCents += amount;
+
+        if (paymentDateKey === todayKey) {
+            summary.todayCents += amount;
+        }
+
+        if (paymentDateKey >= weekKey && paymentDateKey <= todayKey) {
+            summary.weekCents += amount;
+        }
+
+        if (paymentDateKey.startsWith(monthKey)) {
+            summary.monthCents += amount;
+        }
+    });
+
+    return jsonResponse({
+        summary,
+        products: results[2].results.map(function (product) {
+            return {
+                name: product.product_name,
+                quantitySold: Number(product.quantity_sold) || 0,
+                revenueCents: Number(product.revenue_cents) || 0
+            };
+        }),
+        recentPayments: payments.slice(0, 10).map(function (payment) {
+            return {
+                orderNumber: payment.order_number,
+                customerName: payment.customer_name,
+                totalCents: Number(payment.total_cents) || 0,
+                paidAt: payment.paid_at
+            };
+        })
+    });
+}
+
 async function handleAdminInventoryUpdate(request, db) {
     let body;
 
@@ -547,7 +670,7 @@ async function handleAdminOrderAction(request, db, orderId) {
     if (action === "confirm") {
         result = await db.prepare(`
             UPDATE orders
-            SET status = 'confirmed'
+            SET status = 'confirmed', paid_at = COALESCE(paid_at, CURRENT_TIMESTAMP)
             WHERE id = ? AND status = 'pending'
         `).bind(orderId).run();
     } else if (action === "complete") {
@@ -627,6 +750,10 @@ export default {
 
                 if (url.pathname === "/api/admin/inventory" && request.method === "PUT") {
                     return handleAdminInventoryUpdate(request, env.DB);
+                }
+
+                if (url.pathname === "/api/admin/sales" && request.method === "GET") {
+                    return handleAdminSales(env.DB);
                 }
 
                 const orderActionMatch = url.pathname.match(/^\/api\/admin\/orders\/([^/]+)\/action$/);
