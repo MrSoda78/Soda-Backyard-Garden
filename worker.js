@@ -35,10 +35,15 @@ const SCHEMA_STATEMENTS = [
     )`,
     `CREATE TABLE IF NOT EXISTS donations (
         id TEXT PRIMARY KEY,
+        donation_number TEXT UNIQUE,
         donor_name TEXT NOT NULL,
+        donor_phone TEXT,
+        donor_email TEXT,
         amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
         note TEXT,
         received_at TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'received',
+        confirmed_at TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
     `CREATE TRIGGER IF NOT EXISTS deduct_inventory_before_order_item
@@ -138,6 +143,31 @@ function ensureDatabase(db) {
                 SET paid_at = created_at
                 WHERE paid_at IS NULL AND status IN ('confirmed', 'completed')
             `).run();
+
+            const donationColumns = await db.prepare("PRAGMA table_info(donations)").all();
+            const donationColumnNames = new Set(donationColumns.results.map(function (column) {
+                return column.name;
+            }));
+            const donationMigrations = [
+                ["donation_number", "ALTER TABLE donations ADD COLUMN donation_number TEXT"],
+                ["donor_phone", "ALTER TABLE donations ADD COLUMN donor_phone TEXT"],
+                ["donor_email", "ALTER TABLE donations ADD COLUMN donor_email TEXT"],
+                ["status", "ALTER TABLE donations ADD COLUMN status TEXT NOT NULL DEFAULT 'received'"],
+                ["confirmed_at", "ALTER TABLE donations ADD COLUMN confirmed_at TEXT"]
+            ];
+
+            for (const [columnName, migration] of donationMigrations) {
+                if (!donationColumnNames.has(columnName)) {
+                    await db.prepare(migration).run();
+                }
+            }
+
+            await db.prepare(`
+                UPDATE donations
+                SET status = 'received',
+                    confirmed_at = COALESCE(confirmed_at, received_at, created_at)
+                WHERE status IS NULL OR status = ''
+            `).run();
         })().catch(function (error) {
             databaseInitialization = undefined;
             throw error;
@@ -178,6 +208,12 @@ function createOrderNumber() {
     const date = new Date().toISOString().slice(0, 10).replaceAll("-", "");
     const suffix = crypto.randomUUID().slice(0, 6).toUpperCase();
     return "SBG-" + date + "-" + suffix;
+}
+
+function createDonationNumber() {
+    const date = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+    const suffix = crypto.randomUUID().slice(0, 6).toUpperCase();
+    return "DON-" + date + "-" + suffix;
 }
 
 function getCookie(request, name) {
@@ -395,6 +431,69 @@ async function handleOrder(request, db) {
     }, 201);
 }
 
+async function handleDonationRequest(request, db) {
+    let body;
+
+    try {
+        body = await request.json();
+    } catch (_error) {
+        return jsonResponse({ error: "The donation information was not valid." }, 400);
+    }
+
+    if (cleanText(body.website, 100)) {
+        return jsonResponse({
+            referenceNumber: "DON-RECEIVED",
+            amount: "$0.00"
+        });
+    }
+
+    const donorName = cleanText(body.donorName, 100);
+    const phone = cleanText(body.phone, 40);
+    const email = cleanText(body.email, 150);
+    const note = cleanText(body.note, 500);
+    const amountCents = Number(body.amountCents);
+
+    if (donorName.length < 2) {
+        return jsonResponse({ error: "Please enter your full name." }, 400);
+    }
+
+    if (phone.replace(/\D/g, "").length < 7) {
+        return jsonResponse({ error: "Please enter a valid phone number." }, 400);
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return jsonResponse({ error: "Please enter a valid email address or leave it blank." }, 400);
+    }
+
+    if (!Number.isInteger(amountCents) || amountCents < 100 || amountCents > 100000000) {
+        return jsonResponse({ error: "Please enter a valid donation amount of at least $1.00." }, 400);
+    }
+
+    const referenceNumber = createDonationNumber();
+    const submittedDate = torontoDateKey(new Date());
+
+    await db.prepare(`
+        INSERT INTO donations (
+            id, donation_number, donor_name, donor_phone, donor_email,
+            amount_cents, note, received_at, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+    `).bind(
+        crypto.randomUUID(),
+        referenceNumber,
+        donorName,
+        phone,
+        email || null,
+        amountCents,
+        note || null,
+        submittedDate
+    ).run();
+
+    return jsonResponse({
+        referenceNumber,
+        amount: "$" + (amountCents / 100).toFixed(2)
+    }, 201);
+}
+
 async function handleAdminLogin(request, env) {
     if (!env.ADMIN_PASSWORD) {
         return jsonResponse({
@@ -541,17 +640,29 @@ async function handleAdminSales(db) {
         db.prepare(`
             SELECT COUNT(*) AS donation_count, COALESCE(SUM(amount_cents), 0) AS total_cents
             FROM donations
+            WHERE status = 'received'
         `),
         db.prepare(`
-            SELECT id, donor_name, amount_cents, note, received_at
+            SELECT
+                id, donation_number, donor_name, donor_phone, donor_email,
+                amount_cents, note, received_at, status, confirmed_at, created_at
             FROM donations
-            ORDER BY received_at DESC, created_at DESC
+            WHERE status <> 'cancelled'
+            ORDER BY
+                CASE WHEN status = 'pending' THEN 0 ELSE 1 END,
+                created_at DESC
             LIMIT 100
+        `),
+        db.prepare(`
+            SELECT COUNT(*) AS donation_count, COALESCE(SUM(amount_cents), 0) AS total_cents
+            FROM donations
+            WHERE status = 'pending'
         `)
     ]);
     const payments = results[0].results;
     const pending = results[1].results[0] || { order_count: 0, total_cents: 0 };
     const donationSummary = results[3].results[0] || { donation_count: 0, total_cents: 0 };
+    const pendingDonationSummary = results[5].results[0] || { donation_count: 0, total_cents: 0 };
     const todayKey = torontoDateKey(new Date());
     const monthKey = todayKey.slice(0, 7);
     const weekKey = startOfWeekKey(todayKey);
@@ -564,7 +675,9 @@ async function handleAdminSales(db) {
         pendingCents: Number(pending.total_cents) || 0,
         pendingOrders: Number(pending.order_count) || 0,
         donationsCents: Number(donationSummary.total_cents) || 0,
-        donationCount: Number(donationSummary.donation_count) || 0
+        donationCount: Number(donationSummary.donation_count) || 0,
+        pendingDonationCents: Number(pendingDonationSummary.total_cents) || 0,
+        pendingDonationCount: Number(pendingDonationSummary.donation_count) || 0
     };
 
     payments.forEach(function (payment) {
@@ -605,10 +718,16 @@ async function handleAdminSales(db) {
         donations: results[4].results.map(function (donation) {
             return {
                 id: donation.id,
+                referenceNumber: donation.donation_number,
                 donorName: donation.donor_name,
+                phone: donation.donor_phone,
+                email: donation.donor_email,
                 amountCents: Number(donation.amount_cents) || 0,
                 note: donation.note,
-                receivedAt: donation.received_at
+                receivedAt: donation.received_at,
+                status: donation.status,
+                confirmedAt: donation.confirmed_at,
+                createdAt: donation.created_at
             };
         })
     });
@@ -647,17 +766,55 @@ async function handleAdminDonationCreate(request, db) {
     }
 
     await db.prepare(`
-        INSERT INTO donations (id, donor_name, amount_cents, note, received_at)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO donations (
+            id, donation_number, donor_name, amount_cents, note,
+            received_at, status, confirmed_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, 'received', ?)
     `).bind(
         crypto.randomUUID(),
+        createDonationNumber(),
         donorName,
         amountCents,
         note || null,
+        receivedAt,
         receivedAt
     ).run();
 
     return jsonResponse({ success: true }, 201);
+}
+
+async function handleAdminDonationAction(request, db, donationId) {
+    let body;
+
+    try {
+        body = await request.json();
+    } catch (_error) {
+        return jsonResponse({ error: "The donation action was not valid." }, 400);
+    }
+
+    const action = cleanText(body.action, 20);
+
+    if (action !== "confirm") {
+        return jsonResponse({ error: "That donation action is not supported." }, 400);
+    }
+
+    const receivedAt = torontoDateKey(new Date());
+    const result = await db.prepare(`
+        UPDATE donations
+        SET status = 'received',
+            received_at = ?,
+            confirmed_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND status = 'pending'
+    `).bind(receivedAt, donationId).run();
+
+    if (!result.meta || result.meta.changes < 1) {
+        return jsonResponse({
+            error: "The donation has already changed status. Refresh the Sales page and try again."
+        }, 409);
+    }
+
+    return jsonResponse({ success: true });
 }
 
 async function handleAdminDonationDelete(db, donationId) {
@@ -824,6 +981,10 @@ export default {
                 return handleOrder(request, env.DB);
             }
 
+            if (url.pathname === "/api/donations" && request.method === "POST") {
+                return handleDonationRequest(request, env.DB);
+            }
+
             if (url.pathname.startsWith("/api/admin/")) {
                 if (!(await isAdmin(request, env))) {
                     return jsonResponse({ error: "Admin sign-in required." }, 401);
@@ -853,6 +1014,12 @@ export default {
 
                 if (donationMatch && request.method === "DELETE") {
                     return handleAdminDonationDelete(env.DB, donationMatch[1]);
+                }
+
+                const donationActionMatch = url.pathname.match(/^\/api\/admin\/donations\/([^/]+)\/action$/);
+
+                if (donationActionMatch && request.method === "POST") {
+                    return handleAdminDonationAction(request, env.DB, donationActionMatch[1]);
                 }
 
                 const orderActionMatch = url.pathname.match(/^\/api\/admin\/orders\/([^/]+)\/action$/);

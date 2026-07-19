@@ -243,6 +243,11 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("salesDonations").textContent = formatMoney(summary.donationsCents);
         document.getElementById("salesDonationCount").textContent =
             summary.donationCount + (summary.donationCount === 1 ? " donation" : " donations");
+        document.getElementById("salesPendingDonations").textContent =
+            formatMoney(summary.pendingDonationCents);
+        document.getElementById("salesPendingDonationCount").textContent =
+            summary.pendingDonationCount +
+            (summary.pendingDonationCount === 1 ? " request" : " requests");
 
         salesProductRows.replaceChildren();
 
@@ -277,16 +282,22 @@ document.addEventListener("DOMContentLoaded", function () {
         donationRows.replaceChildren();
 
         if (result.donations.length === 0) {
-            appendSalesRow(donationRows, 5, "No donations have been recorded yet.");
+            appendSalesRow(donationRows, 8, "No donation requests or payments have been recorded yet.");
         } else {
             result.donations.forEach(function (donation) {
                 const row = document.createElement("tr");
-                const receivedDate = new Date(donation.receivedAt + "T12:00:00");
+                const displayDate = donation.status === "pending"
+                    ? new Date(donation.createdAt.replace(" ", "T") + "Z").toLocaleDateString()
+                    : new Date(donation.receivedAt + "T12:00:00").toLocaleDateString();
+                const contact = [donation.phone, donation.email].filter(Boolean).join(" / ") || "—";
                 [
+                    donation.referenceNumber || "Manual entry",
                     donation.donorName,
-                    receivedDate.toLocaleDateString(),
+                    displayDate,
+                    contact,
                     donation.note || "—",
-                    formatMoney(donation.amountCents)
+                    formatMoney(donation.amountCents),
+                    donation.status === "pending" ? "Pending" : "Received"
                 ].forEach(function (value) {
                     const cell = document.createElement("td");
                     cell.textContent = value;
@@ -294,6 +305,20 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
 
                 const actionCell = document.createElement("td");
+                if (donation.status === "pending") {
+                    const confirmButton = document.createElement("button");
+                    confirmButton.type = "button";
+                    confirmButton.className = "donation-confirm";
+                    confirmButton.textContent = "Confirm Received";
+                    confirmButton.dataset.donationAction = "confirm";
+                    confirmButton.dataset.donationId = donation.id;
+                    confirmButton.setAttribute(
+                        "aria-label",
+                        "Confirm donation received from " + donation.donorName
+                    );
+                    actionCell.appendChild(confirmButton);
+                }
+
                 const deleteButton = document.createElement("button");
                 deleteButton.type = "button";
                 deleteButton.className = "donation-delete";
@@ -570,6 +595,45 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     donationRows.addEventListener("click", async function (event) {
+        const actionButton = event.target.closest("button[data-donation-action]");
+
+        if (actionButton) {
+            if (!window.confirm("Confirm that this donation payment has been received?")) {
+                return;
+            }
+
+            actionButton.disabled = true;
+            setMessage(donationMessage, "Confirming donation...", "success");
+
+            try {
+                const response = await fetch(
+                    "/api/admin/donations/" +
+                        encodeURIComponent(actionButton.dataset.donationId) +
+                        "/action",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Accept": "application/json",
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ action: actionButton.dataset.donationAction })
+                    }
+                );
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || "The donation could not be confirmed.");
+                }
+
+                await loadSales();
+                setMessage(donationMessage, "Donation confirmed as received.", "success");
+            } catch (error) {
+                actionButton.disabled = false;
+                setMessage(donationMessage, error.message, "error");
+            }
+            return;
+        }
+
         const button = event.target.closest("button[data-donation-id]");
 
         if (!button || !window.confirm("Delete this donation entry?")) {

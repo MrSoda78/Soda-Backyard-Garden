@@ -47,22 +47,106 @@
                     </p>
                 </div>
 
-                <div class="donate-options">
-                    <div class="donate-option">
+                <div class="donate-options" aria-label="Suggested donation amounts">
+                    <button type="button" class="donate-option" data-donation-amount="10">
                         <span class="amount">$10</span>
                         <span class="description">Seeds & supplies</span>
-                    </div>
-                    <div class="donate-option">
+                    </button>
+                    <button type="button" class="donate-option" data-donation-amount="25">
                         <span class="amount">$25</span>
                         <span class="description">Soil & compost</span>
-                    </div>
-                    <div class="donate-option">
+                    </button>
+                    <button type="button" class="donate-option" data-donation-amount="50">
                         <span class="amount">$50</span>
                         <span class="description">Tools & equipment</span>
-                    </div>
-                    <div class="donate-option">
+                    </button>
+                    <button type="button" class="donate-option" data-donation-amount="100">
                         <span class="amount">$100</span>
                         <span class="description">Season supporter</span>
+                    </button>
+                </div>
+
+                <div class="order-layout donation-layout">
+                    <div class="order-info">
+                        <h3>How It Works</h3>
+                        <p>This form sends us your donation request. It does not collect or transfer money.</p>
+                        <ul>
+                            <li>Choose a suggested amount or enter your own.</li>
+                            <li>Submit your contact information.</li>
+                            <li>We will contact you with the current payment arrangements.</li>
+                            <li>Your contribution is recorded as received only after payment is confirmed.</li>
+                        </ul>
+                    </div>
+
+                    <div class="order-form">
+                        <form id="publicDonationForm" action="/api/donations" method="POST" data-email-endpoint="https://formsubmit.co/ajax/sodabackyardgarden@outlook.com">
+                            <input type="hidden" name="_subject" value="New Garden Donation Request">
+                            <input type="hidden" name="_captcha" value="false">
+                            <input type="hidden" name="_template" value="table">
+                            <div class="form-honeypot" aria-hidden="true">
+                                <label for="donationWebsite">Leave this field blank</label>
+                                <input type="text" id="donationWebsite" name="website" tabindex="-1" autocomplete="off">
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="donorFullName">Full Name</label>
+                                    <input type="text" id="donorFullName" name="donorName" maxlength="100" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="donorPhone">Phone Number</label>
+                                    <input type="tel" id="donorPhone" name="phone" maxlength="40" required>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="donorEmail">Email Address</label>
+                                    <input type="email" id="donorEmail" name="email" maxlength="150">
+                                </div>
+                                <div class="form-group">
+                                    <label for="publicDonationAmount">Donation Amount</label>
+                                    <div class="currency-input">
+                                        <span aria-hidden="true">$</span>
+                                        <input type="number" id="publicDonationAmount" name="amount" min="1" max="1000000" step="0.01" placeholder="0.00" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="donorMessage">Message <span class="optional-label">(optional)</span></label>
+                                <textarea id="donorMessage" name="note" rows="4" maxlength="500" placeholder="A message for the garden..."></textarea>
+                            </div>
+
+                            <p class="donation-payment-note"><strong>Please note:</strong> No payment is taken on this website. We will contact you after receiving this request.</p>
+                            <button type="submit" class="button">Submit Donation Request</button>
+                            <p id="donationFormMessage" class="form-message"></p>
+                        </form>
+
+                        <section id="donationConfirmation" class="order-confirmation" tabindex="-1" hidden>
+                            <div class="confirmation-check" aria-hidden="true">&#10003;</div>
+                            <p class="confirmation-kicker">Donation request received</p>
+                            <h2>Thank you, <span id="donationConfirmationName">friend</span>!</h2>
+                            <p>Your support request has been sent to Soda Backyard Garden. No payment has been taken yet.</p>
+
+                            <div class="confirmation-summary">
+                                <p>Your reference number</p>
+                                <strong id="donationConfirmationNumber"></strong>
+                                <span id="donationConfirmationAmount"></span>
+                            </div>
+
+                            <div class="confirmation-next-steps">
+                                <h3>What happens next?</h3>
+                                <ol>
+                                    <li>We will review your request.</li>
+                                    <li>We will contact you with the current payment arrangements.</li>
+                                    <li>Your donation will be recorded after the payment is received.</li>
+                                </ol>
+                            </div>
+
+                            <p class="confirmation-help">Need to make a change? Email <a href="mailto:sodabackyardgarden@outlook.com">sodabackyardgarden@outlook.com</a> and include your reference number.</p>
+                            <button type="button" class="button secondary" id="makeAnotherDonation">Make Another Donation</button>
+                        </section>
                     </div>
                 </div>
 
@@ -74,8 +158,6 @@
                 <div class="donate-buttons">
                     <a href="index.html" class="button secondary">Return Home</a>
                 </div>
-
-                <p class="donate-note">Donation link coming soon.</p>
 
             </div>
         </section>

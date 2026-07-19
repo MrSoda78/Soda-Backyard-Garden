@@ -970,6 +970,8 @@ textarea {
     border-radius: 12px;
     text-align: center;
     border: 2px solid var(--green-border);
+    color: inherit;
+    font: inherit;
     cursor: pointer;
     transition: 0.3s;
 }
@@ -987,9 +989,45 @@ textarea {
 }
 
 .donate-option .description {
+    display: block;
     color: var(--text-soft);
     font-size: 0.9rem;
     margin-top: 6px;
+}
+
+.donation-layout {
+    margin-bottom: 35px;
+}
+
+.donation-payment-note {
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    border-left: 4px solid var(--green-main);
+    border-radius: 6px;
+    background: var(--green-light);
+    color: var(--text-soft);
+}
+
+.currency-input {
+    position: relative;
+}
+
+.currency-input span {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    color: var(--text-soft);
+    transform: translateY(-50%);
+}
+
+.currency-input input {
+    padding-left: 30px;
+}
+
+.optional-label {
+    color: var(--text-soft);
+    font-size: 0.85rem;
+    font-weight: normal;
 }
 
 /* ==========================================================
@@ -1787,6 +1825,28 @@ footer a:hover {
     font-size: 0.82rem;
     font-weight: bold;
     cursor: pointer;
+}
+
+.donation-confirm {
+    margin: 0 8px 6px 0;
+    padding: 7px 10px;
+    border: 1px solid var(--green-main);
+    border-radius: 7px;
+    color: white;
+    background: var(--green-main);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.donation-confirm:hover {
+    background: var(--green-dark);
+}
+
+.donation-confirm:disabled {
+    cursor: wait;
+    opacity: 0.6;
 }
 
 .donation-delete:hover {

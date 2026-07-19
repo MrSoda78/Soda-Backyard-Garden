@@ -128,13 +128,18 @@
                                 <strong id="salesDonations">$0.00</strong>
                                 <small id="salesDonationCount">0 donations</small>
                             </article>
+                            <article class="sales-stat sales-stat-pending">
+                                <span>Pending donations</span>
+                                <strong id="salesPendingDonations">$0.00</strong>
+                                <small id="salesPendingDonationCount">0 requests</small>
+                            </article>
                         </div>
 
                         <section class="sales-card donation-card">
                             <div class="donation-heading">
                                 <div>
-                                    <h3>Donations Received</h3>
-                                    <p>Keep donations separate from product sales while maintaining one private record.</p>
+                                    <h3>Donation Requests &amp; Payments</h3>
+                                    <p>Public requests appear as pending. Confirm them only after the money has been received.</p>
                                 </div>
                             </div>
 
@@ -163,10 +168,13 @@
                                 <table class="sales-table donation-table">
                                     <thead>
                                         <tr>
+                                            <th scope="col">Reference</th>
                                             <th scope="col">Received From</th>
                                             <th scope="col">Date</th>
+                                            <th scope="col">Contact</th>
                                             <th scope="col">Note</th>
                                             <th scope="col">Amount</th>
+                                            <th scope="col">Status</th>
                                             <th scope="col">Action</th>
                                         </tr>
                                     </thead>

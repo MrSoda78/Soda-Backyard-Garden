@@ -417,4 +417,145 @@ document.addEventListener("DOMContentLoaded", function () {
 
         updateOrderTotal();
     }
+
+    const publicDonationForm = document.getElementById("publicDonationForm");
+
+    if (publicDonationForm) {
+        const amountInput = publicDonationForm.elements.namedItem("amount");
+        const formMessageElement = document.getElementById("donationFormMessage");
+        const confirmation = document.getElementById("donationConfirmation");
+        const confirmationNameElement = document.getElementById("donationConfirmationName");
+        const confirmationNumberElement = document.getElementById("donationConfirmationNumber");
+        const confirmationAmountElement = document.getElementById("donationConfirmationAmount");
+        const anotherDonationButton = document.getElementById("makeAnotherDonation");
+        const submitButton = publicDonationForm.querySelector('button[type="submit"]');
+        const amountButtons = Array.from(document.querySelectorAll("[data-donation-amount]"));
+        let donationSubmitting = false;
+
+        function selectDonationAmount(amount) {
+            amountInput.value = Number(amount).toFixed(2);
+            amountButtons.forEach(function (button) {
+                const selected = Number(button.dataset.donationAmount) === Number(amount);
+                button.classList.toggle("selected", selected);
+                button.setAttribute("aria-pressed", selected.toString());
+            });
+            amountInput.focus();
+        }
+
+        async function sendDonationEmail(referenceNumber) {
+            const emailEndpoint = publicDonationForm.dataset.emailEndpoint;
+
+            if (!emailEndpoint) {
+                return;
+            }
+
+            const emailData = new FormData(publicDonationForm);
+            emailData.set("_subject", "New Garden Donation Request " + referenceNumber);
+            emailData.set("referenceNumber", referenceNumber);
+
+            const response = await fetch(emailEndpoint, {
+                method: "POST",
+                body: emailData,
+                headers: { "Accept": "application/json" }
+            });
+
+            if (!response.ok) {
+                throw new Error("The donation request was saved, but the email notification failed.");
+            }
+        }
+
+        amountButtons.forEach(function (button) {
+            button.setAttribute("aria-pressed", "false");
+            button.addEventListener("click", function () {
+                selectDonationAmount(button.dataset.donationAmount);
+            });
+        });
+
+        amountInput.addEventListener("input", function () {
+            amountButtons.forEach(function (button) {
+                const selected = Number(button.dataset.donationAmount) === Number(amountInput.value);
+                button.classList.toggle("selected", selected);
+                button.setAttribute("aria-pressed", selected.toString());
+            });
+        });
+
+        publicDonationForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            if (donationSubmitting) {
+                return;
+            }
+
+            const amount = Number.parseFloat(amountInput.value);
+
+            if (!Number.isFinite(amount) || amount < 1) {
+                formMessageElement.textContent = "Please enter a donation amount of at least $1.00.";
+                formMessageElement.className = "form-message error";
+                return;
+            }
+
+            donationSubmitting = true;
+            submitButton.disabled = true;
+            submitButton.textContent = "Submitting request...";
+            formMessageElement.textContent = "";
+            formMessageElement.className = "form-message";
+
+            try {
+                const response = await fetch("/api/donations", {
+                    method: "POST",
+                    headers: {
+                        "Accept": "application/json",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        donorName: publicDonationForm.elements.namedItem("donorName").value,
+                        phone: publicDonationForm.elements.namedItem("phone").value,
+                        email: publicDonationForm.elements.namedItem("email").value,
+                        amountCents: Math.round(amount * 100),
+                        note: publicDonationForm.elements.namedItem("note").value,
+                        website: publicDonationForm.elements.namedItem("website").value
+                    })
+                });
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || "We could not submit your donation request.");
+                }
+
+                try {
+                    await sendDonationEmail(result.referenceNumber);
+                } catch (emailError) {
+                    console.warn(emailError);
+                }
+
+                const donorName = publicDonationForm.elements.namedItem("donorName").value.trim();
+                publicDonationForm.reset();
+                amountButtons.forEach(function (button) {
+                    button.classList.remove("selected");
+                    button.setAttribute("aria-pressed", "false");
+                });
+                confirmationNameElement.textContent = donorName.split(/\s+/)[0] || "friend";
+                confirmationNumberElement.textContent = result.referenceNumber;
+                confirmationAmountElement.textContent = "Donation amount: " + result.amount;
+                publicDonationForm.hidden = true;
+                confirmation.hidden = false;
+                confirmation.focus();
+            } catch (error) {
+                formMessageElement.textContent = error.message || "We could not submit your donation request. Please try again.";
+                formMessageElement.className = "form-message error";
+            } finally {
+                donationSubmitting = false;
+                submitButton.disabled = false;
+                submitButton.textContent = "Submit Donation Request";
+            }
+        });
+
+        anotherDonationButton.addEventListener("click", function () {
+            confirmation.hidden = true;
+            publicDonationForm.hidden = false;
+            formMessageElement.textContent = "";
+            formMessageElement.className = "form-message";
+            publicDonationForm.elements.namedItem("donorName").focus();
+        });
+    }
 });

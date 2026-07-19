@@ -37,10 +37,15 @@ CREATE TABLE IF NOT EXISTS order_items (
 
 CREATE TABLE IF NOT EXISTS donations (
     id TEXT PRIMARY KEY,
+    donation_number TEXT UNIQUE,
     donor_name TEXT NOT NULL,
+    donor_phone TEXT,
+    donor_email TEXT,
     amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
     note TEXT,
     received_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'received',
+    confirmed_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
