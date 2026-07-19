@@ -78,8 +78,11 @@ const SCHEMA_STATEMENTS = [
         ('menopause-tea', 'Perimenopause / Menopause Tea Mix', 'mix', 700, NULL, 1, 120, 1),
         ('mullein-tea', 'Mullein Tea Mix', 'mix', 600, NULL, 1, 130, 1),
         ('red-raspberry-leaf-tea', 'Red Raspberry Leaf Tea Mix', 'mix', 0, NULL, 1, 140, 0),
-        ('hardo-bread', 'Hardo Bread', 'loaf', 0, 12, 0, 150, 0)
-    ON CONFLICT(id) DO NOTHING`
+        ('hardo-bread', 'Hardo Bread', 'loaf', 500, 12, 0, 150, 1)
+    ON CONFLICT(id) DO NOTHING`,
+    `UPDATE products
+    SET price_cents = 500, active = 1
+    WHERE id = 'hardo-bread' AND price_cents = 0`
 ];
 
 let databaseInitialization;
