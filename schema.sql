@@ -82,7 +82,9 @@ INSERT INTO products (id, name, unit, price_cents, quantity, made_to_order, sort
     ('menopause-tea', 'Perimenopause / Menopause Tea Mix', 'mix', 700, NULL, 1, 120, 1),
     ('mullein-tea', 'Mullein Tea Mix', 'mix', 600, NULL, 1, 130, 1),
     ('red-raspberry-leaf-tea', 'Red Raspberry Leaf Tea Mix', 'mix', 0, NULL, 1, 140, 0),
-    ('hardo-bread', 'Hardo Bread', 'loaf', 500, 12, 0, 150, 1)
+    ('hardo-bread', 'Hardo Bread', 'loaf', 500, 12, 0, 150, 1),
+    ('brown-eggs', 'Brown Eggs', 'dozen', 600, 0, 0, 160, 1),
+    ('white-eggs-flat', 'Flat of White Eggs', 'flat', 1000, 0, 0, 170, 1)
 ON CONFLICT(id) DO NOTHING;
 
 UPDATE products

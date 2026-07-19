@@ -613,6 +613,10 @@ textarea:focus-visible {
     object-position: center 55%;
 }
 
+.product-section-heading {
+    margin-top: 48px;
+}
+
 .section-action {
     margin-top: 30px;
     text-align: center;
