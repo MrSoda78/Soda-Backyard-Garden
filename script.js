@@ -106,6 +106,11 @@ document.addEventListener("DOMContentLoaded", function () {
         return quantity + " available";
     }
 
+    function formatProductPrice(product) {
+        const amount = "$" + (product.priceCents / 100).toFixed(2);
+        return product.unit === "each" ? amount + " each" : amount + " per " + product.unit;
+    }
+
     function renderInventory(products) {
         const productMap = new Map(products.map(function (product) {
             return [product.id, product];
@@ -131,12 +136,32 @@ document.addEventListener("DOMContentLoaded", function () {
             element.classList.toggle("sold-out", !hasStock);
         });
 
+        document.querySelectorAll("[data-price-display]").forEach(function (element) {
+            const product = productMap.get(element.dataset.priceDisplay);
+            element.textContent = product ? formatProductPrice(product) : "Price to be determined";
+            element.classList.toggle("price-placeholder", !product);
+        });
+
+        document.querySelectorAll("[data-product-status]").forEach(function (element) {
+            const product = productMap.get(element.dataset.productStatus);
+            const isAvailable = product && (product.madeToOrder || product.quantity > 0);
+            element.textContent = !product ? "Coming soon" : (isAvailable ? "Available" : "Sold out");
+            element.classList.toggle("coming", !product);
+            element.classList.toggle("available", Boolean(isAvailable));
+            element.classList.toggle("sold-out", Boolean(product) && !isAvailable);
+        });
+
+        document.querySelectorAll("[data-coming-soon-note]").forEach(function (element) {
+            element.hidden = productMap.has(element.dataset.comingSoonNote);
+        });
+
         quantityInputs.forEach(function (input) {
             const product = productMap.get(input.dataset.productId);
             const stockLabel = document.querySelector('[data-order-stock="' + input.dataset.productId + '"]');
 
             if (!product) {
                 input.disabled = true;
+                input.value = "0";
                 return;
             }
 
@@ -181,7 +206,12 @@ document.addEventListener("DOMContentLoaded", function () {
         return result.products;
     }
 
-    if (document.querySelector("[data-stock]") || orderForm) {
+    if (
+        document.querySelector("[data-stock]") ||
+        document.querySelector("[data-price-display]") ||
+        document.querySelector("[data-product-status]") ||
+        orderForm
+    ) {
         quantityInputs.forEach(function (input) {
             if (input.dataset.productId.indexOf("-tea") === -1) {
                 input.disabled = true;

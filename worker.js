@@ -63,26 +63,23 @@ const SCHEMA_STATEMENTS = [
               WHERE order_id = NEW.id
           );
     END`,
-    `INSERT INTO products (id, name, unit, price_cents, quantity, made_to_order, sort_order) VALUES
-        ('callaloo', 'Callaloo, vacuum sealed', 'pack', 600, 11, 0, 10),
-        ('beets', 'Beets', 'bunch', 600, 2, 0, 20),
-        ('yellow-zucchini', 'Yellow Zucchini', 'each', 100, 8, 0, 30),
-        ('green-zucchini', 'Green Zucchini', 'each', 100, 6, 0, 40),
-        ('lebanese-zucchini', 'Lebanese Zucchini', 'each', 100, 2, 0, 50),
-        ('small-courgette', 'Small Courgette', 'each', 100, 2, 0, 60),
-        ('dragon-tongue-beans', 'Dragon Tongue Beans', 'litre', 600, NULL, 1, 70),
-        ('purple-beans', 'Purple Beans', 'litre', 600, NULL, 1, 80),
-        ('green-beans', 'Green Beans', 'litre', 600, NULL, 1, 90),
-        ('cold-flu-tea', 'Cold & Flu Tea Mix', 'mix', 600, NULL, 1, 100),
-        ('menopause-tea', 'Perimenopause / Menopause Tea Mix', 'mix', 700, NULL, 1, 110),
-        ('mullein-tea', 'Mullein Tea Mix', 'mix', 600, NULL, 1, 120)
-    ON CONFLICT(id) DO UPDATE SET
-        name = excluded.name,
-        unit = excluded.unit,
-        price_cents = excluded.price_cents,
-        made_to_order = excluded.made_to_order,
-        sort_order = excluded.sort_order,
-        active = 1`
+    `INSERT INTO products (id, name, unit, price_cents, quantity, made_to_order, sort_order, active) VALUES
+        ('callaloo', 'Callaloo, vacuum sealed', 'pack', 600, 11, 0, 10, 1),
+        ('beets', 'Beets', 'bunch', 600, 2, 0, 20, 1),
+        ('yellow-zucchini', 'Yellow Zucchini', 'each', 100, 8, 0, 30, 1),
+        ('green-zucchini', 'Green Zucchini', 'each', 100, 6, 0, 40, 1),
+        ('lebanese-zucchini', 'Lebanese Zucchini', 'each', 100, 2, 0, 50, 1),
+        ('small-courgette', 'Small Courgette', 'each', 100, 2, 0, 60, 1),
+        ('dragon-tongue-beans', 'Dragon Tongue Beans', 'litre', 600, NULL, 1, 70, 1),
+        ('purple-beans', 'Purple Beans', 'litre', 600, NULL, 1, 80, 1),
+        ('green-beans', 'Green Beans', 'litre', 600, NULL, 1, 90, 1),
+        ('potatoes', 'Potatoes', 'bag', 0, 0, 0, 100, 0),
+        ('cold-flu-tea', 'Cold & Flu Tea Mix', 'mix', 600, NULL, 1, 110, 1),
+        ('menopause-tea', 'Perimenopause / Menopause Tea Mix', 'mix', 700, NULL, 1, 120, 1),
+        ('mullein-tea', 'Mullein Tea Mix', 'mix', 600, NULL, 1, 130, 1),
+        ('red-raspberry-leaf-tea', 'Red Raspberry Leaf Tea Mix', 'mix', 0, NULL, 1, 140, 0),
+        ('hardo-bread', 'Hardo Bread', 'loaf', 0, 12, 0, 150, 0)
+    ON CONFLICT(id) DO NOTHING`
 ];
 
 let databaseInitialization;
@@ -265,6 +262,10 @@ async function handleOrder(request, db) {
             return jsonResponse({ error: "One of the selected quantities is not valid." }, 400);
         }
 
+        if (productId === "hardo-bread" && quantity > 1) {
+            return jsonResponse({ error: "Hardo Bread is limited to one loaf per household." }, 400);
+        }
+
         requestedItems.push({ product, quantity });
     }
 
@@ -425,6 +426,100 @@ async function handleAdminOrders(db) {
     return jsonResponse({ orders: Array.from(orderMap.values()) });
 }
 
+async function handleAdminInventory(db) {
+    const result = await db.prepare(`
+        SELECT id, name, unit, price_cents, quantity, made_to_order, sort_order, active
+        FROM products
+        ORDER BY sort_order, name
+    `).all();
+
+    return jsonResponse({
+        products: result.results.map(function (product) {
+            return {
+                id: product.id,
+                name: product.name,
+                unit: product.unit,
+                priceCents: product.price_cents,
+                quantity: product.quantity,
+                madeToOrder: product.made_to_order === 1,
+                active: product.active === 1
+            };
+        })
+    });
+}
+
+async function handleAdminInventoryUpdate(request, db) {
+    let body;
+
+    try {
+        body = await request.json();
+    } catch (_error) {
+        return jsonResponse({ error: "The inventory changes were not valid." }, 400);
+    }
+
+    if (!body.products || !Array.isArray(body.products) || body.products.length === 0) {
+        return jsonResponse({ error: "No inventory changes were received." }, 400);
+    }
+
+    const existingResult = await db.prepare("SELECT id FROM products").all();
+    const existingIds = new Set(existingResult.results.map(function (product) {
+        return product.id;
+    }));
+    const seenIds = new Set();
+    const updates = [];
+
+    for (const submitted of body.products) {
+        const id = cleanText(submitted.id, 100);
+        const name = cleanText(submitted.name, 100);
+        const unit = cleanText(submitted.unit, 30).toLowerCase();
+        const priceCents = Number(submitted.priceCents);
+        const madeToOrder = submitted.madeToOrder === true;
+        const active = submitted.active === true;
+        const quantity = madeToOrder ? null : Number(submitted.quantity);
+
+        if (!existingIds.has(id) || seenIds.has(id)) {
+            return jsonResponse({ error: "One of the inventory products was not recognized." }, 400);
+        }
+
+        if (name.length < 2 || unit.length < 1) {
+            return jsonResponse({ error: "Every product needs a name and selling unit." }, 400);
+        }
+
+        if (!Number.isInteger(priceCents) || priceCents < 0 || priceCents > 1000000) {
+            return jsonResponse({ error: "Enter a valid price for " + name + "." }, 400);
+        }
+
+        if (!madeToOrder && (!Number.isInteger(quantity) || quantity < 0 || quantity > 1000000)) {
+            return jsonResponse({ error: "Enter a valid quantity for " + name + "." }, 400);
+        }
+
+        if (active && priceCents === 0) {
+            return jsonResponse({ error: name + " needs a price before it can be available to order." }, 400);
+        }
+
+        seenIds.add(id);
+        updates.push(
+            db.prepare(`
+                UPDATE products
+                SET name = ?, unit = ?, price_cents = ?, quantity = ?,
+                    made_to_order = ?, active = ?
+                WHERE id = ?
+            `).bind(
+                name,
+                unit,
+                priceCents,
+                quantity,
+                madeToOrder ? 1 : 0,
+                active ? 1 : 0,
+                id
+            )
+        );
+    }
+
+    await db.batch(updates);
+    return jsonResponse({ success: true });
+}
+
 async function handleAdminOrderAction(request, db, orderId) {
     let body;
 
@@ -459,7 +554,7 @@ async function handleAdminOrderAction(request, db, orderId) {
         return jsonResponse({ error: "That order action is not supported." }, 400);
     }
 
-    if (!result.meta || result.meta.changes !== 1) {
+    if (!result.meta || result.meta.changes < 1) {
         return jsonResponse({
             error: "The order has already changed status. Refresh the order list and try again."
         }, 409);
@@ -512,6 +607,14 @@ export default {
 
                 if (url.pathname === "/api/admin/orders" && request.method === "GET") {
                     return handleAdminOrders(env.DB);
+                }
+
+                if (url.pathname === "/api/admin/inventory" && request.method === "GET") {
+                    return handleAdminInventory(env.DB);
+                }
+
+                if (url.pathname === "/api/admin/inventory" && request.method === "PUT") {
+                    return handleAdminInventoryUpdate(request, env.DB);
                 }
 
                 const orderActionMatch = url.pathname.match(/^\/api\/admin\/orders\/([^/]+)\/action$/);

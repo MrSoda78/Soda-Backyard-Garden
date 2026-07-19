@@ -1349,6 +1349,7 @@ footer a:hover {
 ========================================================== */
 
 .admin-header,
+.admin-dashboard-bar,
 .admin-toolbar,
 .admin-order-heading,
 .admin-toolbar-actions,
@@ -1357,6 +1358,34 @@ footer a:hover {
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+}
+
+.admin-dashboard-bar {
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #dce8dc;
+}
+
+.admin-tabs {
+    display: flex;
+    gap: 8px;
+}
+
+.admin-tab {
+    padding: 11px 18px;
+    border: 1px solid #b9cfb9;
+    border-radius: 9px;
+    color: var(--green-dark);
+    background: white;
+    font: inherit;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.admin-tab.active {
+    border-color: var(--green-dark);
+    color: white;
+    background: var(--green-dark);
 }
 
 .admin-section {
@@ -1475,14 +1504,91 @@ footer a:hover {
     text-align: center;
 }
 
+.admin-inventory-help {
+    margin: -10px 0 18px;
+    padding: 13px 16px;
+    border-left: 4px solid var(--green-main);
+    background: var(--green-soft);
+}
+
+.admin-inventory-wrap {
+    overflow-x: auto;
+    border: 1px solid #dce8dc;
+    border-radius: 14px;
+    background: white;
+    box-shadow: 0 5px 18px rgba(20, 55, 30, 0.08);
+}
+
+.admin-inventory-table {
+    width: 100%;
+    min-width: 880px;
+    border-collapse: collapse;
+}
+
+.admin-inventory-table th,
+.admin-inventory-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e4ece4;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.admin-inventory-table th {
+    color: var(--green-dark);
+    background: #f3f8f3;
+    font-size: 0.83rem;
+}
+
+.admin-inventory-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.admin-inventory-table input[type="text"],
+.admin-inventory-table input[type="number"] {
+    width: 100%;
+    min-width: 90px;
+    padding: 9px;
+}
+
+.admin-inventory-table .inventory-name {
+    min-width: 210px;
+}
+
+.admin-inventory-table input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    accent-color: var(--green-dark);
+}
+
+.inventory-price {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 5px;
+    font-weight: bold;
+}
+
+.inventory-quantity:disabled {
+    background: #e9ece9;
+}
+
 @media (max-width: 650px) {
     .admin-header,
+    .admin-dashboard-bar,
     .admin-toolbar,
     .admin-order-heading,
     .admin-toolbar-actions,
     .admin-order-actions {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .admin-tabs {
+        width: 100%;
+    }
+
+    .admin-tab {
+        flex: 1;
     }
 }
 

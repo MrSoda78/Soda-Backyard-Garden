@@ -34,19 +34,57 @@
                 </div>
 
                 <div id="adminDashboard" hidden>
-                    <div class="admin-toolbar">
-                        <div>
-                            <h2>Customer Orders</h2>
-                            <p>Confirm paid orders, cancel and return stock, or mark deliveries complete.</p>
+                    <div class="admin-dashboard-bar">
+                        <div class="admin-tabs" role="tablist" aria-label="Garden management">
+                            <button type="button" class="admin-tab active" id="ordersTab" role="tab" aria-selected="true" aria-controls="ordersPanel">Customer Orders</button>
+                            <button type="button" class="admin-tab" id="inventoryTab" role="tab" aria-selected="false" aria-controls="inventoryPanel">Inventory</button>
                         </div>
                         <div class="admin-toolbar-actions">
-                            <button type="button" class="button secondary" id="refreshOrders">Refresh</button>
                             <button type="button" class="button secondary" id="adminLogout">Sign Out</button>
                         </div>
                     </div>
 
-                    <p id="adminMessage" class="form-message"></p>
-                    <div id="ordersList" class="admin-orders" aria-live="polite"></div>
+                    <section id="ordersPanel" role="tabpanel" aria-labelledby="ordersTab">
+                        <div class="admin-toolbar">
+                            <div>
+                                <h2>Customer Orders</h2>
+                                <p>Confirm paid orders, cancel and return stock, or mark deliveries complete.</p>
+                            </div>
+                            <button type="button" class="button secondary" id="refreshOrders">Refresh Orders</button>
+                        </div>
+                        <p id="adminMessage" class="form-message"></p>
+                        <div id="ordersList" class="admin-orders" aria-live="polite"></div>
+                    </section>
+
+                    <section id="inventoryPanel" role="tabpanel" aria-labelledby="inventoryTab" hidden>
+                        <div class="admin-toolbar">
+                            <div>
+                                <h2>Inventory Hub</h2>
+                                <p>Edit the website's prices, quantities, and availability. Orders and cancellations will continue adjusting quantities automatically.</p>
+                            </div>
+                            <div class="admin-toolbar-actions">
+                                <button type="button" class="button secondary" id="refreshInventory">Discard Changes</button>
+                                <button type="button" class="button" id="saveInventory">Save Changes</button>
+                            </div>
+                        </div>
+                        <p class="admin-inventory-help"><strong>Available to order</strong> controls whether customers can select the item. Choose <strong>Made to order</strong> for products that do not use a fixed quantity.</p>
+                        <p id="inventoryMessage" class="form-message"></p>
+                        <div class="admin-inventory-wrap">
+                            <table class="admin-inventory-table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Product</th>
+                                        <th scope="col">Price</th>
+                                        <th scope="col">Quantity</th>
+                                        <th scope="col">Selling unit</th>
+                                        <th scope="col">Made to order</th>
+                                        <th scope="col">Available to order</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventoryRows"></tbody>
+                            </table>
+                        </div>
+                    </section>
                 </div>
             </div>
         </section>

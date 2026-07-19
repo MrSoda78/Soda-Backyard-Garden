@@ -7,6 +7,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const adminMessage = document.getElementById("adminMessage");
     const refreshButton = document.getElementById("refreshOrders");
     const logoutButton = document.getElementById("adminLogout");
+    const ordersTab = document.getElementById("ordersTab");
+    const inventoryTab = document.getElementById("inventoryTab");
+    const ordersPanel = document.getElementById("ordersPanel");
+    const inventoryPanel = document.getElementById("inventoryPanel");
+    const inventoryRows = document.getElementById("inventoryRows");
+    const inventoryMessage = document.getElementById("inventoryMessage");
+    const refreshInventoryButton = document.getElementById("refreshInventory");
+    const saveInventoryButton = document.getElementById("saveInventory");
 
     function formatMoney(cents) {
         return "$" + (cents / 100).toFixed(2);
@@ -43,6 +51,132 @@ document.addEventListener("DOMContentLoaded", function () {
         button.dataset.action = action;
         button.dataset.orderId = orderId;
         return button;
+    }
+
+    function switchPanel(panelName) {
+        const showInventory = panelName === "inventory";
+        ordersPanel.hidden = showInventory;
+        inventoryPanel.hidden = !showInventory;
+        ordersTab.classList.toggle("active", !showInventory);
+        inventoryTab.classList.toggle("active", showInventory);
+        ordersTab.setAttribute("aria-selected", (!showInventory).toString());
+        inventoryTab.setAttribute("aria-selected", showInventory.toString());
+
+        if (showInventory) {
+            loadInventory().catch(function (error) {
+                setMessage(inventoryMessage, error.message, "error");
+            });
+        }
+    }
+
+    function createInventoryInput(type, value, className) {
+        const input = document.createElement("input");
+        input.type = type;
+        input.value = value;
+        input.className = className;
+        return input;
+    }
+
+    function renderInventory(products) {
+        inventoryRows.replaceChildren();
+
+        products.forEach(function (product) {
+            const row = document.createElement("tr");
+            row.dataset.productId = product.id;
+
+            const nameCell = document.createElement("td");
+            const nameInput = createInventoryInput("text", product.name, "inventory-name");
+            nameInput.setAttribute("aria-label", "Product name");
+            nameCell.appendChild(nameInput);
+
+            const priceCell = document.createElement("td");
+            const priceWrap = document.createElement("label");
+            priceWrap.className = "inventory-price";
+            priceWrap.append("$");
+            const priceInput = createInventoryInput("number", (product.priceCents / 100).toFixed(2), "inventory-price-input");
+            priceInput.min = "0";
+            priceInput.max = "10000";
+            priceInput.step = "0.01";
+            priceInput.setAttribute("aria-label", product.name + " price");
+            priceWrap.appendChild(priceInput);
+            priceCell.appendChild(priceWrap);
+
+            const quantityCell = document.createElement("td");
+            const quantityInput = createInventoryInput(
+                "number",
+                product.quantity === null ? "" : product.quantity,
+                "inventory-quantity"
+            );
+            quantityInput.min = "0";
+            quantityInput.max = "1000000";
+            quantityInput.step = "1";
+            quantityInput.disabled = product.madeToOrder;
+            quantityInput.setAttribute("aria-label", product.name + " quantity");
+            quantityCell.appendChild(quantityInput);
+
+            const unitCell = document.createElement("td");
+            const unitInput = createInventoryInput("text", product.unit, "inventory-unit");
+            unitInput.setAttribute("aria-label", product.name + " selling unit");
+            unitCell.appendChild(unitInput);
+
+            const madeCell = document.createElement("td");
+            const madeInput = document.createElement("input");
+            madeInput.type = "checkbox";
+            madeInput.checked = product.madeToOrder;
+            madeInput.className = "inventory-made-to-order";
+            madeInput.setAttribute("aria-label", product.name + " is made to order");
+            madeCell.appendChild(madeInput);
+
+            const activeCell = document.createElement("td");
+            const activeInput = document.createElement("input");
+            activeInput.type = "checkbox";
+            activeInput.checked = product.active;
+            activeInput.className = "inventory-active";
+            activeInput.setAttribute("aria-label", product.name + " is available to order");
+            activeCell.appendChild(activeInput);
+
+            row.append(nameCell, priceCell, quantityCell, unitCell, madeCell, activeCell);
+            inventoryRows.appendChild(row);
+        });
+    }
+
+    async function loadInventory() {
+        setMessage(inventoryMessage, "Loading inventory...", "success");
+        const response = await fetch("/api/admin/inventory", {
+            headers: { "Accept": "application/json" },
+            cache: "no-store"
+        });
+
+        if (response.status === 401) {
+            showLogin();
+            return;
+        }
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || "Inventory could not be loaded.");
+        }
+
+        renderInventory(result.products);
+        setMessage(inventoryMessage, "", "");
+    }
+
+    function collectInventory() {
+        return Array.from(inventoryRows.querySelectorAll("tr")).map(function (row) {
+            const price = Number.parseFloat(row.querySelector(".inventory-price-input").value);
+            const quantityValue = row.querySelector(".inventory-quantity").value;
+
+            return {
+                id: row.dataset.productId,
+                name: row.querySelector(".inventory-name").value,
+                unit: row.querySelector(".inventory-unit").value,
+                priceCents: Math.round(price * 100),
+                quantity: quantityValue === "" ? null : Number(quantityValue),
+                madeToOrder: row.querySelector(".inventory-made-to-order").checked,
+                active: row.querySelector(".inventory-active").checked
+            };
+        });
     }
 
     function renderOrders(orders) {
@@ -209,6 +343,61 @@ document.addEventListener("DOMContentLoaded", function () {
         loadOrders().catch(function (error) {
             setMessage(adminMessage, error.message, "error");
         });
+    });
+
+    ordersTab.addEventListener("click", function () {
+        switchPanel("orders");
+    });
+
+    inventoryTab.addEventListener("click", function () {
+        switchPanel("inventory");
+    });
+
+    inventoryRows.addEventListener("change", function (event) {
+        if (!event.target.classList.contains("inventory-made-to-order")) {
+            return;
+        }
+
+        const quantityInput = event.target.closest("tr").querySelector(".inventory-quantity");
+        quantityInput.disabled = event.target.checked;
+
+        if (!event.target.checked && quantityInput.value === "") {
+            quantityInput.value = "0";
+        }
+    });
+
+    refreshInventoryButton.addEventListener("click", function () {
+        loadInventory().catch(function (error) {
+            setMessage(inventoryMessage, error.message, "error");
+        });
+    });
+
+    saveInventoryButton.addEventListener("click", async function () {
+        saveInventoryButton.disabled = true;
+        setMessage(inventoryMessage, "Saving changes...", "success");
+
+        try {
+            const response = await fetch("/api/admin/inventory", {
+                method: "PUT",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ products: collectInventory() })
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "Inventory could not be saved.");
+            }
+
+            await loadInventory();
+            setMessage(inventoryMessage, "Inventory saved. The website is now using these updates.", "success");
+        } catch (error) {
+            setMessage(inventoryMessage, error.message, "error");
+        } finally {
+            saveInventoryButton.disabled = false;
+        }
     });
 
     logoutButton.addEventListener("click", async function () {

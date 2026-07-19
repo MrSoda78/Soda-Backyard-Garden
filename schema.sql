@@ -67,23 +67,20 @@ BEGIN
       );
 END;
 
-INSERT INTO products (id, name, unit, price_cents, quantity, made_to_order, sort_order) VALUES
-    ('callaloo', 'Callaloo, vacuum sealed', 'pack', 600, 11, 0, 10),
-    ('beets', 'Beets', 'bunch', 600, 2, 0, 20),
-    ('yellow-zucchini', 'Yellow Zucchini', 'each', 100, 8, 0, 30),
-    ('green-zucchini', 'Green Zucchini', 'each', 100, 6, 0, 40),
-    ('lebanese-zucchini', 'Lebanese Zucchini', 'each', 100, 2, 0, 50),
-    ('small-courgette', 'Small Courgette', 'each', 100, 2, 0, 60),
-    ('dragon-tongue-beans', 'Dragon Tongue Beans', 'litre', 600, NULL, 1, 70),
-    ('purple-beans', 'Purple Beans', 'litre', 600, NULL, 1, 80),
-    ('green-beans', 'Green Beans', 'litre', 600, NULL, 1, 90),
-    ('cold-flu-tea', 'Cold & Flu Tea Mix', 'mix', 600, NULL, 1, 100),
-    ('menopause-tea', 'Perimenopause / Menopause Tea Mix', 'mix', 700, NULL, 1, 110),
-    ('mullein-tea', 'Mullein Tea Mix', 'mix', 600, NULL, 1, 120)
-ON CONFLICT(id) DO UPDATE SET
-    name = excluded.name,
-    unit = excluded.unit,
-    price_cents = excluded.price_cents,
-    made_to_order = excluded.made_to_order,
-    sort_order = excluded.sort_order,
-    active = 1;
+INSERT INTO products (id, name, unit, price_cents, quantity, made_to_order, sort_order, active) VALUES
+    ('callaloo', 'Callaloo, vacuum sealed', 'pack', 600, 11, 0, 10, 1),
+    ('beets', 'Beets', 'bunch', 600, 2, 0, 20, 1),
+    ('yellow-zucchini', 'Yellow Zucchini', 'each', 100, 8, 0, 30, 1),
+    ('green-zucchini', 'Green Zucchini', 'each', 100, 6, 0, 40, 1),
+    ('lebanese-zucchini', 'Lebanese Zucchini', 'each', 100, 2, 0, 50, 1),
+    ('small-courgette', 'Small Courgette', 'each', 100, 2, 0, 60, 1),
+    ('dragon-tongue-beans', 'Dragon Tongue Beans', 'litre', 600, NULL, 1, 70, 1),
+    ('purple-beans', 'Purple Beans', 'litre', 600, NULL, 1, 80, 1),
+    ('green-beans', 'Green Beans', 'litre', 600, NULL, 1, 90, 1),
+    ('potatoes', 'Potatoes', 'bag', 0, 0, 0, 100, 0),
+    ('cold-flu-tea', 'Cold & Flu Tea Mix', 'mix', 600, NULL, 1, 110, 1),
+    ('menopause-tea', 'Perimenopause / Menopause Tea Mix', 'mix', 700, NULL, 1, 120, 1),
+    ('mullein-tea', 'Mullein Tea Mix', 'mix', 600, NULL, 1, 130, 1),
+    ('red-raspberry-leaf-tea', 'Red Raspberry Leaf Tea Mix', 'mix', 0, NULL, 1, 140, 0),
+    ('hardo-bread', 'Hardo Bread', 'loaf', 0, 12, 0, 150, 0)
+ON CONFLICT(id) DO NOTHING;
