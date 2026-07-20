@@ -110,15 +110,61 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function renderInventory(products) {
         inventoryRows.replaceChildren();
+        const categoryLabels = {
+            produce: "Fresh Produce — New Product Slots",
+            tea: "Tea Mixes — New Product Slots",
+            baked: "Baked Goods — New Product Slots",
+            "pain-rub": "Pain Rub — New Product Slots"
+        };
+        let lastSlotCategory = "";
+        let currentProductsHeadingAdded = false;
 
         products.forEach(function (product) {
+            if (!product.isSlot && !currentProductsHeadingAdded) {
+                const currentRow = document.createElement("tr");
+                const currentCell = document.createElement("th");
+                currentCell.colSpan = 7;
+                currentCell.scope = "rowgroup";
+                currentCell.className = "inventory-section-heading inventory-current-heading";
+                currentCell.textContent = "Current Products";
+                currentRow.appendChild(currentCell);
+                inventoryRows.appendChild(currentRow);
+                currentProductsHeadingAdded = true;
+            }
+
+            if (product.isSlot && product.category !== lastSlotCategory) {
+                const sectionRow = document.createElement("tr");
+                const sectionCell = document.createElement("th");
+                sectionCell.colSpan = 7;
+                sectionCell.scope = "rowgroup";
+                sectionCell.className = "inventory-section-heading";
+                sectionCell.textContent = categoryLabels[product.category] || "New Product Slots";
+                sectionRow.appendChild(sectionCell);
+                inventoryRows.appendChild(sectionRow);
+                lastSlotCategory = product.category;
+            }
+
             const row = document.createElement("tr");
             row.dataset.productId = product.id;
+            row.classList.toggle("inventory-slot-row", product.isSlot);
 
             const nameCell = document.createElement("td");
             const nameInput = createInventoryInput("text", product.name, "inventory-name");
             nameInput.setAttribute("aria-label", "Product name");
             nameCell.appendChild(nameInput);
+
+            const descriptionCell = document.createElement("td");
+            const descriptionInput = document.createElement("textarea");
+            descriptionInput.value = product.description || "";
+            descriptionInput.className = "inventory-description";
+            descriptionInput.rows = 3;
+            descriptionInput.maxLength = 500;
+            descriptionInput.disabled = !product.isSlot;
+            descriptionInput.placeholder = product.isSlot
+                ? "Describe the product for customers"
+                : "Existing card description is managed on its page";
+            descriptionInput.setAttribute("aria-label", product.name + " description");
+            descriptionCell.appendChild(descriptionInput);
 
             const priceCell = document.createElement("td");
             const priceWrap = document.createElement("label");
@@ -166,7 +212,7 @@ document.addEventListener("DOMContentLoaded", function () {
             activeInput.setAttribute("aria-label", product.name + " is available to order");
             activeCell.appendChild(activeInput);
 
-            row.append(nameCell, priceCell, quantityCell, unitCell, madeCell, activeCell);
+            row.append(nameCell, descriptionCell, priceCell, quantityCell, unitCell, madeCell, activeCell);
             inventoryRows.appendChild(row);
         });
     }
@@ -194,13 +240,14 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function collectInventory() {
-        return Array.from(inventoryRows.querySelectorAll("tr")).map(function (row) {
+        return Array.from(inventoryRows.querySelectorAll("tr[data-product-id]")).map(function (row) {
             const price = Number.parseFloat(row.querySelector(".inventory-price-input").value);
             const quantityValue = row.querySelector(".inventory-quantity").value;
 
             return {
                 id: row.dataset.productId,
                 name: row.querySelector(".inventory-name").value,
+                description: row.querySelector(".inventory-description").value,
                 unit: row.querySelector(".inventory-unit").value,
                 priceCents: Math.round(price * 100),
                 quantity: quantityValue === "" ? null : Number(quantityValue),

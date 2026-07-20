@@ -7,7 +7,10 @@ const SCHEMA_STATEMENTS = [
         quantity INTEGER CHECK (quantity IS NULL OR quantity >= 0),
         made_to_order INTEGER NOT NULL DEFAULT 0 CHECK (made_to_order IN (0, 1)),
         sort_order INTEGER NOT NULL DEFAULT 0,
-        active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1))
+        active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+        description TEXT NOT NULL DEFAULT '',
+        category TEXT NOT NULL DEFAULT '',
+        is_slot INTEGER NOT NULL DEFAULT 0 CHECK (is_slot IN (0, 1))
     )`,
     `CREATE TABLE IF NOT EXISTS orders (
         id TEXT PRIMARY KEY,
@@ -110,6 +113,32 @@ const SCHEMA_STATEMENTS = [
     WHERE id = 'hardo-bread' AND price_cents = 0`
 ];
 
+const PRODUCT_SLOT_INSERT = `INSERT INTO products (
+        id, name, unit, price_cents, quantity, made_to_order,
+        sort_order, active, description, category, is_slot
+    ) VALUES
+        ('slot-produce-1', 'New Product Slot 1', 'each', 0, 0, 0, 1001, 0, '', 'produce', 1),
+        ('slot-produce-2', 'New Product Slot 2', 'each', 0, 0, 0, 1002, 0, '', 'produce', 1),
+        ('slot-produce-3', 'New Product Slot 3', 'each', 0, 0, 0, 1003, 0, '', 'produce', 1),
+        ('slot-produce-4', 'New Product Slot 4', 'each', 0, 0, 0, 1004, 0, '', 'produce', 1),
+        ('slot-produce-5', 'New Product Slot 5', 'each', 0, 0, 0, 1005, 0, '', 'produce', 1),
+        ('slot-tea-1', 'New Product Slot 1', 'mix', 0, NULL, 1, 1101, 0, '', 'tea', 1),
+        ('slot-tea-2', 'New Product Slot 2', 'mix', 0, NULL, 1, 1102, 0, '', 'tea', 1),
+        ('slot-tea-3', 'New Product Slot 3', 'mix', 0, NULL, 1, 1103, 0, '', 'tea', 1),
+        ('slot-tea-4', 'New Product Slot 4', 'mix', 0, NULL, 1, 1104, 0, '', 'tea', 1),
+        ('slot-tea-5', 'New Product Slot 5', 'mix', 0, NULL, 1, 1105, 0, '', 'tea', 1),
+        ('slot-baked-1', 'New Product Slot 1', 'each', 0, 0, 0, 1201, 0, '', 'baked', 1),
+        ('slot-baked-2', 'New Product Slot 2', 'each', 0, 0, 0, 1202, 0, '', 'baked', 1),
+        ('slot-baked-3', 'New Product Slot 3', 'each', 0, 0, 0, 1203, 0, '', 'baked', 1),
+        ('slot-baked-4', 'New Product Slot 4', 'each', 0, 0, 0, 1204, 0, '', 'baked', 1),
+        ('slot-baked-5', 'New Product Slot 5', 'each', 0, 0, 0, 1205, 0, '', 'baked', 1),
+        ('slot-pain-rub-1', 'New Product Slot 1', 'each', 0, 0, 0, 1301, 0, '', 'pain-rub', 1),
+        ('slot-pain-rub-2', 'New Product Slot 2', 'each', 0, 0, 0, 1302, 0, '', 'pain-rub', 1),
+        ('slot-pain-rub-3', 'New Product Slot 3', 'each', 0, 0, 0, 1303, 0, '', 'pain-rub', 1),
+        ('slot-pain-rub-4', 'New Product Slot 4', 'each', 0, 0, 0, 1304, 0, '', 'pain-rub', 1),
+        ('slot-pain-rub-5', 'New Product Slot 5', 'each', 0, 0, 0, 1305, 0, '', 'pain-rub', 1)
+    ON CONFLICT(id) DO NOTHING`;
+
 let databaseInitialization;
 
 function jsonResponse(body, status = 200) {
@@ -145,6 +174,24 @@ function ensureDatabase(db) {
                 SET paid_at = created_at
                 WHERE paid_at IS NULL AND status IN ('confirmed', 'completed')
             `).run();
+
+            const productColumns = await db.prepare("PRAGMA table_info(products)").all();
+            const productColumnNames = new Set(productColumns.results.map(function (column) {
+                return column.name;
+            }));
+            const productMigrations = [
+                ["description", "ALTER TABLE products ADD COLUMN description TEXT NOT NULL DEFAULT ''"],
+                ["category", "ALTER TABLE products ADD COLUMN category TEXT NOT NULL DEFAULT ''"],
+                ["is_slot", "ALTER TABLE products ADD COLUMN is_slot INTEGER NOT NULL DEFAULT 0"]
+            ];
+
+            for (const [columnName, migration] of productMigrations) {
+                if (!productColumnNames.has(columnName)) {
+                    await db.prepare(migration).run();
+                }
+            }
+
+            await db.prepare(PRODUCT_SLOT_INSERT).run();
 
             const donationColumns = await db.prepare("PRAGMA table_info(donations)").all();
             const donationColumnNames = new Set(donationColumns.results.map(function (column) {
@@ -283,7 +330,9 @@ async function isAdmin(request, env) {
 
 async function getProducts(db, includeInactive = false) {
     const result = await db.prepare(`
-        SELECT id, name, unit, price_cents, quantity, made_to_order, active
+        SELECT
+            id, name, unit, price_cents, quantity, made_to_order, active,
+            description, category, is_slot
         FROM products
         ${includeInactive ? "" : "WHERE active = 1"}
         ORDER BY sort_order, name
@@ -297,7 +346,10 @@ async function getProducts(db, includeInactive = false) {
             priceCents: product.price_cents,
             quantity: product.quantity,
             madeToOrder: product.made_to_order === 1,
-            active: product.active === 1
+            active: product.active === 1,
+            description: product.description || "",
+            category: product.category || "",
+            isSlot: product.is_slot === 1
         };
     });
 }
@@ -591,7 +643,9 @@ async function handleAdminOrders(db) {
 
 async function handleAdminInventory(db) {
     const result = await db.prepare(`
-        SELECT id, name, unit, price_cents, quantity, made_to_order, sort_order, active
+        SELECT
+            id, name, unit, price_cents, quantity, made_to_order, sort_order, active,
+            description, category, is_slot
         FROM products
         ORDER BY sort_order, name
     `).all();
@@ -605,7 +659,10 @@ async function handleAdminInventory(db) {
                 priceCents: product.price_cents,
                 quantity: product.quantity,
                 madeToOrder: product.made_to_order === 1,
-                active: product.active === 1
+                active: product.active === 1,
+                description: product.description || "",
+                category: product.category || "",
+                isSlot: product.is_slot === 1
             };
         })
     });
@@ -844,9 +901,9 @@ async function handleAdminInventoryUpdate(request, db) {
         return jsonResponse({ error: "No inventory changes were received." }, 400);
     }
 
-    const existingResult = await db.prepare("SELECT id FROM products").all();
-    const existingIds = new Set(existingResult.results.map(function (product) {
-        return product.id;
+    const existingResult = await db.prepare("SELECT id, is_slot FROM products").all();
+    const existingProducts = new Map(existingResult.results.map(function (product) {
+        return [product.id, product];
     }));
     const seenIds = new Set();
     const updates = [];
@@ -854,13 +911,16 @@ async function handleAdminInventoryUpdate(request, db) {
     for (const submitted of body.products) {
         const id = cleanText(submitted.id, 100);
         const name = cleanText(submitted.name, 100);
+        const description = cleanText(submitted.description, 500);
         const unit = cleanText(submitted.unit, 30).toLowerCase();
         const priceCents = Number(submitted.priceCents);
         const madeToOrder = submitted.madeToOrder === true;
         const active = submitted.active === true;
         const quantity = madeToOrder ? null : Number(submitted.quantity);
 
-        if (!existingIds.has(id) || seenIds.has(id)) {
+        const existingProduct = existingProducts.get(id);
+
+        if (!existingProduct || seenIds.has(id)) {
             return jsonResponse({ error: "One of the inventory products was not recognized." }, 400);
         }
 
@@ -880,12 +940,22 @@ async function handleAdminInventoryUpdate(request, db) {
             return jsonResponse({ error: name + " needs a price before it can be available to order." }, 400);
         }
 
+        if (
+            active &&
+            existingProduct.is_slot === 1 &&
+            (name.startsWith("New Product Slot") || description.length < 3)
+        ) {
+            return jsonResponse({
+                error: "Complete the product name and description for " + name + " before making it available."
+            }, 400);
+        }
+
         seenIds.add(id);
         updates.push(
             db.prepare(`
                 UPDATE products
                 SET name = ?, unit = ?, price_cents = ?, quantity = ?,
-                    made_to_order = ?, active = ?
+                    made_to_order = ?, active = ?, description = ?
                 WHERE id = ?
             `).bind(
                 name,
@@ -894,6 +964,7 @@ async function handleAdminInventoryUpdate(request, db) {
                 quantity,
                 madeToOrder ? 1 : 0,
                 active ? 1 : 0,
+                description,
                 id
             )
         );

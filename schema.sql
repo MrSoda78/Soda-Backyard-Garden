@@ -6,7 +6,10 @@ CREATE TABLE IF NOT EXISTS products (
     quantity INTEGER CHECK (quantity IS NULL OR quantity >= 0),
     made_to_order INTEGER NOT NULL DEFAULT 0 CHECK (made_to_order IN (0, 1)),
     sort_order INTEGER NOT NULL DEFAULT 0,
-    active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1))
+    active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+    description TEXT NOT NULL DEFAULT '',
+    category TEXT NOT NULL DEFAULT '',
+    is_slot INTEGER NOT NULL DEFAULT 0 CHECK (is_slot IN (0, 1))
 );
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -114,3 +117,29 @@ ON CONFLICT(id) DO NOTHING;
 UPDATE products
 SET price_cents = 500, active = 1
 WHERE id = 'hardo-bread' AND price_cents = 0;
+
+INSERT INTO products (
+    id, name, unit, price_cents, quantity, made_to_order,
+    sort_order, active, description, category, is_slot
+) VALUES
+    ('slot-produce-1', 'New Product Slot 1', 'each', 0, 0, 0, 1001, 0, '', 'produce', 1),
+    ('slot-produce-2', 'New Product Slot 2', 'each', 0, 0, 0, 1002, 0, '', 'produce', 1),
+    ('slot-produce-3', 'New Product Slot 3', 'each', 0, 0, 0, 1003, 0, '', 'produce', 1),
+    ('slot-produce-4', 'New Product Slot 4', 'each', 0, 0, 0, 1004, 0, '', 'produce', 1),
+    ('slot-produce-5', 'New Product Slot 5', 'each', 0, 0, 0, 1005, 0, '', 'produce', 1),
+    ('slot-tea-1', 'New Product Slot 1', 'mix', 0, NULL, 1, 1101, 0, '', 'tea', 1),
+    ('slot-tea-2', 'New Product Slot 2', 'mix', 0, NULL, 1, 1102, 0, '', 'tea', 1),
+    ('slot-tea-3', 'New Product Slot 3', 'mix', 0, NULL, 1, 1103, 0, '', 'tea', 1),
+    ('slot-tea-4', 'New Product Slot 4', 'mix', 0, NULL, 1, 1104, 0, '', 'tea', 1),
+    ('slot-tea-5', 'New Product Slot 5', 'mix', 0, NULL, 1, 1105, 0, '', 'tea', 1),
+    ('slot-baked-1', 'New Product Slot 1', 'each', 0, 0, 0, 1201, 0, '', 'baked', 1),
+    ('slot-baked-2', 'New Product Slot 2', 'each', 0, 0, 0, 1202, 0, '', 'baked', 1),
+    ('slot-baked-3', 'New Product Slot 3', 'each', 0, 0, 0, 1203, 0, '', 'baked', 1),
+    ('slot-baked-4', 'New Product Slot 4', 'each', 0, 0, 0, 1204, 0, '', 'baked', 1),
+    ('slot-baked-5', 'New Product Slot 5', 'each', 0, 0, 0, 1205, 0, '', 'baked', 1),
+    ('slot-pain-rub-1', 'New Product Slot 1', 'each', 0, 0, 0, 1301, 0, '', 'pain-rub', 1),
+    ('slot-pain-rub-2', 'New Product Slot 2', 'each', 0, 0, 0, 1302, 0, '', 'pain-rub', 1),
+    ('slot-pain-rub-3', 'New Product Slot 3', 'each', 0, 0, 0, 1303, 0, '', 'pain-rub', 1),
+    ('slot-pain-rub-4', 'New Product Slot 4', 'each', 0, 0, 0, 1304, 0, '', 'pain-rub', 1),
+    ('slot-pain-rub-5', 'New Product Slot 5', 'each', 0, 0, 0, 1305, 0, '', 'pain-rub', 1)
+ON CONFLICT(id) DO NOTHING;

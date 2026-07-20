@@ -672,6 +672,25 @@ textarea:focus-visible {
     text-align: center;
 }
 
+.dynamic-product-image {
+    border-bottom: 1px solid var(--green-border);
+    background:
+        linear-gradient(135deg, rgba(89, 151, 89, 0.08), rgba(255, 255, 255, 0.7)),
+        var(--green-light);
+    font-weight: bold;
+    letter-spacing: 0.03em;
+}
+
+.dynamic-product-description {
+    margin-bottom: 16px;
+    color: var(--text-soft);
+    line-height: 1.55;
+}
+
+.dynamic-product-section[hidden] {
+    display: none;
+}
+
 .storage-notice {
     display: grid;
     grid-template-columns: auto 1fr;
@@ -1676,7 +1695,7 @@ footer a:hover {
 
 .admin-inventory-table {
     width: 100%;
-    min-width: 880px;
+    min-width: 1180px;
     border-collapse: collapse;
 }
 
@@ -1699,7 +1718,8 @@ footer a:hover {
 }
 
 .admin-inventory-table input[type="text"],
-.admin-inventory-table input[type="number"] {
+.admin-inventory-table input[type="number"],
+.admin-inventory-table textarea {
     width: 100%;
     min-width: 90px;
     padding: 9px;
@@ -1707,6 +1727,35 @@ footer a:hover {
 
 .admin-inventory-table .inventory-name {
     min-width: 210px;
+}
+
+.admin-inventory-table .inventory-description {
+    min-width: 260px;
+    resize: vertical;
+}
+
+.admin-inventory-table .inventory-section-heading {
+    padding: 14px 16px;
+    border-top: 3px solid var(--green-dark);
+    border-bottom: 1px solid var(--green-border);
+    color: white;
+    background: var(--green-dark);
+    font-size: 0.92rem;
+    letter-spacing: 0.02em;
+}
+
+.admin-inventory-table .inventory-current-heading {
+    border-top: 0;
+    background: #49624d;
+}
+
+.admin-inventory-table .inventory-description:disabled {
+    color: #6b746d;
+    background: #eef1ee;
+}
+
+.inventory-slot-row {
+    background: #fbfefb;
 }
 
 .admin-inventory-table input[type="checkbox"] {

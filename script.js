@@ -86,7 +86,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const orderTotal = document.getElementById("orderTotal");
     const orderTotalInput = document.getElementById("orderTotalInput");
     const formMessage = document.getElementById("formMessage");
-    const quantityInputs = orderForm
+    let quantityInputs = orderForm
         ? Array.from(orderForm.querySelectorAll("input[data-product-id]"))
         : [];
 
@@ -119,7 +119,149 @@ document.addEventListener("DOMContentLoaded", function () {
         return product.unit === "each" ? amount + " each" : amount + " per " + product.unit;
     }
 
+    function renderDynamicProductCards(products) {
+        document.querySelectorAll("[data-dynamic-products]").forEach(function (grid) {
+            const category = grid.dataset.dynamicProducts;
+            const activeProducts = products.filter(function (product) {
+                return (
+                    product.isSlot &&
+                    product.category === category &&
+                    product.active &&
+                    product.priceCents > 0
+                );
+            });
+
+            grid.querySelectorAll("[data-dynamic-product-card]").forEach(function (card) {
+                card.remove();
+            });
+
+            activeProducts.forEach(function (product) {
+                const card = document.createElement("div");
+                card.className = "product-card";
+                card.dataset.dynamicProductCard = product.id;
+
+                const placeholder = document.createElement("div");
+                placeholder.className = "product-image-placeholder dynamic-product-image";
+                placeholder.textContent = "Image coming soon";
+                card.appendChild(placeholder);
+
+                const content = document.createElement("div");
+                content.className = "product-card-content";
+
+                const heading = document.createElement("h3");
+                heading.textContent = product.name;
+
+                const price = document.createElement("p");
+                price.className = "price";
+                price.dataset.priceDisplay = product.id;
+                price.textContent = formatProductPrice(product);
+
+                const description = document.createElement("p");
+                description.className = "dynamic-product-description";
+                description.textContent = product.description;
+
+                const stock = document.createElement("p");
+                stock.className = "stock-count";
+                const stockText = document.createElement("strong");
+                stockText.dataset.stock = product.id;
+                stockText.textContent = product.madeToOrder
+                    ? "Made to order"
+                    : product.quantity + " available";
+                stock.appendChild(stockText);
+
+                const status = document.createElement("span");
+                const available = product.madeToOrder || product.quantity > 0;
+                status.className = "status " + (available ? "available" : "sold-out");
+                status.dataset.productStatus = product.id;
+                status.textContent = available ? "Available" : "Sold out";
+
+                content.append(heading, price, description, stock, status);
+                card.appendChild(content);
+                grid.appendChild(card);
+            });
+
+            const section = document.querySelector(
+                '[data-dynamic-section="' + category + '"]'
+            );
+
+            if (section) {
+                section.hidden = activeProducts.length === 0;
+            }
+        });
+    }
+
+    function renderDynamicOrderProducts(products) {
+        if (!orderForm) {
+            return;
+        }
+
+        document.querySelectorAll("[data-dynamic-order-products]").forEach(function (container) {
+            const category = container.dataset.dynamicOrderProducts;
+            const activeProducts = products.filter(function (product) {
+                return (
+                    product.isSlot &&
+                    product.category === category &&
+                    product.active &&
+                    product.priceCents > 0
+                );
+            });
+            const group = document.querySelector(
+                '[data-dynamic-order-group="' + category + '"]'
+            );
+            container.replaceChildren();
+
+            activeProducts.forEach(function (product) {
+                const row = document.createElement("div");
+                row.className = "product-row";
+
+                const inputId = "dynamic-" + product.id;
+                const label = document.createElement("label");
+                label.htmlFor = inputId;
+                label.append(product.name + " (");
+
+                const price = document.createElement("span");
+                price.dataset.priceDisplay = product.id;
+                price.textContent = formatProductPrice(product);
+                label.appendChild(price);
+                label.append(") ");
+
+                const stock = document.createElement("small");
+                stock.dataset.orderStock = product.id;
+                stock.textContent = product.madeToOrder
+                    ? "Made to order"
+                    : product.quantity + " available";
+                label.appendChild(stock);
+
+                const input = document.createElement("input");
+                input.type = "number";
+                input.id = inputId;
+                input.name = product.id + "Qty";
+                input.min = "0";
+                input.value = "0";
+                input.dataset.price = (product.priceCents / 100).toString();
+                input.dataset.productId = product.id;
+
+                if (!product.madeToOrder) {
+                    input.max = product.quantity.toString();
+                    input.disabled = product.quantity === 0;
+                }
+
+                row.append(label, input);
+                container.appendChild(row);
+            });
+
+            if (group) {
+                group.hidden = activeProducts.length === 0;
+            }
+        });
+
+        quantityInputs = Array.from(orderForm.querySelectorAll("input[data-product-id]"));
+    }
+
     function renderInventory(products) {
+        renderDynamicProductCards(products);
+        renderDynamicOrderProducts(products);
+
         const productMap = new Map(products.map(function (product) {
             return [product.id, product];
         }));
@@ -309,8 +451,10 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
 
-        quantityInputs.forEach(function (input) {
-            input.addEventListener("input", updateOrderTotal);
+        orderForm.addEventListener("input", function (event) {
+            if (event.target.matches("input[data-product-id]")) {
+                updateOrderTotal();
+            }
         });
 
         orderForm.addEventListener("submit", async function (event) {
