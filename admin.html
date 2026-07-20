@@ -51,7 +51,10 @@
                                 <h2>Customer Orders</h2>
                                 <p>Confirm paid orders, cancel and return stock, notify customers of cancellations, or mark deliveries complete.</p>
                             </div>
-                            <button type="button" class="button secondary" id="refreshOrders">Refresh Orders</button>
+                            <div class="admin-toolbar-actions">
+                                <button type="button" class="button secondary" id="refreshOrders">Refresh Orders</button>
+                                <button type="button" class="button danger" id="deleteCancelledOrders">Delete All Cancelled</button>
+                            </div>
                         </div>
                         <p id="adminMessage" class="form-message"></p>
                         <div id="ordersList" class="admin-orders" aria-live="polite"></div>

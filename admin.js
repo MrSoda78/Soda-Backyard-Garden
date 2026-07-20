@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const ordersList = document.getElementById("ordersList");
     const adminMessage = document.getElementById("adminMessage");
     const refreshButton = document.getElementById("refreshOrders");
+    const deleteCancelledOrdersButton = document.getElementById("deleteCancelledOrders");
     const logoutButton = document.getElementById("adminLogout");
     const ordersTab = document.getElementById("ordersTab");
     const inventoryTab = document.getElementById("inventoryTab");
@@ -599,8 +600,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 actions.appendChild(createActionButton("Cancel & Return Stock", "cancel", order.id, "danger"));
             } else if (order.status === "completed" && order.email) {
                 actions.appendChild(createCustomerEmailLink(order));
-            } else if (order.status === "cancelled" && order.email) {
-                actions.appendChild(createCancellationEmailLink(order));
+            } else if (order.status === "cancelled") {
+                if (order.email) {
+                    actions.appendChild(createCancellationEmailLink(order));
+                }
+                actions.appendChild(createActionButton("Delete Cancelled Order", "delete", order.id, "danger"));
             }
 
             if (actions.children.length > 0) {
@@ -675,20 +679,30 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
+        if (button.dataset.action === "delete" && !window.confirm("Permanently delete this cancelled order? This cannot be undone.")) {
+            return;
+        }
+
         button.disabled = true;
         setMessage(adminMessage, "Updating order...", "success");
 
         try {
+            const isDelete = button.dataset.action === "delete";
             const response = await fetch(
-                "/api/admin/orders/" + encodeURIComponent(button.dataset.orderId) + "/action",
-                {
-                    method: "POST",
-                    headers: {
-                        "Accept": "application/json",
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ action: button.dataset.action })
-                }
+                "/api/admin/orders/" + encodeURIComponent(button.dataset.orderId) + (isDelete ? "" : "/action"),
+                isDelete
+                    ? {
+                        method: "DELETE",
+                        headers: { "Accept": "application/json" }
+                    }
+                    : {
+                        method: "POST",
+                        headers: {
+                            "Accept": "application/json",
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ action: button.dataset.action })
+                    }
             );
             const result = await response.json();
 
@@ -707,6 +721,40 @@ document.addEventListener("DOMContentLoaded", function () {
         loadOrders().catch(function (error) {
             setMessage(adminMessage, error.message, "error");
         });
+    });
+
+    deleteCancelledOrdersButton.addEventListener("click", async function () {
+        if (!window.confirm("Permanently delete every cancelled order? Pending, confirmed, and delivered orders will not be affected.")) {
+            return;
+        }
+
+        deleteCancelledOrdersButton.disabled = true;
+        setMessage(adminMessage, "Deleting cancelled orders...", "success");
+
+        try {
+            const response = await fetch("/api/admin/orders/cancelled", {
+                method: "DELETE",
+                headers: { "Accept": "application/json" }
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The cancelled orders could not be deleted.");
+            }
+
+            await loadOrders();
+            setMessage(
+                adminMessage,
+                result.deletedCount === 1
+                    ? "1 cancelled order deleted."
+                    : result.deletedCount + " cancelled orders deleted.",
+                "success"
+            );
+        } catch (error) {
+            setMessage(adminMessage, error.message, "error");
+        } finally {
+            deleteCancelledOrdersButton.disabled = false;
+        }
     });
 
     ordersTab.addEventListener("click", function () {

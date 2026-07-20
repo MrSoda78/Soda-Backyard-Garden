@@ -1231,6 +1231,51 @@ async function handleAdminOrderAction(request, db, orderId) {
     return jsonResponse({ success: true });
 }
 
+async function handleAdminOrderDelete(db, orderId) {
+    const results = await db.batch([
+        db.prepare(`
+            DELETE FROM order_items
+            WHERE order_id IN (
+                SELECT id FROM orders WHERE id = ? AND status = 'cancelled'
+            )
+        `).bind(orderId),
+        db.prepare(`
+            DELETE FROM orders
+            WHERE id = ? AND status = 'cancelled'
+        `).bind(orderId)
+    ]);
+    const result = results[1];
+
+    if (!result.meta || result.meta.changes < 1) {
+        return jsonResponse({
+            error: "Only cancelled orders can be deleted. Refresh the order list and try again."
+        }, 409);
+    }
+
+    return jsonResponse({ success: true });
+}
+
+async function handleAdminCancelledOrdersDelete(db) {
+    const results = await db.batch([
+        db.prepare(`
+            DELETE FROM order_items
+            WHERE order_id IN (
+                SELECT id FROM orders WHERE status = 'cancelled'
+            )
+        `),
+        db.prepare(`
+            DELETE FROM orders
+            WHERE status = 'cancelled'
+        `)
+    ]);
+    const result = results[1];
+
+    return jsonResponse({
+        success: true,
+        deletedCount: result.meta ? result.meta.changes : 0
+    });
+}
+
 export default {
     async fetch(request, env) {
         const url = new URL(request.url);
@@ -1281,6 +1326,10 @@ export default {
                     return handleAdminOrders(env.DB);
                 }
 
+                if (url.pathname === "/api/admin/orders/cancelled" && request.method === "DELETE") {
+                    return handleAdminCancelledOrdersDelete(env.DB);
+                }
+
                 if (url.pathname === "/api/admin/inventory" && request.method === "GET") {
                     return handleAdminInventory(env.DB);
                 }
@@ -1313,6 +1362,12 @@ export default {
 
                 if (orderActionMatch && request.method === "POST") {
                     return handleAdminOrderAction(request, env.DB, orderActionMatch[1]);
+                }
+
+                const orderMatch = url.pathname.match(/^\/api\/admin\/orders\/([^/]+)$/);
+
+                if (orderMatch && request.method === "DELETE") {
+                    return handleAdminOrderDelete(env.DB, orderMatch[1]);
                 }
             }
 
