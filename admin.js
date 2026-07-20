@@ -109,6 +109,32 @@ document.addEventListener("DOMContentLoaded", function () {
         return link;
     }
 
+    function createCancellationEmailLink(order) {
+        const firstName = order.customerName.trim().split(/\s+/)[0] || order.customerName;
+        const subject = "Update about your Soda Backyard Garden order " + order.orderNumber;
+        const body = [
+            "Hello " + firstName + ",",
+            "",
+            "Your Soda Backyard Garden order " + order.orderNumber + " has been cancelled.",
+            "",
+            "Any items reserved for this order have been returned to availability.",
+            "",
+            "If you already sent payment, please reply to this email so we can arrange the next step.",
+            "",
+            "We are sorry for the inconvenience. Please contact us if you have any questions.",
+            "",
+            "Soda Backyard Garden"
+        ].join("\r\n");
+        const link = document.createElement("a");
+        link.className = "button admin-action danger";
+        link.textContent = "Email Cancellation";
+        link.href = "mailto:" + encodeURIComponent(order.email)
+            + "?subject=" + encodeURIComponent(subject)
+            + "&body=" + encodeURIComponent(body);
+        link.setAttribute("aria-label", "Email cancellation notice to " + order.customerName);
+        return link;
+    }
+
     function switchPanel(panelName) {
         const panels = {
             orders: { tab: ordersTab, panel: ordersPanel },
@@ -573,6 +599,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 actions.appendChild(createActionButton("Cancel & Return Stock", "cancel", order.id, "danger"));
             } else if (order.status === "completed" && order.email) {
                 actions.appendChild(createCustomerEmailLink(order));
+            } else if (order.status === "cancelled" && order.email) {
+                actions.appendChild(createCancellationEmailLink(order));
             }
 
             if (actions.children.length > 0) {
