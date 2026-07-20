@@ -123,7 +123,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (!product.isSlot && !currentProductsHeadingAdded) {
                 const currentRow = document.createElement("tr");
                 const currentCell = document.createElement("th");
-                currentCell.colSpan = 7;
+                currentCell.colSpan = 8;
                 currentCell.scope = "rowgroup";
                 currentCell.className = "inventory-section-heading inventory-current-heading";
                 currentCell.textContent = "Current Products";
@@ -135,7 +135,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (product.isSlot && product.category !== lastSlotCategory) {
                 const sectionRow = document.createElement("tr");
                 const sectionCell = document.createElement("th");
-                sectionCell.colSpan = 7;
+                sectionCell.colSpan = 8;
                 sectionCell.scope = "rowgroup";
                 sectionCell.className = "inventory-section-heading";
                 sectionCell.textContent = categoryLabels[product.category] || "New Product Slots";
@@ -191,6 +191,19 @@ document.addEventListener("DOMContentLoaded", function () {
             quantityInput.setAttribute("aria-label", product.name + " quantity");
             quantityCell.appendChild(quantityInput);
 
+            const orderLimitCell = document.createElement("td");
+            const orderLimitInput = createInventoryInput(
+                "number",
+                product.orderLimit === null ? "" : product.orderLimit,
+                "inventory-order-limit"
+            );
+            orderLimitInput.min = "1";
+            orderLimitInput.max = "50";
+            orderLimitInput.step = "1";
+            orderLimitInput.placeholder = "No limit";
+            orderLimitInput.setAttribute("aria-label", product.name + " maximum per order");
+            orderLimitCell.appendChild(orderLimitInput);
+
             const unitCell = document.createElement("td");
             const unitInput = createInventoryInput("text", product.unit, "inventory-unit");
             unitInput.setAttribute("aria-label", product.name + " selling unit");
@@ -212,7 +225,16 @@ document.addEventListener("DOMContentLoaded", function () {
             activeInput.setAttribute("aria-label", product.name + " is available to order");
             activeCell.appendChild(activeInput);
 
-            row.append(nameCell, descriptionCell, priceCell, quantityCell, unitCell, madeCell, activeCell);
+            row.append(
+                nameCell,
+                descriptionCell,
+                priceCell,
+                quantityCell,
+                orderLimitCell,
+                unitCell,
+                madeCell,
+                activeCell
+            );
             inventoryRows.appendChild(row);
         });
     }
@@ -243,6 +265,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return Array.from(inventoryRows.querySelectorAll("tr[data-product-id]")).map(function (row) {
             const price = Number.parseFloat(row.querySelector(".inventory-price-input").value);
             const quantityValue = row.querySelector(".inventory-quantity").value;
+            const orderLimitValue = row.querySelector(".inventory-order-limit").value;
 
             return {
                 id: row.dataset.productId,
@@ -251,6 +274,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 unit: row.querySelector(".inventory-unit").value,
                 priceCents: Math.round(price * 100),
                 quantity: quantityValue === "" ? null : Number(quantityValue),
+                orderLimit: orderLimitValue === "" ? null : Number(orderLimitValue),
                 madeToOrder: row.querySelector(".inventory-made-to-order").checked,
                 active: row.querySelector(".inventory-active").checked
             };

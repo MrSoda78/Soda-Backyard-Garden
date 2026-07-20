@@ -1695,7 +1695,7 @@ footer a:hover {
 
 .admin-inventory-table {
     width: 100%;
-    min-width: 1180px;
+    min-width: 1320px;
     border-collapse: collapse;
 }
 
@@ -1774,6 +1774,10 @@ footer a:hover {
 
 .inventory-quantity:disabled {
     background: #e9ece9;
+}
+
+.admin-inventory-table .inventory-order-limit {
+    min-width: 125px;
 }
 
 .sales-summary {

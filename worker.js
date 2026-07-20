@@ -10,7 +10,8 @@ const SCHEMA_STATEMENTS = [
         active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
         description TEXT NOT NULL DEFAULT '',
         category TEXT NOT NULL DEFAULT '',
-        is_slot INTEGER NOT NULL DEFAULT 0 CHECK (is_slot IN (0, 1))
+        is_slot INTEGER NOT NULL DEFAULT 0 CHECK (is_slot IN (0, 1)),
+        order_limit INTEGER CHECK (order_limit IS NULL OR order_limit > 0)
     )`,
     `CREATE TABLE IF NOT EXISTS orders (
         id TEXT PRIMARY KEY,
@@ -182,7 +183,8 @@ function ensureDatabase(db) {
             const productMigrations = [
                 ["description", "ALTER TABLE products ADD COLUMN description TEXT NOT NULL DEFAULT ''"],
                 ["category", "ALTER TABLE products ADD COLUMN category TEXT NOT NULL DEFAULT ''"],
-                ["is_slot", "ALTER TABLE products ADD COLUMN is_slot INTEGER NOT NULL DEFAULT 0"]
+                ["is_slot", "ALTER TABLE products ADD COLUMN is_slot INTEGER NOT NULL DEFAULT 0"],
+                ["order_limit", "ALTER TABLE products ADD COLUMN order_limit INTEGER"]
             ];
 
             for (const [columnName, migration] of productMigrations) {
@@ -192,6 +194,11 @@ function ensureDatabase(db) {
             }
 
             await db.prepare(PRODUCT_SLOT_INSERT).run();
+            await db.prepare(`
+                UPDATE products
+                SET order_limit = 1
+                WHERE id = 'hardo-bread' AND order_limit IS NULL
+            `).run();
 
             const donationColumns = await db.prepare("PRAGMA table_info(donations)").all();
             const donationColumnNames = new Set(donationColumns.results.map(function (column) {
@@ -332,7 +339,7 @@ async function getProducts(db, includeInactive = false) {
     const result = await db.prepare(`
         SELECT
             id, name, unit, price_cents, quantity, made_to_order, active,
-            description, category, is_slot
+            description, category, is_slot, order_limit
         FROM products
         ${includeInactive ? "" : "WHERE active = 1"}
         ORDER BY sort_order, name
@@ -349,7 +356,8 @@ async function getProducts(db, includeInactive = false) {
             active: product.active === 1,
             description: product.description || "",
             category: product.category || "",
-            isSlot: product.is_slot === 1
+            isSlot: product.is_slot === 1,
+            orderLimit: product.order_limit
         };
     });
 }
@@ -414,8 +422,10 @@ async function handleOrder(request, db) {
             return jsonResponse({ error: "One of the selected quantities is not valid." }, 400);
         }
 
-        if (productId === "hardo-bread" && quantity > 1) {
-            return jsonResponse({ error: "Hardo Bread is limited to one loaf per household." }, 400);
+        if (product.orderLimit !== null && quantity > product.orderLimit) {
+            return jsonResponse({
+                error: product.name + " is limited to " + product.orderLimit + " per order."
+            }, 400);
         }
 
         requestedItems.push({ product, quantity });
@@ -645,7 +655,7 @@ async function handleAdminInventory(db) {
     const result = await db.prepare(`
         SELECT
             id, name, unit, price_cents, quantity, made_to_order, sort_order, active,
-            description, category, is_slot
+            description, category, is_slot, order_limit
         FROM products
         ORDER BY sort_order, name
     `).all();
@@ -662,7 +672,8 @@ async function handleAdminInventory(db) {
                 active: product.active === 1,
                 description: product.description || "",
                 category: product.category || "",
-                isSlot: product.is_slot === 1
+                isSlot: product.is_slot === 1,
+                orderLimit: product.order_limit
             };
         })
     });
@@ -917,6 +928,9 @@ async function handleAdminInventoryUpdate(request, db) {
         const madeToOrder = submitted.madeToOrder === true;
         const active = submitted.active === true;
         const quantity = madeToOrder ? null : Number(submitted.quantity);
+        const orderLimit = submitted.orderLimit === null || submitted.orderLimit === ""
+            ? null
+            : Number(submitted.orderLimit);
 
         const existingProduct = existingProducts.get(id);
 
@@ -934,6 +948,15 @@ async function handleAdminInventoryUpdate(request, db) {
 
         if (!madeToOrder && (!Number.isInteger(quantity) || quantity < 0 || quantity > 1000000)) {
             return jsonResponse({ error: "Enter a valid quantity for " + name + "." }, 400);
+        }
+
+        if (
+            orderLimit !== null &&
+            (!Number.isInteger(orderLimit) || orderLimit < 1 || orderLimit > 50)
+        ) {
+            return jsonResponse({
+                error: "Enter a maximum per order between 1 and 50 for " + name + ", or leave it blank."
+            }, 400);
         }
 
         if (active && priceCents === 0) {
@@ -955,7 +978,7 @@ async function handleAdminInventoryUpdate(request, db) {
             db.prepare(`
                 UPDATE products
                 SET name = ?, unit = ?, price_cents = ?, quantity = ?,
-                    made_to_order = ?, active = ?, description = ?
+                    made_to_order = ?, active = ?, description = ?, order_limit = ?
                 WHERE id = ?
             `).bind(
                 name,
@@ -965,6 +988,7 @@ async function handleAdminInventoryUpdate(request, db) {
                 madeToOrder ? 1 : 0,
                 active ? 1 : 0,
                 description,
+                orderLimit,
                 id
             )
         );

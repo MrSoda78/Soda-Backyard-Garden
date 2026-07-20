@@ -61,14 +61,14 @@
                         <div class="admin-toolbar">
                             <div>
                                 <h2>Inventory Hub</h2>
-                                <p>Edit prices, quantities, descriptions, and availability. Reusable product slots can add new products without changing the website code.</p>
+                                <p>Edit prices, quantities, order limits, descriptions, and availability. Reusable product slots can add new products without changing the website code.</p>
                             </div>
                             <div class="admin-toolbar-actions">
                                 <button type="button" class="button secondary" id="refreshInventory">Discard Changes</button>
                                 <button type="button" class="button" id="saveInventory">Save Changes</button>
                             </div>
                         </div>
-                        <p class="admin-inventory-help"><strong>New product slots:</strong> enter a product name, description, price, selling unit, and quantity, then check <strong>Available to order</strong>. The new card and order-form option will appear automatically. Choose <strong>Made to order</strong> when the product does not use a fixed quantity.</p>
+                        <p class="admin-inventory-help"><strong>Maximum per order:</strong> enter the most one household can request in a single order, or leave it blank for no limit. For new product slots, enter the product details, then check <strong>Available to order</strong>. Choose <strong>Made to order</strong> when the product does not use a fixed quantity.</p>
                         <p id="inventoryMessage" class="form-message"></p>
                         <div class="admin-inventory-wrap">
                             <table class="admin-inventory-table">
@@ -78,6 +78,7 @@
                                         <th scope="col">Description</th>
                                         <th scope="col">Price</th>
                                         <th scope="col">Quantity</th>
+                                        <th scope="col">Maximum per order</th>
                                         <th scope="col">Selling unit</th>
                                         <th scope="col">Made to order</th>
                                         <th scope="col">Available to order</th>

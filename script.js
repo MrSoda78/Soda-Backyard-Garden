@@ -96,7 +96,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         if (product.madeToOrder) {
-            return "Made to order";
+            return "Made to order" + formatOrderLimit(product);
         }
 
         const quantity = product.quantity;
@@ -104,10 +104,13 @@ document.addEventListener("DOMContentLoaded", function () {
         const plural = element.dataset.unitPlural;
 
         if (singular && plural) {
-            return quantity + " " + (quantity === 1 ? singular : plural) + " available";
+            return (
+                quantity + " " + (quantity === 1 ? singular : plural) + " available" +
+                formatOrderLimit(product)
+            );
         }
 
-        return quantity + " available";
+        return quantity + " available" + formatOrderLimit(product);
     }
 
     function formatProductPrice(product) {
@@ -117,6 +120,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const amount = "$" + (product.priceCents / 100).toFixed(2);
         return product.unit === "each" ? amount + " each" : amount + " per " + product.unit;
+    }
+
+    function formatOrderLimit(product) {
+        return Number.isInteger(product.orderLimit)
+            ? " · Maximum " + product.orderLimit + " per order"
+            : "";
     }
 
     function renderDynamicProductCards(products) {
@@ -164,9 +173,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 stock.className = "stock-count";
                 const stockText = document.createElement("strong");
                 stockText.dataset.stock = product.id;
-                stockText.textContent = product.madeToOrder
-                    ? "Made to order"
-                    : product.quantity + " available";
+                stockText.textContent = (
+                    product.madeToOrder
+                        ? "Made to order"
+                        : product.quantity + " available"
+                ) + formatOrderLimit(product);
                 stock.appendChild(stockText);
 
                 const status = document.createElement("span");
@@ -227,9 +238,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 const stock = document.createElement("small");
                 stock.dataset.orderStock = product.id;
-                stock.textContent = product.madeToOrder
-                    ? "Made to order"
-                    : product.quantity + " available";
+                stock.textContent = (
+                    product.madeToOrder
+                        ? "Made to order"
+                        : product.quantity + " available"
+                ) + formatOrderLimit(product);
                 label.appendChild(stock);
 
                 const input = document.createElement("input");
@@ -241,8 +254,19 @@ document.addEventListener("DOMContentLoaded", function () {
                 input.dataset.price = (product.priceCents / 100).toString();
                 input.dataset.productId = product.id;
 
-                if (!product.madeToOrder) {
-                    input.max = product.quantity.toString();
+                if (product.orderLimit !== null) {
+                    input.dataset.orderLimit = product.orderLimit.toString();
+                }
+
+                if (product.madeToOrder) {
+                    if (product.orderLimit !== null) {
+                        input.max = product.orderLimit.toString();
+                    }
+                } else {
+                    const maximumQuantity = product.orderLimit === null
+                        ? product.quantity
+                        : Math.min(product.quantity, product.orderLimit);
+                    input.max = maximumQuantity.toString();
                     input.disabled = product.quantity === 0;
                 }
 
@@ -328,14 +352,27 @@ document.addEventListener("DOMContentLoaded", function () {
 
             input.dataset.price = (product.priceCents / 100).toString();
 
+            if (product.orderLimit === null) {
+                delete input.dataset.orderLimit;
+            } else {
+                input.dataset.orderLimit = product.orderLimit.toString();
+            }
+
             if (product.madeToOrder) {
-                input.removeAttribute("max");
+                if (product.orderLimit === null) {
+                    input.removeAttribute("max");
+                } else {
+                    input.max = product.orderLimit.toString();
+
+                    if (Number.parseInt(input.value, 10) > product.orderLimit) {
+                        input.value = product.orderLimit;
+                    }
+                }
                 input.disabled = false;
             } else {
-                const orderLimit = Number.parseInt(input.dataset.orderLimit, 10);
-                const maximumQuantity = Number.isNaN(orderLimit)
+                const maximumQuantity = product.orderLimit === null
                     ? product.quantity
-                    : Math.min(product.quantity, orderLimit);
+                    : Math.min(product.quantity, product.orderLimit);
                 input.max = maximumQuantity.toString();
                 input.disabled = product.quantity === 0;
 
@@ -345,9 +382,11 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             if (stockLabel) {
-                stockLabel.textContent = product.madeToOrder
-                    ? "Made to order"
-                    : product.quantity + " available";
+                stockLabel.textContent = (
+                    product.madeToOrder
+                        ? "Made to order"
+                        : product.quantity + " available"
+                ) + formatOrderLimit(product);
             }
         });
     }

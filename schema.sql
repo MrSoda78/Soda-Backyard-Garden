@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS products (
     active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
     description TEXT NOT NULL DEFAULT '',
     category TEXT NOT NULL DEFAULT '',
-    is_slot INTEGER NOT NULL DEFAULT 0 CHECK (is_slot IN (0, 1))
+    is_slot INTEGER NOT NULL DEFAULT 0 CHECK (is_slot IN (0, 1)),
+    order_limit INTEGER CHECK (order_limit IS NULL OR order_limit > 0)
 );
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -117,6 +118,10 @@ ON CONFLICT(id) DO NOTHING;
 UPDATE products
 SET price_cents = 500, active = 1
 WHERE id = 'hardo-bread' AND price_cents = 0;
+
+UPDATE products
+SET order_limit = 1
+WHERE id = 'hardo-bread' AND order_limit IS NULL;
 
 INSERT INTO products (
     id, name, unit, price_cents, quantity, made_to_order,
