@@ -261,6 +261,15 @@ function cleanText(value, maximumLength) {
     return typeof value === "string" ? value.trim().slice(0, maximumLength) : "";
 }
 
+function escapeHtml(value) {
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+}
+
 function createOrderNumber() {
     const date = new Date().toISOString().slice(0, 10).replaceAll("-", "");
     const suffix = crypto.randomUUID().slice(0, 6).toUpperCase();
@@ -367,7 +376,115 @@ async function handleInventory(db) {
     return jsonResponse({ products: await getProducts(db, true) });
 }
 
-async function handleOrder(request, db) {
+async function sendBrevoOrderReceipt(env, order) {
+    if (!env.BREVO_API_KEY) {
+        console.error("Brevo purchaser receipt skipped: BREVO_API_KEY is not configured.");
+        return false;
+    }
+
+    const itemRows = order.items.map(function (item) {
+        return `
+            <tr>
+                <td style="padding:8px;border-bottom:1px solid #dce8dc;">${escapeHtml(item.name)}</td>
+                <td style="padding:8px;border-bottom:1px solid #dce8dc;text-align:center;">${item.quantity}</td>
+                <td style="padding:8px;border-bottom:1px solid #dce8dc;text-align:right;">${escapeHtml(item.lineTotal)}</td>
+            </tr>
+        `;
+    }).join("");
+    const notesHtml = order.notes
+        ? `<p><strong>Your notes:</strong> ${escapeHtml(order.notes)}</p>`
+        : "";
+    const htmlContent = `
+        <!doctype html>
+        <html>
+            <body style="margin:0;padding:24px;background:#f5f7f2;color:#26362a;font-family:Arial,sans-serif;">
+                <div style="max-width:620px;margin:0 auto;padding:28px;border:1px solid #dce8dc;border-radius:14px;background:white;">
+                    <h1 style="margin-top:0;color:#285936;font-size:24px;">Soda Backyard Garden</h1>
+                    <p>Hello ${escapeHtml(order.customerName)},</p>
+                    <p>We received your order request. Please keep this email for your records.</p>
+                    <p><strong>Order number:</strong> ${escapeHtml(order.orderNumber)}</p>
+                    <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+                        <thead>
+                            <tr style="background:#eef6ed;color:#285936;">
+                                <th style="padding:8px;text-align:left;">Item</th>
+                                <th style="padding:8px;text-align:center;">Quantity</th>
+                                <th style="padding:8px;text-align:right;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>${itemRows}</tbody>
+                    </table>
+                    <p style="font-size:18px;"><strong>Estimated total: ${escapeHtml(order.total)}</strong></p>
+                    ${notesHtml}
+                    <h2 style="color:#285936;font-size:19px;">What happens next?</h2>
+                    <ol>
+                        <li>Send payment to <a href="mailto:marlenereid@hotmail.com">marlenereid@hotmail.com</a>.</li>
+                        <li>Your order is confirmed once payment is received.</li>
+                    </ol>
+                    <p>Need to make a change? Reply to this email and include your order number.</p>
+                </div>
+            </body>
+        </html>
+    `;
+    const textItems = order.items.map(function (item) {
+        return item.quantity + " x " + item.name + " - " + item.lineTotal;
+    }).join("\n");
+    const textContent = [
+        "Soda Backyard Garden",
+        "",
+        "Hello " + order.customerName + ",",
+        "We received your order request.",
+        "Order number: " + order.orderNumber,
+        "",
+        textItems,
+        "",
+        "Estimated total: " + order.total,
+        order.notes ? "Your notes: " + order.notes : "",
+        "",
+        "Send payment to marlenereid@hotmail.com.",
+        "Your order is confirmed once payment is received."
+    ].filter(function (line) {
+        return line !== "";
+    }).join("\n");
+    const brevoRequest = new Request("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "api-key": env.BREVO_API_KEY
+        },
+        body: JSON.stringify({
+            sender: {
+                name: "Soda Backyard Garden",
+                email: "sodabackyardgarden@outlook.com"
+            },
+            to: [{
+                name: order.customerName,
+                email: order.email
+            }],
+            replyTo: {
+                name: "Soda Backyard Garden",
+                email: "sodabackyardgarden@outlook.com"
+            },
+            subject: "Your Soda Backyard Garden order " + order.orderNumber,
+            htmlContent,
+            textContent,
+            tags: ["garden-order"]
+        })
+    });
+    const response = env.BREVO_API
+        ? await env.BREVO_API.fetch(brevoRequest)
+        : await fetch(brevoRequest);
+
+    if (!response.ok) {
+        const details = (await response.text()).slice(0, 300);
+        console.error("Brevo purchaser receipt failed:", response.status, details);
+        return false;
+    }
+
+    return true;
+}
+
+async function handleOrder(request, db, env) {
     let body;
 
     try {
@@ -537,16 +654,34 @@ async function handleOrder(request, db) {
         return jsonResponse({ error: "We could not save the order. Please try again shortly." }, 500);
     }
 
+    const responseItems = requestedItems.map(function (item) {
+        return {
+            name: item.product.name,
+            quantity: item.quantity,
+            lineTotal: "$" + ((item.product.priceCents * item.quantity) / 100).toFixed(2)
+        };
+    });
+    const formattedTotal = "$" + (totalCents / 100).toFixed(2);
+    let customerEmailSent = false;
+
+    try {
+        customerEmailSent = await sendBrevoOrderReceipt(env, {
+            customerName,
+            email,
+            notes,
+            orderNumber,
+            total: formattedTotal,
+            items: responseItems
+        });
+    } catch (error) {
+        console.error("Brevo purchaser receipt request failed:", error);
+    }
+
     return jsonResponse({
         orderNumber,
-        total: "$" + (totalCents / 100).toFixed(2),
-        items: requestedItems.map(function (item) {
-            return {
-                name: item.product.name,
-                quantity: item.quantity,
-                lineTotal: "$" + ((item.product.priceCents * item.quantity) / 100).toFixed(2)
-            };
-        })
+        total: formattedTotal,
+        items: responseItems,
+        customerEmailSent
     }, 201);
 }
 
@@ -1130,7 +1265,7 @@ export default {
             }
 
             if (url.pathname === "/api/orders" && request.method === "POST") {
-                return handleOrder(request, env.DB);
+                return handleOrder(request, env.DB, env);
             }
 
             if (url.pathname === "/api/donations" && request.method === "POST") {

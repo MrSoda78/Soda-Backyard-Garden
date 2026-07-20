@@ -483,7 +483,6 @@ document.addEventListener("DOMContentLoaded", function () {
             emailData.set("_subject", "New Garden Order " + orderNumber);
             emailData.set("_template", "table");
             emailData.set("_captcha", "false");
-            emailData.set("_cc", customerEmail);
             emailData.set("Order Number", orderNumber);
             emailData.set("Customer", customerName);
             emailData.set("email", customerEmail);
@@ -572,12 +571,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     throw new Error(result.error || "We could not submit your order.");
                 }
 
-                let emailSent = true;
-
                 try {
                     await sendEmailNotification(result.orderNumber, result.items, result.total);
                 } catch (emailError) {
-                    emailSent = false;
                     console.warn(emailError);
                 }
 
@@ -592,10 +588,13 @@ document.addEventListener("DOMContentLoaded", function () {
                     confirmationTotal.textContent = "Estimated total: " + result.total;
 
                     if (confirmationEmailStatus) {
-                        confirmationEmailStatus.textContent = emailSent
+                        confirmationEmailStatus.textContent = result.customerEmailSent
                             ? "A copy of your order has been sent to your email address."
-                            : "Your order was saved, but the email copy could not be sent.";
-                        confirmationEmailStatus.classList.toggle("confirmation-email-error", !emailSent);
+                            : "Your order was saved, but the purchaser email could not be sent. Please keep your order number.";
+                        confirmationEmailStatus.classList.toggle(
+                            "confirmation-email-error",
+                            !result.customerEmailSent
+                        );
                     }
 
                     orderForm.hidden = true;
