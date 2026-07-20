@@ -436,6 +436,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const confirmationName = document.getElementById("confirmationName");
         const confirmationOrderNumber = document.getElementById("confirmationOrderNumber");
         const confirmationTotal = document.getElementById("confirmationTotal");
+        const confirmationItemList = document.getElementById("confirmationItemList");
         const confirmationEmailStatus = document.getElementById("confirmationEmailStatus");
         const confirmationEmailHelp = document.getElementById("confirmationEmailHelp");
         let isSubmitting = false;
@@ -588,10 +589,23 @@ document.addEventListener("DOMContentLoaded", function () {
                     confirmationOrderNumber.textContent = result.orderNumber;
                     confirmationTotal.textContent = "Estimated total: " + result.total;
 
+                    if (confirmationItemList) {
+                        confirmationItemList.replaceChildren();
+                        result.items.forEach(function (item) {
+                            const listItem = document.createElement("li");
+                            const itemDescription = document.createElement("span");
+                            const itemTotal = document.createElement("strong");
+                            itemDescription.textContent = item.quantity + " × " + item.name;
+                            itemTotal.textContent = item.lineTotal;
+                            listItem.append(itemDescription, itemTotal);
+                            confirmationItemList.appendChild(listItem);
+                        });
+                    }
+
                     if (confirmationEmailStatus) {
                         confirmationEmailStatus.textContent = result.customerEmailSent
-                            ? "A copy of your order has been sent to your email address."
-                            : "Your order was saved, but the purchaser email could not be sent. Please keep your order number.";
+                            ? "We also attempted to email this receipt. Please save or screenshot the copy below in case the email is delayed."
+                            : "The email copy could not be sent. Please save or screenshot the receipt below.";
                         confirmationEmailStatus.classList.toggle(
                             "confirmation-email-error",
                             !result.customerEmailSent

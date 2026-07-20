@@ -1499,6 +1499,33 @@ footer a:hover {
     letter-spacing: 0.03em;
 }
 
+.confirmation-summary h3 {
+    margin: 20px 0 8px;
+    text-align: left;
+}
+
+.confirmation-item-list {
+    margin: 0 0 14px;
+    padding: 0;
+    list-style: none;
+    text-align: left;
+}
+
+.confirmation-item-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(40, 89, 54, 0.18);
+}
+
+.confirmation-item-list strong {
+    flex: 0 0 auto;
+    margin: 0;
+    font-size: 1rem;
+    letter-spacing: 0;
+}
+
 .confirmation-next-steps {
     margin-bottom: 22px;
     text-align: left;
@@ -1680,6 +1707,10 @@ footer a:hover {
 
 .admin-action.danger {
     background: #a43b3b;
+}
+
+.admin-email-customer {
+    background: var(--green-dark);
 }
 
 .admin-empty {
