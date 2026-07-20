@@ -1686,17 +1686,26 @@ footer a:hover {
 }
 
 .admin-inventory-wrap {
-    overflow-x: auto;
+    max-height: min(68vh, 720px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
     border: 1px solid #dce8dc;
     border-radius: 14px;
     background: white;
     box-shadow: 0 5px 18px rgba(20, 55, 30, 0.08);
 }
 
+.admin-inventory-wrap:focus-visible {
+    outline: 3px solid rgba(47, 110, 58, 0.35);
+    outline-offset: 3px;
+}
+
 .admin-inventory-table {
     width: 100%;
     min-width: 1320px;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
 }
 
 .admin-inventory-table th,
@@ -1711,6 +1720,13 @@ footer a:hover {
     color: var(--green-dark);
     background: #f3f8f3;
     font-size: 0.83rem;
+}
+
+.admin-inventory-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    box-shadow: 0 2px 0 #dce8dc;
 }
 
 .admin-inventory-table tbody tr:last-child td {
