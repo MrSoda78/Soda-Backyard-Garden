@@ -588,6 +588,26 @@ textarea:focus-visible {
     margin-bottom: 10px;
 }
 
+.ingredient-list {
+    margin: 2px 0 16px;
+    padding: 12px 14px;
+    border-left: 3px solid var(--green-main);
+    border-radius: 6px;
+    background: var(--green-light);
+}
+
+.ingredient-list h4 {
+    margin-bottom: 4px;
+    color: var(--green-dark);
+    font-size: 0.9rem;
+}
+
+.ingredient-list p {
+    color: var(--text-soft);
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+
 .stock-count {
     margin-bottom: 14px;
     color: var(--text-soft);
