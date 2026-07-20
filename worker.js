@@ -196,8 +196,9 @@ function ensureDatabase(db) {
             await db.prepare(PRODUCT_SLOT_INSERT).run();
             await db.prepare(`
                 UPDATE products
-                SET order_limit = 1
-                WHERE id = 'hardo-bread' AND order_limit IS NULL
+                SET order_limit = COALESCE(order_limit, 1),
+                    category = 'baked'
+                WHERE id = 'hardo-bread'
             `).run();
 
             const donationColumns = await db.prepare("PRAGMA table_info(donations)").all();
@@ -396,8 +397,8 @@ async function handleOrder(request, db) {
         return jsonResponse({ error: "Please enter a valid phone number." }, 400);
     }
 
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        return jsonResponse({ error: "Please enter a valid email address or leave it blank." }, 400);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return jsonResponse({ error: "Please enter a valid email address so we can send your order copy." }, 400);
     }
 
     if (!allowedDeliveryDays.has(deliveryDay)) {
@@ -433,6 +434,53 @@ async function handleOrder(request, db) {
 
     if (requestedItems.length === 0) {
         return jsonResponse({ error: "Please select at least one item." }, 400);
+    }
+
+    const includesBakedGoods = requestedItems.some(function (item) {
+        return item.product.category === "baked";
+    });
+
+    if (includesBakedGoods) {
+        const phoneDigits = phone.replace(/\D/g, "");
+        const existingBakedOrder = await db.prepare(`
+            SELECT orders.id
+            FROM orders
+            WHERE orders.status <> 'cancelled'
+              AND orders.created_at >= datetime('now', '-7 days')
+              AND (
+                  REPLACE(
+                      REPLACE(
+                          REPLACE(
+                              REPLACE(
+                                  REPLACE(
+                                      REPLACE(orders.phone, ' ', ''),
+                                      '-', ''
+                                  ),
+                                  '(', ''
+                              ),
+                              ')', ''
+                          ),
+                          '+', ''
+                      ),
+                      '.', ''
+                  ) = ?
+                  OR LOWER(TRIM(COALESCE(orders.email, ''))) = ?
+              )
+              AND EXISTS (
+                  SELECT 1
+                  FROM order_items
+                  INNER JOIN products ON products.id = order_items.product_id
+                  WHERE order_items.order_id = orders.id
+                    AND products.category = 'baked'
+              )
+            LIMIT 1
+        `).bind(phoneDigits, email.toLowerCase()).first();
+
+        if (existingBakedOrder) {
+            return jsonResponse({
+                error: "Baked goods are limited to one order per household every seven days."
+            }, 409);
+        }
     }
 
     const totalCents = requestedItems.reduce(function (total, item) {
@@ -491,7 +539,14 @@ async function handleOrder(request, db) {
 
     return jsonResponse({
         orderNumber,
-        total: "$" + (totalCents / 100).toFixed(2)
+        total: "$" + (totalCents / 100).toFixed(2),
+        items: requestedItems.map(function (item) {
+            return {
+                name: item.product.name,
+                quantity: item.quantity,
+                lineTotal: "$" + ((item.product.priceCents * item.quantity) / 100).toFixed(2)
+            };
+        })
     }, 201);
 }
 

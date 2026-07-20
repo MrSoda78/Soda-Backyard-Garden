@@ -58,9 +58,6 @@
 
                     <div class="order-form">
                         <form id="orderForm" action="/api/orders" method="POST" data-email-endpoint="https://formsubmit.co/ajax/sodabackyardgarden@outlook.com">
-                            <input type="hidden" name="_subject" value="New Garden Order Request">
-                            <input type="hidden" name="_captcha" value="false">
-                            <input type="hidden" name="_template" value="table">
                             <input type="hidden" id="orderTotalInput" name="estimatedTotal" value="$0.00">
                             <div class="form-honeypot" aria-hidden="true">
                                 <label for="website">Leave this field blank</label>
@@ -81,8 +78,8 @@
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="email">Email Address</label>
-                                    <input type="email" id="email" name="email">
+                                    <label for="email">Email Address (required for your order copy)</label>
+                                    <input type="email" id="email" name="email" autocomplete="email" required>
                                 </div>
 
                             </div>
@@ -224,6 +221,7 @@
 
                                 <div class="product-group">
                                     <h4 class="product-group-title">Baked Goods</h4>
+                                    <p class="product-notice">Baked goods are limited to one order per household every seven days.</p>
 
                                     <div class="product-row product-row-coming-soon">
                                         <label for="hardoBreadQty">Hardo Bread (<span data-price-display="hardo-bread">$5.00 per loaf</span>) <small data-order-stock="hardo-bread">12 available · limit 1 per household</small></label>
@@ -301,6 +299,7 @@
                             <p class="confirmation-kicker">Order request received</p>
                             <h2>Thank you, <span id="confirmationName">friend</span>!</h2>
                             <p>We have received your order request and reserved the available items you selected.</p>
+                            <p id="confirmationEmailStatus">A copy of your order has been sent to your email address.</p>
 
                             <div class="confirmation-summary">
                                 <p>Your order number</p>
@@ -311,14 +310,12 @@
                             <div class="confirmation-next-steps">
                                 <h3>What happens next?</h3>
                                 <ol>
-                                    <li>We will review your request and contact you to confirm the details and payment.</li>
+                                    <li>Send payment to <a href="mailto:marlenereid@hotmail.com">marlenereid@hotmail.com</a>.</li>
                                     <li>Your order is confirmed once payment is received.</li>
-                                    <li>We will notify you of the scheduled delivery day in advance.</li>
                                 </ol>
                             </div>
 
                             <p class="confirmation-help">Need to make a change? Email <a href="mailto:sodabackyardgarden@outlook.com">sodabackyardgarden@outlook.com</a> and include your order number.</p>
-                            <button type="button" class="button secondary" id="placeAnotherOrder">Place Another Order</button>
                         </section>
                     </div>
 

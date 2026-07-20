@@ -123,6 +123,10 @@ UPDATE products
 SET order_limit = 1
 WHERE id = 'hardo-bread' AND order_limit IS NULL;
 
+UPDATE products
+SET category = 'baked'
+WHERE id = 'hardo-bread';
+
 INSERT INTO products (
     id, name, unit, price_cents, quantity, made_to_order,
     sort_order, active, description, category, is_slot

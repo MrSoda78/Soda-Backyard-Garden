@@ -1518,6 +1518,11 @@ footer a:hover {
     font-size: 0.92rem;
 }
 
+.confirmation-email-error {
+    color: #8a2f2f;
+    font-weight: bold;
+}
+
 /* ==========================================================
    PRIVATE ORDER ADMIN
 ========================================================== */

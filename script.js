@@ -436,7 +436,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const confirmationName = document.getElementById("confirmationName");
         const confirmationOrderNumber = document.getElementById("confirmationOrderNumber");
         const confirmationTotal = document.getElementById("confirmationTotal");
-        const placeAnotherOrderButton = document.getElementById("placeAnotherOrder");
+        const confirmationEmailStatus = document.getElementById("confirmationEmailStatus");
         let isSubmitting = false;
 
         function updateOrderTotal() {
@@ -468,16 +468,38 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
 
-        async function sendEmailNotification(orderNumber) {
+        async function sendEmailNotification(orderNumber, items, total) {
             const emailEndpoint = orderForm.dataset.emailEndpoint;
 
             if (!emailEndpoint) {
                 return;
             }
 
-            const emailData = new FormData(orderForm);
+            const customerName = orderForm.elements.namedItem("customerName").value.trim();
+            const customerEmail = orderForm.elements.namedItem("email").value.trim();
+            const phone = orderForm.elements.namedItem("phone").value.trim();
+            const notes = orderForm.elements.namedItem("notes").value.trim();
+            const emailData = new FormData();
             emailData.set("_subject", "New Garden Order " + orderNumber);
-            emailData.set("orderNumber", orderNumber);
+            emailData.set("_template", "table");
+            emailData.set("_captcha", "false");
+            emailData.set("_cc", customerEmail);
+            emailData.set("Order Number", orderNumber);
+            emailData.set("Customer", customerName);
+            emailData.set("email", customerEmail);
+            emailData.set("Phone", phone);
+            emailData.set(
+                "Items",
+                items.map(function (item) {
+                    return item.quantity + " × " + item.name + " — " + item.lineTotal;
+                }).join("\n")
+            );
+            emailData.set("Estimated Total", total);
+            emailData.set("Payment", "Send payment to marlenereid@hotmail.com");
+
+            if (notes) {
+                emailData.set("Notes", notes);
+            }
 
             const response = await fetch(emailEndpoint, {
                 method: "POST",
@@ -550,9 +572,12 @@ document.addEventListener("DOMContentLoaded", function () {
                     throw new Error(result.error || "We could not submit your order.");
                 }
 
+                let emailSent = true;
+
                 try {
-                    await sendEmailNotification(result.orderNumber);
+                    await sendEmailNotification(result.orderNumber, result.items, result.total);
                 } catch (emailError) {
+                    emailSent = false;
                     console.warn(emailError);
                 }
 
@@ -565,6 +590,14 @@ document.addEventListener("DOMContentLoaded", function () {
                     confirmationName.textContent = customerName.split(/\s+/)[0] || "friend";
                     confirmationOrderNumber.textContent = result.orderNumber;
                     confirmationTotal.textContent = "Estimated total: " + result.total;
+
+                    if (confirmationEmailStatus) {
+                        confirmationEmailStatus.textContent = emailSent
+                            ? "A copy of your order has been sent to your email address."
+                            : "Your order was saved, but the email copy could not be sent.";
+                        confirmationEmailStatus.classList.toggle("confirmation-email-error", !emailSent);
+                    }
+
                     orderForm.hidden = true;
                     orderConfirmation.hidden = false;
                     orderConfirmation.focus();
@@ -587,16 +620,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 submitButton.textContent = "Submit Order Request";
             }
         });
-
-        if (placeAnotherOrderButton && orderConfirmation) {
-            placeAnotherOrderButton.addEventListener("click", function () {
-                orderConfirmation.hidden = true;
-                orderForm.hidden = false;
-                formMessage.textContent = "";
-                formMessage.className = "form-message";
-                orderForm.elements.namedItem("customerName").focus();
-            });
-        }
 
         updateOrderTotal();
     }
