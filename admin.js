@@ -78,38 +78,6 @@ document.addEventListener("DOMContentLoaded", function () {
         return button;
     }
 
-    function createCustomerEmailLink(order) {
-        const firstName = order.customerName.trim().split(/\s+/)[0] || order.customerName;
-        const itemLines = order.items.map(function (item) {
-            return item.quantity + " x " + item.name + " - " + formatMoney(item.lineTotalCents);
-        });
-        const subject = "Your Soda Backyard Garden order " + order.orderNumber + " is confirmed";
-        const body = [
-            "Hello " + firstName + ",",
-            "",
-            "We received your payment and your Soda Backyard Garden order is now confirmed.",
-            "",
-            "Order number: " + order.orderNumber,
-            "",
-            "Your order:",
-            ...itemLines,
-            "",
-            "Total paid: " + formatMoney(order.totalCents),
-            "",
-            "We will follow up with your delivery details.",
-            "",
-            "Thank you for supporting Soda Backyard Garden!"
-        ].join("\r\n");
-        const link = document.createElement("a");
-        link.className = "button admin-action admin-email-customer";
-        link.textContent = "Email Customer";
-        link.href = "mailto:" + encodeURIComponent(order.email)
-            + "?subject=" + encodeURIComponent(subject)
-            + "&body=" + encodeURIComponent(body);
-        link.setAttribute("aria-label", "Email order confirmation to " + order.customerName);
-        return link;
-    }
-
     function createCancellationEmailLink(order) {
         const firstName = order.customerName.trim().split(/\s+/)[0] || order.customerName;
         const subject = "Update about your Soda Backyard Garden order " + order.orderNumber;
@@ -593,13 +561,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 actions.appendChild(createActionButton("Confirm Payment", "confirm", order.id));
                 actions.appendChild(createActionButton("Cancel & Return Stock", "cancel", order.id, "danger"));
             } else if (order.status === "confirmed") {
-                if (order.email) {
-                    actions.appendChild(createCustomerEmailLink(order));
-                }
                 actions.appendChild(createActionButton("Mark Delivered", "complete", order.id));
                 actions.appendChild(createActionButton("Cancel & Return Stock", "cancel", order.id, "danger"));
-            } else if (order.status === "completed" && order.email) {
-                actions.appendChild(createCustomerEmailLink(order));
             } else if (order.status === "cancelled") {
                 if (order.email) {
                     actions.appendChild(createCancellationEmailLink(order));
