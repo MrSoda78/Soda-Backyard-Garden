@@ -437,6 +437,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const confirmationOrderNumber = document.getElementById("confirmationOrderNumber");
         const confirmationTotal = document.getElementById("confirmationTotal");
         const confirmationEmailStatus = document.getElementById("confirmationEmailStatus");
+        const confirmationEmailHelp = document.getElementById("confirmationEmailHelp");
         let isSubmitting = false;
 
         function updateOrderTotal() {
@@ -595,6 +596,10 @@ document.addEventListener("DOMContentLoaded", function () {
                             "confirmation-email-error",
                             !result.customerEmailSent
                         );
+                    }
+
+                    if (confirmationEmailHelp) {
+                        confirmationEmailHelp.hidden = !result.customerEmailSent;
                     }
 
                     orderForm.hidden = true;

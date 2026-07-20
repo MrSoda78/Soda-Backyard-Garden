@@ -1523,6 +1523,12 @@ footer a:hover {
     font-weight: bold;
 }
 
+.confirmation-email-help {
+    margin: -6px auto 18px;
+    color: var(--text-soft);
+    font-size: 0.92rem;
+}
+
 /* ==========================================================
    PRIVATE ORDER ADMIN
 ========================================================== */
