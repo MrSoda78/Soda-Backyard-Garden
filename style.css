@@ -1685,6 +1685,24 @@ footer a:hover {
     background: var(--green-soft);
 }
 
+.inventory-bulk-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.inventory-bulk-actions span {
+    color: var(--text-soft);
+    font-size: 0.88rem;
+}
+
+.inventory-bulk-button {
+    padding: 8px 14px;
+    font-size: 0.88rem;
+}
+
 .admin-inventory-wrap {
     max-height: min(68vh, 720px);
     overflow: auto;
@@ -1727,6 +1745,24 @@ footer a:hover {
     top: 0;
     z-index: 3;
     box-shadow: 0 2px 0 #dce8dc;
+}
+
+.admin-inventory-table thead th:first-child {
+    left: 0;
+    z-index: 5;
+    box-shadow: 2px 2px 0 #dce8dc;
+}
+
+.admin-inventory-table tbody tr[data-product-id] > td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: white;
+    box-shadow: 2px 0 0 #dce8dc;
+}
+
+.admin-inventory-table tbody tr.inventory-slot-row > td:first-child {
+    background: #fbfefb;
 }
 
 .admin-inventory-table tbody tr:last-child td {

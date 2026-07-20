@@ -17,6 +17,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const inventoryMessage = document.getElementById("inventoryMessage");
     const refreshInventoryButton = document.getElementById("refreshInventory");
     const saveInventoryButton = document.getElementById("saveInventory");
+    const selectAllInventoryButton = document.getElementById("selectAllInventory");
+    const deselectAllInventoryButton = document.getElementById("deselectAllInventory");
     const salesMessage = document.getElementById("salesMessage");
     const refreshSalesButton = document.getElementById("refreshSales");
     const salesProductRows = document.getElementById("salesProductRows");
@@ -279,6 +281,57 @@ document.addEventListener("DOMContentLoaded", function () {
                 active: row.querySelector(".inventory-active").checked
             };
         });
+    }
+
+    function canBeMadeAvailable(row) {
+        const price = Number.parseFloat(row.querySelector(".inventory-price-input").value);
+
+        if (!Number.isFinite(price) || price <= 0) {
+            return false;
+        }
+
+        if (!row.classList.contains("inventory-slot-row")) {
+            return true;
+        }
+
+        const name = row.querySelector(".inventory-name").value.trim();
+        const description = row.querySelector(".inventory-description").value.trim();
+        return !name.startsWith("New Product Slot") && description.length >= 3;
+    }
+
+    function setAllInventoryAvailability(available) {
+        const rows = Array.from(inventoryRows.querySelectorAll("tr[data-product-id]"));
+        let skipped = 0;
+
+        rows.forEach(function (row) {
+            const checkbox = row.querySelector(".inventory-active");
+
+            if (available && !canBeMadeAvailable(row)) {
+                checkbox.checked = false;
+                skipped += 1;
+                return;
+            }
+
+            checkbox.checked = available;
+        });
+
+        if (available) {
+            const skippedMessage = skipped > 0
+                ? " " + skipped + " unfinished or price-less product" +
+                    (skipped === 1 ? " was" : "s were") + " left unavailable."
+                : "";
+            setMessage(
+                inventoryMessage,
+                "Selected all ready products." + skippedMessage + " Click Save Changes to apply.",
+                "success"
+            );
+        } else {
+            setMessage(
+                inventoryMessage,
+                "Deselected all products. Click Save Changes to apply.",
+                "success"
+            );
+        }
     }
 
     function appendSalesRow(container, values, emptyMessage) {
@@ -620,6 +673,14 @@ document.addEventListener("DOMContentLoaded", function () {
         loadInventory().catch(function (error) {
             setMessage(inventoryMessage, error.message, "error");
         });
+    });
+
+    selectAllInventoryButton.addEventListener("click", function () {
+        setAllInventoryAvailability(true);
+    });
+
+    deselectAllInventoryButton.addEventListener("click", function () {
+        setAllInventoryAvailability(false);
     });
 
     refreshSalesButton.addEventListener("click", function () {
