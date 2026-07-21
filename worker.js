@@ -24,7 +24,8 @@ const SCHEMA_STATEMENTS = [
         total_cents INTEGER NOT NULL CHECK (total_cents >= 0),
         status TEXT NOT NULL DEFAULT 'pending',
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        paid_at TEXT
+        paid_at TEXT,
+        source TEXT NOT NULL DEFAULT 'online'
     )`,
     `CREATE TABLE IF NOT EXISTS order_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -111,7 +112,30 @@ const SCHEMA_STATEMENTS = [
     ON CONFLICT(id) DO NOTHING`,
     `UPDATE products
     SET price_cents = 500, active = 1
-    WHERE id = 'hardo-bread' AND price_cents = 0`
+    WHERE id = 'hardo-bread' AND price_cents = 0`,
+    `UPDATE products
+    SET category = 'produce'
+    WHERE id IN (
+        'callaloo', 'beets', 'yellow-zucchini', 'green-zucchini',
+        'lebanese-zucchini', 'small-courgette', 'dragon-tongue-beans',
+        'purple-beans', 'green-beans', 'potatoes', 'fresh-garlic',
+        'fresh-onions', 'sage', 'brown-eggs', 'white-eggs-flat'
+    )`,
+    `UPDATE products
+    SET category = 'tea'
+    WHERE id IN (
+        'cold-flu-tea', 'menopause-tea', 'mullein-tea',
+        'red-raspberry-leaf-tea', 'bloating-tea', 'sleep-tea'
+    )`,
+    `UPDATE products
+    SET category = 'baked'
+    WHERE id = 'hardo-bread'`,
+    `UPDATE products
+    SET category = 'pain-rub'
+    WHERE id IN (
+        'pain-rub-oil-2oz', 'pain-rub-oil-4oz',
+        'pain-rub-balm-2oz', 'pain-rub-balm-4oz'
+    )`
 ];
 
 const PRODUCT_SLOT_INSERT = `INSERT INTO products (
@@ -168,6 +192,14 @@ function ensureDatabase(db) {
 
             if (!hasPaidAt) {
                 await db.prepare("ALTER TABLE orders ADD COLUMN paid_at TEXT").run();
+            }
+
+            const hasSource = orderColumns.results.some(function (column) {
+                return column.name === "source";
+            });
+
+            if (!hasSource) {
+                await db.prepare("ALTER TABLE orders ADD COLUMN source TEXT NOT NULL DEFAULT 'online'").run();
             }
 
             await db.prepare(`
@@ -484,19 +516,11 @@ async function sendBrevoOrderReceipt(env, order) {
     return true;
 }
 
-async function handleOrder(request, db, env) {
-    let body;
-
-    try {
-        body = await request.json();
-    } catch (_error) {
-        return jsonResponse({ error: "The order information was not valid." }, 400);
-    }
-
-    if (cleanText(body.website, 100)) {
-        return jsonResponse({ orderNumber: "SBG-RECEIVED", total: "$0.00" });
-    }
-
+async function createOrderRecord(body, db, options = {}) {
+    const requireEmail = options.requireEmail === true;
+    const requirePhone = options.requirePhone === true;
+    const paymentReceived = options.paymentReceived === true;
+    const source = cleanText(options.source || "online", 30);
     const customerName = cleanText(body.customerName, 100);
     const phone = cleanText(body.phone, 40);
     const email = cleanText(body.email, 150);
@@ -510,12 +534,20 @@ async function handleOrder(request, db, env) {
         return jsonResponse({ error: "Please enter your full name." }, 400);
     }
 
-    if (phone.replace(/\D/g, "").length < 7) {
+    if (requirePhone && phone.replace(/\D/g, "").length < 7) {
         return jsonResponse({ error: "Please enter a valid phone number." }, 400);
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        return jsonResponse({ error: "Please enter a valid email address so we can send your order copy." }, 400);
+    if (phone && phone.replace(/\D/g, "").length < 7) {
+        return jsonResponse({ error: "Please enter a valid phone number or leave it blank." }, 400);
+    }
+
+    if (requireEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return jsonResponse({ error: "Please enter a valid email address." }, 400);
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return jsonResponse({ error: "Please enter a valid email address or leave it blank." }, 400);
     }
 
     if (!allowedDeliveryDays.has(deliveryDay)) {
@@ -553,53 +585,6 @@ async function handleOrder(request, db, env) {
         return jsonResponse({ error: "Please select at least one item." }, 400);
     }
 
-    const includesBakedGoods = requestedItems.some(function (item) {
-        return item.product.category === "baked";
-    });
-
-    if (includesBakedGoods) {
-        const phoneDigits = phone.replace(/\D/g, "");
-        const existingBakedOrder = await db.prepare(`
-            SELECT orders.id
-            FROM orders
-            WHERE orders.status <> 'cancelled'
-              AND orders.created_at >= datetime('now', '-7 days')
-              AND (
-                  REPLACE(
-                      REPLACE(
-                          REPLACE(
-                              REPLACE(
-                                  REPLACE(
-                                      REPLACE(orders.phone, ' ', ''),
-                                      '-', ''
-                                  ),
-                                  '(', ''
-                              ),
-                              ')', ''
-                          ),
-                          '+', ''
-                      ),
-                      '.', ''
-                  ) = ?
-                  OR LOWER(TRIM(COALESCE(orders.email, ''))) = ?
-              )
-              AND EXISTS (
-                  SELECT 1
-                  FROM order_items
-                  INNER JOIN products ON products.id = order_items.product_id
-                  WHERE order_items.order_id = orders.id
-                    AND products.category = 'baked'
-              )
-            LIMIT 1
-        `).bind(phoneDigits, email.toLowerCase()).first();
-
-        if (existingBakedOrder) {
-            return jsonResponse({
-                error: "Baked goods are limited to one order per household every seven days."
-            }, 409);
-        }
-    }
-
     const totalCents = requestedItems.reduce(function (total, item) {
         return total + (item.product.priceCents * item.quantity);
     }, 0);
@@ -609,8 +594,9 @@ async function handleOrder(request, db, env) {
         db.prepare(`
             INSERT INTO orders (
                 id, order_number, customer_name, phone, email,
-                delivery_day, notes, total_cents
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                delivery_day, notes, total_cents, status, paid_at, source
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,
+                CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE NULL END, ?)
         `).bind(
             orderId,
             orderNumber,
@@ -619,7 +605,10 @@ async function handleOrder(request, db, env) {
             email || null,
             deliveryDay,
             notes || null,
-            totalCents
+            totalCents,
+            paymentReceived ? "confirmed" : "pending",
+            paymentReceived ? 1 : 0,
+            source || "online"
         )
     ];
 
@@ -661,27 +650,79 @@ async function handleOrder(request, db, env) {
             lineTotal: "$" + ((item.product.priceCents * item.quantity) / 100).toFixed(2)
         };
     });
-    const formattedTotal = "$" + (totalCents / 100).toFixed(2);
-    let customerEmailSent = false;
+    return {
+        customerName,
+        email,
+        notes,
+        orderNumber,
+        total: "$" + (totalCents / 100).toFixed(2),
+        items: responseItems,
+        status: paymentReceived ? "confirmed" : "pending"
+    };
+}
+
+async function handleOrder(request, db) {
+    let body;
 
     try {
-        customerEmailSent = await sendBrevoOrderReceipt(env, {
-            customerName,
-            email,
-            notes,
-            orderNumber,
-            total: formattedTotal,
-            items: responseItems
-        });
-    } catch (error) {
-        console.error("Brevo purchaser receipt request failed:", error);
+        body = await request.json();
+    } catch (_error) {
+        return jsonResponse({ error: "The order information was not valid." }, 400);
+    }
+
+    if (cleanText(body.website, 100)) {
+        return jsonResponse({ orderNumber: "SBG-RECEIVED", total: "$0.00" });
+    }
+
+    const order = await createOrderRecord(body, db, {
+        requireEmail: true,
+        requirePhone: true,
+        source: "online"
+    });
+
+    if (order instanceof Response) {
+        return order;
     }
 
     return jsonResponse({
-        orderNumber,
-        total: formattedTotal,
-        items: responseItems,
-        customerEmailSent
+        orderNumber: order.orderNumber,
+        total: order.total,
+        items: order.items
+    }, 201);
+}
+
+async function handleAdminOrderCreate(request, db) {
+    let body;
+
+    try {
+        body = await request.json();
+    } catch (_error) {
+        return jsonResponse({ error: "The offline order information was not valid." }, 400);
+    }
+
+    const allowedSources = new Set(["phone", "in-person", "other"]);
+    const source = cleanText(body.source, 30);
+
+    if (!allowedSources.has(source)) {
+        return jsonResponse({ error: "Please select how the offline order was received." }, 400);
+    }
+
+    const order = await createOrderRecord(body, db, {
+        paymentReceived: body.paymentReceived === true,
+        requireEmail: false,
+        requirePhone: false,
+        source
+    });
+
+    if (order instanceof Response) {
+        return order;
+    }
+
+    return jsonResponse({
+        success: true,
+        orderNumber: order.orderNumber,
+        total: order.total,
+        status: order.status
     }, 201);
 }
 
@@ -799,6 +840,7 @@ async function handleAdminOrders(db) {
             orders.notes,
             orders.total_cents,
             orders.status,
+            orders.source,
             orders.created_at,
             order_items.product_name,
             order_items.unit_price_cents,
@@ -823,6 +865,7 @@ async function handleAdminOrders(db) {
                 notes: row.notes,
                 totalCents: row.total_cents,
                 status: row.status,
+                source: row.source || "online",
                 createdAt: row.created_at,
                 items: []
             });
@@ -1310,7 +1353,7 @@ export default {
             }
 
             if (url.pathname === "/api/orders" && request.method === "POST") {
-                return handleOrder(request, env.DB, env);
+                return handleOrder(request, env.DB);
             }
 
             if (url.pathname === "/api/donations" && request.method === "POST") {
@@ -1324,6 +1367,10 @@ export default {
 
                 if (url.pathname === "/api/admin/orders" && request.method === "GET") {
                     return handleAdminOrders(env.DB);
+                }
+
+                if (url.pathname === "/api/admin/orders" && request.method === "POST") {
+                    return handleAdminOrderCreate(request, env.DB);
                 }
 
                 if (url.pathname === "/api/admin/orders/cancelled" && request.method === "DELETE") {

@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS orders (
     total_cents INTEGER NOT NULL CHECK (total_cents >= 0),
     status TEXT NOT NULL DEFAULT 'pending',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    paid_at TEXT
+    paid_at TEXT,
+    source TEXT NOT NULL DEFAULT 'online'
 );
 
 CREATE TABLE IF NOT EXISTS order_items (
@@ -126,6 +127,29 @@ WHERE id = 'hardo-bread' AND order_limit IS NULL;
 UPDATE products
 SET category = 'baked'
 WHERE id = 'hardo-bread';
+
+UPDATE products
+SET category = 'produce'
+WHERE id IN (
+    'callaloo', 'beets', 'yellow-zucchini', 'green-zucchini',
+    'lebanese-zucchini', 'small-courgette', 'dragon-tongue-beans',
+    'purple-beans', 'green-beans', 'potatoes', 'fresh-garlic',
+    'fresh-onions', 'sage', 'brown-eggs', 'white-eggs-flat'
+);
+
+UPDATE products
+SET category = 'tea'
+WHERE id IN (
+    'cold-flu-tea', 'menopause-tea', 'mullein-tea',
+    'red-raspberry-leaf-tea', 'bloating-tea', 'sleep-tea'
+);
+
+UPDATE products
+SET category = 'pain-rub'
+WHERE id IN (
+    'pain-rub-oil-2oz', 'pain-rub-oil-4oz',
+    'pain-rub-balm-2oz', 'pain-rub-balm-4oz'
+);
 
 INSERT INTO products (
     id, name, unit, price_cents, quantity, made_to_order,

@@ -437,8 +437,6 @@ document.addEventListener("DOMContentLoaded", function () {
         const confirmationOrderNumber = document.getElementById("confirmationOrderNumber");
         const confirmationTotal = document.getElementById("confirmationTotal");
         const confirmationItemList = document.getElementById("confirmationItemList");
-        const confirmationEmailStatus = document.getElementById("confirmationEmailStatus");
-        const confirmationEmailHelp = document.getElementById("confirmationEmailHelp");
         let isSubmitting = false;
 
         function updateOrderTotal() {
@@ -600,20 +598,6 @@ document.addEventListener("DOMContentLoaded", function () {
                             listItem.append(itemDescription, itemTotal);
                             confirmationItemList.appendChild(listItem);
                         });
-                    }
-
-                    if (confirmationEmailStatus) {
-                        confirmationEmailStatus.textContent = result.customerEmailSent
-                            ? "We also attempted to email this receipt. Please save or screenshot the copy below in case the email is delayed."
-                            : "The email copy could not be sent. Please save or screenshot the receipt below.";
-                        confirmationEmailStatus.classList.toggle(
-                            "confirmation-email-error",
-                            !result.customerEmailSent
-                        );
-                    }
-
-                    if (confirmationEmailHelp) {
-                        confirmationEmailHelp.hidden = !result.customerEmailSent;
                     }
 
                     orderForm.hidden = true;

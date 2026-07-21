@@ -7,6 +7,10 @@ document.addEventListener("DOMContentLoaded", function () {
     const adminMessage = document.getElementById("adminMessage");
     const refreshButton = document.getElementById("refreshOrders");
     const deleteCancelledOrdersButton = document.getElementById("deleteCancelledOrders");
+    const offlineOrderForm = document.getElementById("offlineOrderForm");
+    const offlineOrderProducts = document.getElementById("offlineOrderProducts");
+    const offlineOrderTotal = document.getElementById("offlineOrderTotal");
+    const offlineOrderMessage = document.getElementById("offlineOrderMessage");
     const logoutButton = document.getElementById("adminLogout");
     const ordersTab = document.getElementById("ordersTab");
     const inventoryTab = document.getElementById("inventoryTab");
@@ -27,6 +31,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const donationForm = document.getElementById("donationForm");
     const donationMessage = document.getElementById("donationMessage");
     const donationRows = document.getElementById("donationRows");
+    let offlineQuantityInputs = [];
+    let offlineProductsLoaded = false;
 
     function formatMoney(cents) {
         return "$" + (cents / 100).toFixed(2);
@@ -102,6 +108,129 @@ document.addEventListener("DOMContentLoaded", function () {
             + "&body=" + encodeURIComponent(body);
         link.setAttribute("aria-label", "Email cancellation notice to " + order.customerName);
         return link;
+    }
+
+    function updateOfflineOrderTotal() {
+        const totalCents = offlineQuantityInputs.reduce(function (total, input) {
+            const quantity = Math.max(0, Number.parseInt(input.value, 10) || 0);
+            return total + (quantity * Number(input.dataset.priceCents));
+        }, 0);
+        offlineOrderTotal.textContent = "Total: " + formatMoney(totalCents);
+    }
+
+    function renderOfflineOrderProducts(products) {
+        const categoryLabels = {
+            produce: "Fresh Produce",
+            tea: "Tea Mixes",
+            baked: "Baked Goods",
+            "pain-rub": "Pain Rub"
+        };
+        const categoryOrder = ["produce", "tea", "baked", "pain-rub"];
+        const availableProducts = products.filter(function (product) {
+            return product.active && product.priceCents > 0;
+        });
+        const groupedProducts = new Map();
+
+        offlineOrderProducts.replaceChildren();
+
+        availableProducts.forEach(function (product) {
+            const category = product.category || "produce";
+
+            if (!groupedProducts.has(category)) {
+                groupedProducts.set(category, []);
+            }
+
+            groupedProducts.get(category).push(product);
+        });
+
+        const orderedCategories = [
+            ...categoryOrder.filter(function (category) {
+                return groupedProducts.has(category);
+            }),
+            ...Array.from(groupedProducts.keys()).filter(function (category) {
+                return !categoryOrder.includes(category);
+            })
+        ];
+
+        orderedCategories.forEach(function (category) {
+            const group = document.createElement("div");
+            group.className = "product-group";
+            const heading = createTextElement(
+                "h4",
+                "product-group-title",
+                categoryLabels[category] || "Other Products"
+            );
+            group.appendChild(heading);
+
+            groupedProducts.get(category).forEach(function (product) {
+                const row = document.createElement("div");
+                row.className = "product-row";
+                const inputId = "offline-quantity-" + product.id;
+                const label = document.createElement("label");
+                label.htmlFor = inputId;
+                const stockText = product.madeToOrder
+                    ? "No fixed quantity"
+                    : product.quantity + " available";
+                label.textContent = product.name + " (" + formatMoney(product.priceCents) + " per " + product.unit + ") ";
+                label.appendChild(createTextElement("small", "", stockText));
+
+                const input = document.createElement("input");
+                input.type = "number";
+                input.id = inputId;
+                input.min = "0";
+                input.value = "0";
+                input.dataset.productId = product.id;
+                input.dataset.priceCents = product.priceCents.toString();
+
+                const maximumQuantity = product.madeToOrder
+                    ? (product.orderLimit === null ? 50 : product.orderLimit)
+                    : (product.orderLimit === null
+                        ? product.quantity
+                        : Math.min(product.quantity, product.orderLimit));
+                input.max = maximumQuantity.toString();
+                input.disabled = maximumQuantity === 0;
+
+                row.append(label, input);
+                group.appendChild(row);
+            });
+
+            offlineOrderProducts.appendChild(group);
+        });
+
+        if (availableProducts.length === 0) {
+            offlineOrderProducts.appendChild(createTextElement(
+                "p",
+                "admin-empty",
+                "No products are currently available to order."
+            ));
+        }
+
+        offlineQuantityInputs = Array.from(
+            offlineOrderProducts.querySelectorAll("input[data-product-id]")
+        );
+        updateOfflineOrderTotal();
+    }
+
+    async function loadOfflineOrderProducts() {
+        offlineOrderProducts.textContent = "Loading available products...";
+        const response = await fetch("/api/admin/inventory", {
+            headers: { "Accept": "application/json" },
+            cache: "no-store"
+        });
+
+        if (response.status === 401) {
+            showLogin();
+            return;
+        }
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || "Available products could not be loaded.");
+        }
+
+        renderOfflineOrderProducts(result.products);
+        offlineProductsLoaded = true;
     }
 
     function switchPanel(panelName) {
@@ -528,8 +657,21 @@ document.addEventListener("DOMContentLoaded", function () {
             const details = document.createElement("div");
             details.className = "admin-order-details";
             const submitted = new Date(order.createdAt.replace(" ", "T") + "Z");
+            const sourceLabels = {
+                online: "Website",
+                phone: "Phone",
+                "in-person": "In person",
+                other: "Other offline order"
+            };
             details.appendChild(createTextElement("p", "", "Submitted: " + submitted.toLocaleString()));
-            details.appendChild(createTextElement("p", "", "Phone: " + order.phone));
+            details.appendChild(createTextElement(
+                "p",
+                "",
+                "Source: " + (sourceLabels[order.source] || "Website")
+            ));
+            if (order.phone) {
+                details.appendChild(createTextElement("p", "", "Phone: " + order.phone));
+            }
 
             if (order.email) {
                 details.appendChild(createTextElement("p", "", "Email: " + order.email));
@@ -599,6 +741,14 @@ document.addEventListener("DOMContentLoaded", function () {
         showDashboard();
         setMessage(adminMessage, "", "");
         renderOrders(result.orders);
+
+        if (!offlineProductsLoaded) {
+            try {
+                await loadOfflineOrderProducts();
+            } catch (error) {
+                setMessage(offlineOrderMessage, error.message, "error");
+            }
+        }
     }
 
     loginForm.addEventListener("submit", async function (event) {
@@ -623,9 +773,85 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             loginForm.reset();
+            offlineProductsLoaded = false;
             await loadOrders();
         } catch (error) {
             setMessage(loginMessage, error.message, "error");
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+
+    offlineOrderProducts.addEventListener("input", function (event) {
+        if (event.target.matches("input[data-product-id]")) {
+            const maximum = Number.parseInt(event.target.max, 10);
+            const quantity = Math.max(0, Number.parseInt(event.target.value, 10) || 0);
+
+            if (!Number.isNaN(maximum) && quantity > maximum) {
+                event.target.value = maximum;
+            }
+
+            updateOfflineOrderTotal();
+        }
+    });
+
+    offlineOrderForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        const submitButton = offlineOrderForm.querySelector('button[type="submit"]');
+        const items = {};
+
+        offlineQuantityInputs.forEach(function (input) {
+            const quantity = Math.max(0, Number.parseInt(input.value, 10) || 0);
+
+            if (quantity > 0) {
+                items[input.dataset.productId] = quantity;
+            }
+        });
+
+        if (Object.keys(items).length === 0) {
+            setMessage(offlineOrderMessage, "Select at least one product.", "error");
+            return;
+        }
+
+        submitButton.disabled = true;
+        setMessage(offlineOrderMessage, "Creating order...", "success");
+
+        try {
+            const response = await fetch("/api/admin/orders", {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    customerName: offlineOrderForm.customerName.value,
+                    source: offlineOrderForm.source.value,
+                    phone: offlineOrderForm.phone.value,
+                    email: offlineOrderForm.email.value,
+                    deliveryDay: offlineOrderForm.deliveryDay.value,
+                    paymentReceived: offlineOrderForm.paymentReceived.checked,
+                    notes: offlineOrderForm.notes.value,
+                    items
+                })
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The offline order could not be created.");
+            }
+
+            offlineOrderForm.reset();
+            offlineProductsLoaded = false;
+            await loadOrders();
+            setMessage(
+                offlineOrderMessage,
+                "Order " + result.orderNumber + " created as " +
+                    (result.status === "confirmed" ? "paid" : "pending payment") +
+                    ". Total: " + result.total,
+                "success"
+            );
+        } catch (error) {
+            setMessage(offlineOrderMessage, error.message, "error");
         } finally {
             submitButton.disabled = false;
         }
@@ -673,6 +899,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 throw new Error(result.error || "The order could not be updated.");
             }
 
+            offlineProductsLoaded = false;
             await loadOrders();
         } catch (error) {
             setMessage(adminMessage, error.message, "error");
@@ -681,6 +908,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     refreshButton.addEventListener("click", function () {
+        offlineProductsLoaded = false;
         loadOrders().catch(function (error) {
             setMessage(adminMessage, error.message, "error");
         });
@@ -889,7 +1117,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 throw new Error(result.error || "Inventory could not be saved.");
             }
 
-            await loadInventory();
+            await Promise.all([loadInventory(), loadOfflineOrderProducts()]);
             setMessage(inventoryMessage, "Inventory saved. The website is now using these updates.", "success");
         } catch (error) {
             setMessage(inventoryMessage, error.message, "error");
