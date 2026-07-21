@@ -1747,6 +1747,53 @@ footer a:hover {
     padding-left: 22px;
 }
 
+.admin-item-adjustments {
+    margin: 12px 0 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--green-border);
+    border-radius: 10px;
+    background: #f8fbf7;
+}
+
+.admin-item-adjustments summary {
+    color: var(--green-dark);
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.admin-adjustment-help {
+    margin: 12px 0;
+    color: #4e5d50;
+    font-size: 0.92rem;
+}
+
+.admin-adjustment-rows {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.admin-adjustment-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) 90px;
+    align-items: center;
+    gap: 12px;
+}
+
+.admin-adjustment-row label {
+    margin: 0;
+}
+
+.admin-adjustment-row input {
+    width: 100%;
+}
+
+@media (max-width: 560px) {
+    .admin-adjustment-row {
+        grid-template-columns: 1fr;
+    }
+}
+
 .admin-order-total {
     color: var(--green-dark);
     font-size: 1.1rem;

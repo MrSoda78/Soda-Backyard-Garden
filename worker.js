@@ -82,6 +82,23 @@ const SCHEMA_STATEMENTS = [
               WHERE order_id = NEW.id
           );
     END`,
+    `CREATE TRIGGER IF NOT EXISTS restock_inventory_after_order_item_reduce
+    AFTER UPDATE OF quantity ON order_items
+    WHEN NEW.quantity < OLD.quantity
+      AND (SELECT status FROM orders WHERE id = OLD.order_id) <> 'cancelled'
+    BEGIN
+        UPDATE products
+        SET quantity = quantity + (OLD.quantity - NEW.quantity)
+        WHERE id = OLD.product_id AND made_to_order = 0;
+    END`,
+    `CREATE TRIGGER IF NOT EXISTS restock_inventory_after_order_item_delete
+    AFTER DELETE ON order_items
+    WHEN (SELECT status FROM orders WHERE id = OLD.order_id) <> 'cancelled'
+    BEGIN
+        UPDATE products
+        SET quantity = quantity + OLD.quantity
+        WHERE id = OLD.product_id AND made_to_order = 0;
+    END`,
     `INSERT INTO products (id, name, unit, price_cents, quantity, made_to_order, sort_order, active) VALUES
         ('callaloo', 'Callaloo, vacuum sealed', 'pack', 600, 11, 0, 10, 1),
         ('beets', 'Beets', 'bunch', 600, 2, 0, 20, 1),
@@ -842,6 +859,7 @@ async function handleAdminOrders(db) {
             orders.status,
             orders.source,
             orders.created_at,
+            order_items.id AS order_item_id,
             order_items.product_name,
             order_items.unit_price_cents,
             order_items.quantity,
@@ -873,6 +891,7 @@ async function handleAdminOrders(db) {
 
         if (row.product_name) {
             orderMap.get(row.id).items.push({
+                id: row.order_item_id,
                 name: row.product_name,
                 quantity: row.quantity,
                 unitPriceCents: row.unit_price_cents,
@@ -1274,6 +1293,125 @@ async function handleAdminOrderAction(request, db, orderId) {
     return jsonResponse({ success: true });
 }
 
+async function handleAdminOrderItemsUpdate(request, db, orderId) {
+    let body;
+
+    try {
+        body = await request.json();
+    } catch (_error) {
+        return jsonResponse({ error: "The item changes were not valid." }, 400);
+    }
+
+    if (!Array.isArray(body.items) || body.items.length === 0) {
+        return jsonResponse({ error: "No item changes were received." }, 400);
+    }
+
+    const order = await db.prepare(`
+        SELECT id, status
+        FROM orders
+        WHERE id = ?
+    `).bind(orderId).first();
+
+    if (!order) {
+        return jsonResponse({ error: "That order was not found." }, 404);
+    }
+
+    if (!new Set(["pending", "confirmed"]).has(order.status)) {
+        return jsonResponse({
+            error: "Only pending or confirmed orders can have items adjusted."
+        }, 409);
+    }
+
+    const currentResult = await db.prepare(`
+        SELECT id, product_name, quantity
+        FROM order_items
+        WHERE order_id = ?
+    `).bind(orderId).all();
+    const currentItems = new Map(currentResult.results.map(function (item) {
+        return [String(item.id), item];
+    }));
+    const seenIds = new Set();
+    const changes = [];
+
+    for (const submitted of body.items) {
+        const itemId = String(submitted.id || "");
+        const quantity = Number(submitted.quantity);
+        const current = currentItems.get(itemId);
+
+        if (!current || seenIds.has(itemId) || !Number.isInteger(quantity)) {
+            return jsonResponse({ error: "One of the item changes was not valid." }, 400);
+        }
+
+        if (quantity < 0 || quantity > current.quantity) {
+            return jsonResponse({
+                error: current.product_name + " can only be reduced from its current quantity."
+            }, 400);
+        }
+
+        seenIds.add(itemId);
+
+        if (quantity < current.quantity) {
+            changes.push({ id: itemId, quantity });
+        }
+    }
+
+    if (changes.length === 0) {
+        return jsonResponse({ error: "Reduce at least one quantity before saving." }, 400);
+    }
+
+    const statements = changes.map(function (change) {
+        if (change.quantity === 0) {
+            return db.prepare(`
+                DELETE FROM order_items
+                WHERE id = ? AND order_id = ?
+            `).bind(change.id, orderId);
+        }
+
+        return db.prepare(`
+            UPDATE order_items
+            SET quantity = ?, line_total_cents = unit_price_cents * ?
+            WHERE id = ? AND order_id = ?
+        `).bind(change.quantity, change.quantity, change.id, orderId);
+    });
+
+    statements.push(
+        db.prepare(`
+            UPDATE orders
+            SET total_cents = COALESCE((
+                    SELECT SUM(line_total_cents)
+                    FROM order_items
+                    WHERE order_id = ?
+                ), 0),
+                status = CASE
+                    WHEN EXISTS (
+                        SELECT 1 FROM order_items WHERE order_id = ?
+                    ) THEN status
+                    ELSE 'cancelled'
+                END
+            WHERE id = ? AND status IN ('pending', 'confirmed')
+        `).bind(orderId, orderId, orderId)
+    );
+
+    try {
+        await db.batch(statements);
+    } catch (error) {
+        console.error("Order item adjustment failed", error);
+        return jsonResponse({ error: "The item changes could not be saved." }, 500);
+    }
+
+    const updatedOrder = await db.prepare(`
+        SELECT total_cents, status
+        FROM orders
+        WHERE id = ?
+    `).bind(orderId).first();
+
+    return jsonResponse({
+        success: true,
+        totalCents: updatedOrder.total_cents,
+        status: updatedOrder.status
+    });
+}
+
 async function handleAdminOrderDelete(db, orderId) {
     const results = await db.batch([
         db.prepare(`
@@ -1409,6 +1547,12 @@ export default {
 
                 if (orderActionMatch && request.method === "POST") {
                     return handleAdminOrderAction(request, env.DB, orderActionMatch[1]);
+                }
+
+                const orderItemsMatch = url.pathname.match(/^\/api\/admin\/orders\/([^/]+)\/items$/);
+
+                if (orderItemsMatch && request.method === "POST") {
+                    return handleAdminOrderItemsUpdate(request, env.DB, orderItemsMatch[1]);
                 }
 
                 const orderMatch = url.pathname.match(/^\/api\/admin\/orders\/([^/]+)$/);

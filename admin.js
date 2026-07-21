@@ -690,6 +690,49 @@ document.addEventListener("DOMContentLoaded", function () {
                 ));
             });
             card.appendChild(itemList);
+
+            if (order.status === "pending" || order.status === "confirmed") {
+                const adjustmentPanel = document.createElement("details");
+                adjustmentPanel.className = "admin-item-adjustments";
+                const adjustmentSummary = document.createElement("summary");
+                adjustmentSummary.textContent = "Adjust Individual Items";
+                adjustmentPanel.appendChild(adjustmentSummary);
+                adjustmentPanel.appendChild(createTextElement(
+                    "p",
+                    "admin-adjustment-help",
+                    "Enter the quantity the customer is keeping. Use 0 to remove an item completely. Quantities can only be reduced."
+                ));
+                const adjustmentRows = document.createElement("div");
+                adjustmentRows.className = "admin-adjustment-rows";
+
+                order.items.forEach(function (item) {
+                    const row = document.createElement("div");
+                    row.className = "admin-adjustment-row";
+                    const inputId = "order-item-" + order.id + "-" + item.id;
+                    const label = document.createElement("label");
+                    label.htmlFor = inputId;
+                    label.textContent = item.name + " — quantity to keep";
+                    const input = document.createElement("input");
+                    input.type = "number";
+                    input.id = inputId;
+                    input.min = "0";
+                    input.max = item.quantity.toString();
+                    input.value = item.quantity.toString();
+                    input.dataset.orderItemId = item.id;
+                    input.dataset.originalQuantity = item.quantity.toString();
+                    row.append(label, input);
+                    adjustmentRows.appendChild(row);
+                });
+
+                adjustmentPanel.appendChild(adjustmentRows);
+                adjustmentPanel.appendChild(createActionButton(
+                    "Save Item Changes",
+                    "adjust-items",
+                    order.id
+                ));
+                card.appendChild(adjustmentPanel);
+            }
+
             card.appendChild(createTextElement("p", "admin-order-total", "Total: " + formatMoney(order.totalCents)));
 
             if (order.notes) {
@@ -872,13 +915,52 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
+        let adjustedItems = null;
+
+        if (button.dataset.action === "adjust-items") {
+            const card = button.closest(".admin-order-card");
+            const inputs = Array.from(card.querySelectorAll("input[data-order-item-id]"));
+            adjustedItems = inputs.map(function (input) {
+                return {
+                    id: input.dataset.orderItemId,
+                    quantity: Number.parseInt(input.value, 10),
+                    originalQuantity: Number.parseInt(input.dataset.originalQuantity, 10)
+                };
+            });
+            const invalidItem = adjustedItems.find(function (item) {
+                return !Number.isInteger(item.quantity) ||
+                    item.quantity < 0 ||
+                    item.quantity > item.originalQuantity;
+            });
+
+            if (invalidItem) {
+                setMessage(adminMessage, "Enter a quantity between 0 and the current amount.", "error");
+                return;
+            }
+
+            const reductions = adjustedItems.filter(function (item) {
+                return item.quantity < item.originalQuantity;
+            });
+
+            if (reductions.length === 0) {
+                setMessage(adminMessage, "Reduce at least one item quantity before saving.", "error");
+                return;
+            }
+
+            if (!window.confirm("Save these item reductions? Removed quantities will return to availability and the order total will be updated.")) {
+                return;
+            }
+        }
+
         button.disabled = true;
         setMessage(adminMessage, "Updating order...", "success");
 
         try {
             const isDelete = button.dataset.action === "delete";
+            const isItemAdjustment = button.dataset.action === "adjust-items";
             const response = await fetch(
-                "/api/admin/orders/" + encodeURIComponent(button.dataset.orderId) + (isDelete ? "" : "/action"),
+                "/api/admin/orders/" + encodeURIComponent(button.dataset.orderId) +
+                    (isDelete ? "" : (isItemAdjustment ? "/items" : "/action")),
                 isDelete
                     ? {
                         method: "DELETE",
@@ -890,7 +972,13 @@ document.addEventListener("DOMContentLoaded", function () {
                             "Accept": "application/json",
                             "Content-Type": "application/json"
                         },
-                        body: JSON.stringify({ action: button.dataset.action })
+                        body: JSON.stringify(isItemAdjustment
+                            ? {
+                                items: adjustedItems.map(function (item) {
+                                    return { id: item.id, quantity: item.quantity };
+                                })
+                            }
+                            : { action: button.dataset.action })
                     }
             );
             const result = await response.json();

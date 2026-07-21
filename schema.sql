@@ -87,6 +87,25 @@ BEGIN
       );
 END;
 
+CREATE TRIGGER IF NOT EXISTS restock_inventory_after_order_item_reduce
+AFTER UPDATE OF quantity ON order_items
+WHEN NEW.quantity < OLD.quantity
+  AND (SELECT status FROM orders WHERE id = OLD.order_id) <> 'cancelled'
+BEGIN
+    UPDATE products
+    SET quantity = quantity + (OLD.quantity - NEW.quantity)
+    WHERE id = OLD.product_id AND made_to_order = 0;
+END;
+
+CREATE TRIGGER IF NOT EXISTS restock_inventory_after_order_item_delete
+AFTER DELETE ON order_items
+WHEN (SELECT status FROM orders WHERE id = OLD.order_id) <> 'cancelled'
+BEGIN
+    UPDATE products
+    SET quantity = quantity + OLD.quantity
+    WHERE id = OLD.product_id AND made_to_order = 0;
+END;
+
 INSERT INTO products (id, name, unit, price_cents, quantity, made_to_order, sort_order, active) VALUES
     ('callaloo', 'Callaloo, vacuum sealed', 'pack', 600, 11, 0, 10, 1),
     ('beets', 'Beets', 'bunch', 600, 2, 0, 20, 1),
