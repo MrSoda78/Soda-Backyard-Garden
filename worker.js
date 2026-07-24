@@ -109,6 +109,7 @@ const SCHEMA_STATEMENTS = [
         ('dragon-tongue-beans', 'Dragon Tongue Beans', 'litre', 600, NULL, 1, 70, 1),
         ('purple-beans', 'Purple Beans', 'litre', 600, NULL, 1, 80, 1),
         ('green-beans', 'Green Beans', 'litre', 600, NULL, 1, 90, 1),
+        ('yellow-beans', 'Yellow Beans', 'litre', 600, NULL, 1, 95, 1),
         ('potatoes', 'Potatoes', 'bag', 0, 0, 0, 100, 0),
         ('cold-flu-tea', 'Cold & Flu Tea Mix', 'mix', 600, NULL, 1, 110, 1),
         ('menopause-tea', 'Perimenopause / Menopause Tea Mix', 'mix', 700, NULL, 1, 120, 1),
@@ -135,7 +136,7 @@ const SCHEMA_STATEMENTS = [
     WHERE id IN (
         'callaloo', 'beets', 'yellow-zucchini', 'green-zucchini',
         'lebanese-zucchini', 'small-courgette', 'dragon-tongue-beans',
-        'purple-beans', 'green-beans', 'potatoes', 'fresh-garlic',
+        'purple-beans', 'green-beans', 'yellow-beans', 'potatoes', 'fresh-garlic',
         'fresh-onions', 'sage', 'brown-eggs', 'white-eggs-flat'
     )`,
     `UPDATE products
