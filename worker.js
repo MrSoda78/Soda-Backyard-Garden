@@ -101,7 +101,7 @@ const SCHEMA_STATEMENTS = [
     END`,
     `INSERT INTO products (id, name, unit, price_cents, quantity, made_to_order, sort_order, active) VALUES
         ('callaloo', 'Callaloo, vacuum sealed', 'pack', 600, 11, 0, 10, 1),
-        ('beets', 'Beets', 'bunch', 600, 2, 0, 20, 1),
+        ('beets', 'Turnips', 'bundle', 300, 2, 0, 20, 1),
         ('yellow-zucchini', 'Yellow Zucchini', 'each', 100, 8, 0, 30, 1),
         ('green-zucchini', 'Green Zucchini', 'each', 100, 6, 0, 40, 1),
         ('lebanese-zucchini', 'Lebanese Zucchini', 'each', 100, 2, 0, 50, 1),
@@ -128,6 +128,9 @@ const SCHEMA_STATEMENTS = [
         ('fresh-onions', 'Fresh Onions', 'each', 0, 0, 0, 230, 0),
         ('sage', 'Sage', 'bunch', 600, 0, 0, 240, 1)
     ON CONFLICT(id) DO NOTHING`,
+    `UPDATE products
+    SET name = 'Turnips'
+    WHERE id = 'beets' AND name IN ('Beets', 'Turnip')`,
     `UPDATE products
     SET price_cents = 500, active = 1
     WHERE id = 'hardo-bread' AND price_cents = 0`,
