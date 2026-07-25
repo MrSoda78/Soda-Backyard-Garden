@@ -633,7 +633,7 @@ textarea:focus-visible {
 }
 
 .product-row-coming-soon {
-    opacity: 0.75;
+    opacity: 1;
 }
 
 .product-row-coming-soon input:disabled {
@@ -1353,6 +1353,7 @@ footer a:hover {
     margin-bottom: 4px;
     color: var(--green-dark);
     font-size: 1rem;
+    font-weight: 700;
 }
 
 .product-group-title span {
@@ -1375,7 +1376,12 @@ footer a:hover {
 
 .product-row label {
     margin-bottom: 0;
+    color: var(--text-dark);
     font-weight: normal;
+}
+
+.product-row label span {
+    color: var(--text-dark);
 }
 
 .product-row label small {

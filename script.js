@@ -483,7 +483,6 @@ document.addEventListener("DOMContentLoaded", function () {
             emailData.set("_subject", "New Garden Order " + orderNumber);
             emailData.set("_template", "table");
             emailData.set("_captcha", "false");
-            emailData.set("_cc", customerEmail);
             emailData.set("Order Number", orderNumber);
             emailData.set("Customer", customerName);
             emailData.set("email", customerEmail);
@@ -572,11 +571,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     throw new Error(result.error || "We could not submit your order.");
                 }
 
-                let notificationSent = false;
-
                 try {
                     await sendEmailNotification(result.orderNumber, result.items, result.total);
-                    notificationSent = true;
                 } catch (emailError) {
                     console.warn(emailError);
                 }
@@ -590,18 +586,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     confirmationName.textContent = customerName.split(/\s+/)[0] || "friend";
                     confirmationOrderNumber.textContent = result.orderNumber;
                     confirmationTotal.textContent = "Estimated total: " + result.total;
-                    const confirmationEmailStatus = document.getElementById("confirmationEmailStatus");
-
-                    if (confirmationEmailStatus) {
-                        confirmationEmailStatus.textContent = notificationSent
-                            ? "A copy of this receipt has been sent to your email address. Please check your junk folder if it is not in your inbox."
-                            : "Please save or screenshot this receipt. We could not send the email copy, so the garden will follow up with you directly.";
-                        confirmationEmailStatus.classList.toggle(
-                            "confirmation-email-error",
-                            !notificationSent
-                        );
-                    }
-
                     if (confirmationItemList) {
                         confirmationItemList.replaceChildren();
                         result.items.forEach(function (item) {

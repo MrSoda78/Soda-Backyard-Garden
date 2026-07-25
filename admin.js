@@ -110,6 +110,43 @@ document.addEventListener("DOMContentLoaded", function () {
         return link;
     }
 
+    function createOrderReceiptEmailLink(order) {
+        const firstName = order.customerName.trim().split(/\s+/)[0] || order.customerName;
+        const subject = "Your Soda Backyard Garden order " + order.orderNumber;
+        const itemLines = order.items.map(function (item) {
+            return item.quantity + " x " + item.name + " - " + formatMoney(item.lineTotalCents);
+        });
+        const body = [
+            "Hello " + firstName + ",",
+            "",
+            "We received your Soda Backyard Garden order request.",
+            "",
+            "Order number: " + order.orderNumber,
+            "",
+            "Your order:",
+            ...itemLines,
+            "",
+            "Estimated total: " + formatMoney(order.totalCents),
+            order.notes ? "Your notes: " + order.notes : "",
+            "",
+            "What happens next:",
+            "1. Send payment to marlenereid@hotmail.com.",
+            "2. Your order is confirmed once payment is received.",
+            "",
+            "Please reply to this email if you need to make a change.",
+            "",
+            "Soda Backyard Garden"
+        ].join("\r\n");
+        const link = document.createElement("a");
+        link.className = "button admin-action";
+        link.textContent = "Email / Resend Order Receipt";
+        link.href = "mailto:" + encodeURIComponent(order.email)
+            + "?subject=" + encodeURIComponent(subject)
+            + "&body=" + encodeURIComponent(body);
+        link.setAttribute("aria-label", "Email order receipt to " + order.customerName);
+        return link;
+    }
+
     function updateOfflineOrderTotal() {
         const totalCents = offlineQuantityInputs.reduce(function (total, input) {
             const quantity = Math.max(0, Number.parseInt(input.value, 10) || 0);
@@ -741,6 +778,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
             const actions = document.createElement("div");
             actions.className = "admin-order-actions";
+
+            if (order.email && order.status !== "cancelled") {
+                actions.appendChild(createOrderReceiptEmailLink(order));
+            }
 
             if (order.status === "pending") {
                 actions.appendChild(createActionButton("Confirm Payment", "confirm", order.id));
