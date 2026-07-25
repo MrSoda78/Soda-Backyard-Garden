@@ -156,7 +156,13 @@ const SCHEMA_STATEMENTS = [
     WHERE id IN (
         'pain-rub-oil-2oz', 'pain-rub-oil-4oz',
         'pain-rub-balm-2oz', 'pain-rub-balm-4oz'
-    )`
+    )`,
+    `UPDATE products
+    SET quantity = NULL, made_to_order = 1
+    WHERE id IN ('brown-eggs', 'white-eggs-flat')
+      AND active = 1
+      AND made_to_order = 0
+      AND quantity = 0`
 ];
 
 const PRODUCT_SLOT_INSERT = `INSERT INTO products (

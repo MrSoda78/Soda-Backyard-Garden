@@ -89,6 +89,14 @@ document.addEventListener("DOMContentLoaded", function () {
     let quantityInputs = orderForm
         ? Array.from(orderForm.querySelectorAll("input[data-product-id]"))
         : [];
+    const simpleAvailabilityProductIds = new Set([
+        "brown-eggs",
+        "white-eggs-flat"
+    ]);
+
+    function usesSimpleAvailability(product) {
+        return simpleAvailabilityProductIds.has(product.id);
+    }
 
     function formatStock(product, element) {
         if (!product.active) {
@@ -96,7 +104,9 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         if (product.madeToOrder) {
-            return "Made to order" + formatOrderLimit(product);
+            return (
+                usesSimpleAvailability(product) ? "Available" : "Made to order"
+            ) + formatOrderLimit(product);
         }
 
         const quantity = product.quantity;
@@ -175,7 +185,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 stockText.dataset.stock = product.id;
                 stockText.textContent = (
                     product.madeToOrder
-                        ? "Made to order"
+                        ? (usesSimpleAvailability(product) ? "Available" : "Made to order")
                         : product.quantity + " available"
                 ) + formatOrderLimit(product);
                 stock.appendChild(stockText);
@@ -240,7 +250,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 stock.dataset.orderStock = product.id;
                 stock.textContent = (
                     product.madeToOrder
-                        ? "Made to order"
+                        ? (usesSimpleAvailability(product) ? "Available" : "Made to order")
                         : product.quantity + " available"
                 ) + formatOrderLimit(product);
                 label.appendChild(stock);
@@ -384,7 +394,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (stockLabel) {
                 stockLabel.textContent = (
                     product.madeToOrder
-                        ? "Made to order"
+                        ? (usesSimpleAvailability(product) ? "Available" : "Made to order")
                         : product.quantity + " available"
                 ) + formatOrderLimit(product);
             }
