@@ -5,8 +5,10 @@
 node_modules/**
 .wrangler/**
 worker.js
+sales-workbook.js
 wrangler.jsonc
 package.json
 package-lock.json
 schema.sql
 readme.md
+outputs/**

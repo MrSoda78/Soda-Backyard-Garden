@@ -1990,6 +1990,15 @@ footer a:hover {
     margin-bottom: 28px;
 }
 
+.admin-export-note {
+    margin: -8px 0 20px;
+    padding: 12px 15px;
+    border-left: 4px solid var(--green-main);
+    border-radius: 7px;
+    color: var(--text-soft);
+    background: var(--green-light);
+}
+
 .sales-stat {
     display: flex;
     min-height: 132px;

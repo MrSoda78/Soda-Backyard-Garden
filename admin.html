@@ -172,8 +172,12 @@
                                 <h2>Sales</h2>
                                 <p>Running totals from orders where payment has been confirmed.</p>
                             </div>
-                            <button type="button" class="button secondary" id="refreshSales">Refresh Sales</button>
+                            <div class="admin-toolbar-actions">
+                                <button type="button" class="button secondary" id="refreshSales">Refresh Sales</button>
+                                <button type="button" class="button" id="exportSales">Export to Excel</button>
+                            </div>
                         </div>
+                        <p class="admin-export-note">The Excel workbook includes confirmed sales, donations, an editable Expenses sheet, and an automatic profit summary.</p>
                         <p id="salesMessage" class="form-message"></p>
 
                         <div class="sales-summary" aria-live="polite">

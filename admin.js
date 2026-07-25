@@ -26,6 +26,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const deselectAllInventoryButton = document.getElementById("deselectAllInventory");
     const salesMessage = document.getElementById("salesMessage");
     const refreshSalesButton = document.getElementById("refreshSales");
+    const exportSalesButton = document.getElementById("exportSales");
     const salesProductRows = document.getElementById("salesProductRows");
     const recentPaymentRows = document.getElementById("recentPaymentRows");
     const donationForm = document.getElementById("donationForm");
@@ -671,6 +672,59 @@ document.addEventListener("DOMContentLoaded", function () {
         setMessage(salesMessage, "", "");
     }
 
+    async function exportSalesWorkbook() {
+        exportSalesButton.disabled = true;
+        setMessage(salesMessage, "Preparing Excel workbook...", "success");
+
+        try {
+            const response = await fetch("/api/admin/sales/export", {
+                headers: {
+                    "Accept": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                },
+                cache: "no-store"
+            });
+
+            if (response.status === 401) {
+                showLogin();
+                return;
+            }
+
+            if (!response.ok) {
+                const result = await response.json().catch(function () {
+                    return {};
+                });
+                throw new Error(result.error || "The Excel workbook could not be created.");
+            }
+
+            const workbook = await response.blob();
+            const disposition = response.headers.get("Content-Disposition") || "";
+            const filenameMatch = disposition.match(/filename="([^"]+)"/);
+            const filename = filenameMatch
+                ? filenameMatch[1]
+                : "Soda-Backyard-Garden-Finances.xlsx";
+            const downloadUrl = URL.createObjectURL(workbook);
+            const downloadLink = document.createElement("a");
+
+            downloadLink.href = downloadUrl;
+            downloadLink.download = filename;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            downloadLink.remove();
+            window.setTimeout(function () {
+                URL.revokeObjectURL(downloadUrl);
+            }, 0);
+            setMessage(
+                salesMessage,
+                "Excel workbook downloaded. Enter garden costs on its Expenses sheet.",
+                "success"
+            );
+        } catch (error) {
+            setMessage(salesMessage, error.message, "error");
+        } finally {
+            exportSalesButton.disabled = false;
+        }
+    }
+
     function renderOrders(orders) {
         ordersList.replaceChildren();
 
@@ -1088,6 +1142,8 @@ document.addEventListener("DOMContentLoaded", function () {
     salesTab.addEventListener("click", function () {
         switchPanel("sales");
     });
+
+    exportSalesButton.addEventListener("click", exportSalesWorkbook);
 
     inventoryRows.addEventListener("change", function (event) {
         if (!event.target.classList.contains("inventory-made-to-order")) {

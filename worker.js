@@ -1,3 +1,5 @@
+import { buildSalesWorkbook } from "./sales-workbook.js";
+
 const SCHEMA_STATEMENTS = [
     `CREATE TABLE IF NOT EXISTS products (
         id TEXT PRIMARY KEY,
@@ -1074,6 +1076,72 @@ async function handleAdminSales(db) {
     });
 }
 
+async function handleAdminSalesExport(db) {
+    const results = await db.batch([
+        db.prepare(`
+            SELECT
+                COALESCE(orders.paid_at, orders.created_at) AS paid_at,
+                orders.order_number,
+                orders.customer_name,
+                orders.source,
+                order_items.product_name,
+                order_items.unit_price_cents,
+                order_items.quantity,
+                order_items.line_total_cents
+            FROM order_items
+            JOIN orders ON orders.id = order_items.order_id
+            WHERE orders.status IN ('confirmed', 'completed')
+            ORDER BY
+                COALESCE(orders.paid_at, orders.created_at) DESC,
+                orders.order_number,
+                order_items.id
+        `),
+        db.prepare(`
+            SELECT
+                donation_number, donor_name, amount_cents, note,
+                received_at, status, created_at
+            FROM donations
+            WHERE status <> 'cancelled'
+            ORDER BY created_at DESC
+        `)
+    ]);
+    const workbook = buildSalesWorkbook({
+        exportedAt: new Date().toISOString(),
+        sales: results[0].results.map(function (line) {
+            return {
+                paidAt: line.paid_at,
+                orderNumber: line.order_number,
+                customerName: line.customer_name,
+                source: line.source || "online",
+                productName: line.product_name,
+                unitPriceCents: Number(line.unit_price_cents) || 0,
+                quantity: Number(line.quantity) || 0,
+                lineTotalCents: Number(line.line_total_cents) || 0
+            };
+        }),
+        donations: results[1].results.map(function (donation) {
+            return {
+                referenceNumber: donation.donation_number,
+                donorName: donation.donor_name,
+                amountCents: Number(donation.amount_cents) || 0,
+                note: donation.note,
+                receivedAt: donation.received_at,
+                status: donation.status,
+                createdAt: donation.created_at
+            };
+        })
+    });
+    const filename = "Soda-Backyard-Garden-Finances-" + torontoDateKey(new Date()) + ".xlsx";
+
+    return new Response(workbook, {
+        headers: {
+            "Cache-Control": "no-store",
+            "Content-Disposition": `attachment; filename="${filename}"`,
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        }
+    });
+}
+
 async function handleAdminDonationCreate(request, db) {
     let body;
 
@@ -1544,6 +1612,10 @@ export default {
 
                 if (url.pathname === "/api/admin/sales" && request.method === "GET") {
                     return handleAdminSales(env.DB);
+                }
+
+                if (url.pathname === "/api/admin/sales/export" && request.method === "GET") {
+                    return handleAdminSalesExport(env.DB);
                 }
 
                 if (url.pathname === "/api/admin/donations" && request.method === "POST") {
