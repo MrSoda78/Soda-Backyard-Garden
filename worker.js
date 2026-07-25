@@ -682,7 +682,7 @@ async function createOrderRecord(body, db, options = {}) {
     };
 }
 
-async function handleOrder(request, db) {
+async function handleOrder(request, db, env) {
     let body;
 
     try {
@@ -705,10 +705,19 @@ async function handleOrder(request, db) {
         return order;
     }
 
+    let customerEmailSent = false;
+
+    try {
+        customerEmailSent = await sendBrevoOrderReceipt(env, order);
+    } catch (error) {
+        console.error("Brevo purchaser receipt request failed:", error);
+    }
+
     return jsonResponse({
         orderNumber: order.orderNumber,
         total: order.total,
-        items: order.items
+        items: order.items,
+        customerEmailSent
     }, 201);
 }
 
@@ -1495,7 +1504,7 @@ export default {
             }
 
             if (url.pathname === "/api/orders" && request.method === "POST") {
-                return handleOrder(request, env.DB);
+                return handleOrder(request, env.DB, env);
             }
 
             if (url.pathname === "/api/donations" && request.method === "POST") {

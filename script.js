@@ -586,6 +586,18 @@ document.addEventListener("DOMContentLoaded", function () {
                     confirmationName.textContent = customerName.split(/\s+/)[0] || "friend";
                     confirmationOrderNumber.textContent = result.orderNumber;
                     confirmationTotal.textContent = "Estimated total: " + result.total;
+                    const confirmationEmailStatus = document.getElementById("confirmationEmailStatus");
+
+                    if (confirmationEmailStatus) {
+                        confirmationEmailStatus.textContent = result.customerEmailSent
+                            ? "A copy of this receipt was sent to your email address. Please check your junk folder if it is not in your inbox."
+                            : "Please save or screenshot this receipt. We could not send the email copy, so the garden will contact you directly.";
+                        confirmationEmailStatus.classList.toggle(
+                            "confirmation-email-error",
+                            !result.customerEmailSent
+                        );
+                    }
+
                     if (confirmationItemList) {
                         confirmationItemList.replaceChildren();
                         result.items.forEach(function (item) {
