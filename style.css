@@ -1626,6 +1626,11 @@ footer a:hover {
 
 .admin-orders {
     display: grid;
+    max-height: min(74vh, 860px);
+    padding: 4px 8px 4px 4px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
     gap: 20px;
 }
 
@@ -1775,6 +1780,11 @@ footer a:hover {
 
 .admin-adjustment-rows {
     display: grid;
+    max-height: min(48vh, 420px);
+    padding-right: 6px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
     gap: 10px;
     margin-bottom: 14px;
 }

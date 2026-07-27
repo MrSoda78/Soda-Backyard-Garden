@@ -791,7 +791,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 adjustmentPanel.appendChild(createTextElement(
                     "p",
                     "admin-adjustment-help",
-                    "Enter the quantity the customer is keeping. Use 0 to remove an item completely. Quantities can only be reduced."
+                    "Enter the customer's new quantity. Use 0 to remove an item. Increases deduct available inventory; reductions return it. Admin changes may override the public per-order limit."
                 ));
                 const adjustmentRows = document.createElement("div");
                 adjustmentRows.className = "admin-adjustment-rows";
@@ -802,12 +802,17 @@ document.addEventListener("DOMContentLoaded", function () {
                     const inputId = "order-item-" + order.id + "-" + item.id;
                     const label = document.createElement("label");
                     label.htmlFor = inputId;
-                    label.textContent = item.name + " — quantity to keep";
+                    const availabilityText = item.madeToOrder
+                        ? "no fixed inventory"
+                        : item.availableQuantity + " more available";
+                    label.textContent = item.name + " — new quantity (" + availabilityText + ")";
                     const input = document.createElement("input");
                     input.type = "number";
                     input.id = inputId;
                     input.min = "0";
-                    input.max = item.quantity.toString();
+                    input.max = item.madeToOrder
+                        ? "50"
+                        : Math.min(50, item.quantity + item.availableQuantity).toString();
                     input.value = item.quantity.toString();
                     input.dataset.orderItemId = item.id;
                     input.dataset.originalQuantity = item.quantity.toString();
@@ -1025,24 +1030,24 @@ document.addEventListener("DOMContentLoaded", function () {
             const invalidItem = adjustedItems.find(function (item) {
                 return !Number.isInteger(item.quantity) ||
                     item.quantity < 0 ||
-                    item.quantity > item.originalQuantity;
+                    item.quantity > 50;
             });
 
             if (invalidItem) {
-                setMessage(adminMessage, "Enter a quantity between 0 and the current amount.", "error");
+                setMessage(adminMessage, "Enter a quantity between 0 and 50.", "error");
                 return;
             }
 
-            const reductions = adjustedItems.filter(function (item) {
-                return item.quantity < item.originalQuantity;
+            const changes = adjustedItems.filter(function (item) {
+                return item.quantity !== item.originalQuantity;
             });
 
-            if (reductions.length === 0) {
-                setMessage(adminMessage, "Reduce at least one item quantity before saving.", "error");
+            if (changes.length === 0) {
+                setMessage(adminMessage, "Change at least one item quantity before saving.", "error");
                 return;
             }
 
-            if (!window.confirm("Save these item reductions? Removed quantities will return to availability and the order total will be updated.")) {
+            if (!window.confirm("Save these item changes? Increases will deduct available inventory, reductions will return inventory, and the order total will be updated.")) {
                 return;
             }
         }

@@ -66,6 +66,20 @@ const SCHEMA_STATEMENTS = [
         SET quantity = quantity - NEW.quantity
         WHERE id = NEW.product_id;
     END`,
+    `CREATE TRIGGER IF NOT EXISTS deduct_inventory_before_order_item_increase
+    BEFORE UPDATE OF quantity ON order_items
+    WHEN NEW.quantity > OLD.quantity
+      AND (SELECT made_to_order FROM products WHERE id = NEW.product_id) = 0
+    BEGIN
+        SELECT CASE
+            WHEN (SELECT quantity FROM products WHERE id = NEW.product_id) IS NULL
+              OR (SELECT quantity FROM products WHERE id = NEW.product_id) < (NEW.quantity - OLD.quantity)
+            THEN RAISE(ABORT, 'INSUFFICIENT_STOCK')
+        END;
+        UPDATE products
+        SET quantity = quantity - (NEW.quantity - OLD.quantity)
+        WHERE id = NEW.product_id;
+    END`,
     `CREATE TRIGGER IF NOT EXISTS restock_inventory_after_order_cancel
     AFTER UPDATE OF status ON orders
     WHEN NEW.status = 'cancelled' AND OLD.status <> 'cancelled'
@@ -881,12 +895,16 @@ async function handleAdminOrders(db) {
             orders.source,
             orders.created_at,
             order_items.id AS order_item_id,
+            order_items.product_id,
             order_items.product_name,
             order_items.unit_price_cents,
             order_items.quantity,
-            order_items.line_total_cents
+            order_items.line_total_cents,
+            products.quantity AS available_quantity,
+            products.made_to_order
         FROM orders
         LEFT JOIN order_items ON order_items.order_id = orders.id
+        LEFT JOIN products ON products.id = order_items.product_id
         ORDER BY orders.created_at DESC, order_items.id
         LIMIT 500
     `).all();
@@ -913,10 +931,13 @@ async function handleAdminOrders(db) {
         if (row.product_name) {
             orderMap.get(row.id).items.push({
                 id: row.order_item_id,
+                productId: row.product_id,
                 name: row.product_name,
                 quantity: row.quantity,
                 unitPriceCents: row.unit_price_cents,
-                lineTotalCents: row.line_total_cents
+                lineTotalCents: row.line_total_cents,
+                availableQuantity: row.available_quantity,
+                madeToOrder: row.made_to_order === 1
             });
         }
     });
@@ -1429,21 +1450,21 @@ async function handleAdminOrderItemsUpdate(request, db, orderId) {
             return jsonResponse({ error: "One of the item changes was not valid." }, 400);
         }
 
-        if (quantity < 0 || quantity > current.quantity) {
+        if (quantity < 0 || quantity > 50) {
             return jsonResponse({
-                error: current.product_name + " can only be reduced from its current quantity."
+                error: current.product_name + " must have a quantity between 0 and 50."
             }, 400);
         }
 
         seenIds.add(itemId);
 
-        if (quantity < current.quantity) {
+        if (quantity !== current.quantity) {
             changes.push({ id: itemId, quantity });
         }
     }
 
     if (changes.length === 0) {
-        return jsonResponse({ error: "Reduce at least one quantity before saving." }, 400);
+        return jsonResponse({ error: "Change at least one quantity before saving." }, 400);
     }
 
     const statements = changes.map(function (change) {
@@ -1482,6 +1503,12 @@ async function handleAdminOrderItemsUpdate(request, db, orderId) {
     try {
         await db.batch(statements);
     } catch (error) {
+        if (String(error).includes("INSUFFICIENT_STOCK")) {
+            return jsonResponse({
+                error: "There is not enough available inventory for that increase. Refresh the order and check Inventory before trying again."
+            }, 409);
+        }
+
         console.error("Order item adjustment failed", error);
         return jsonResponse({ error: "The item changes could not be saved." }, 500);
     }
