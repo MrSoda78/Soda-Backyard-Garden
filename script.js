@@ -143,6 +143,61 @@ document.addEventListener("DOMContentLoaded", function () {
             : "";
     }
 
+    let productDetailsSequence = 0;
+
+    function enhanceProductCards(root = document) {
+        root.querySelectorAll(".product-card:not([data-details-toggle-ready])").forEach(function (card) {
+            const content = card.querySelector(":scope > .product-card-content");
+            const heading = content ? content.querySelector(":scope > h3") : null;
+
+            if (!content || !heading) {
+                return;
+            }
+
+            const detailElements = Array.from(content.children).filter(function (element) {
+                return element !== heading;
+            });
+
+            if (detailElements.length === 0) {
+                return;
+            }
+
+            productDetailsSequence += 1;
+            const detailsId = "product-details-" + productDetailsSequence;
+            const details = document.createElement("div");
+            details.className = "product-card-details";
+            details.id = detailsId;
+            details.hidden = true;
+            detailElements.forEach(function (element) {
+                details.appendChild(element);
+            });
+
+            const toggle = document.createElement("button");
+            toggle.type = "button";
+            toggle.className = "product-details-toggle";
+            toggle.textContent = "View details";
+            toggle.setAttribute("aria-expanded", "false");
+            toggle.setAttribute("aria-controls", detailsId);
+            toggle.setAttribute("aria-label", "View details for " + heading.textContent.trim());
+            toggle.addEventListener("click", function () {
+                const willOpen = details.hidden;
+                details.hidden = !willOpen;
+                toggle.textContent = willOpen ? "Hide details" : "View details";
+                toggle.setAttribute("aria-expanded", willOpen.toString());
+                toggle.setAttribute(
+                    "aria-label",
+                    (willOpen ? "Hide details for " : "View details for ") + heading.textContent.trim()
+                );
+            });
+
+            content.append(toggle, details);
+            card.dataset.detailsToggleReady = "true";
+            card.classList.add("is-collapsible");
+        });
+    }
+
+    enhanceProductCards();
+
     function renderDynamicProductCards(products) {
         document.querySelectorAll("[data-dynamic-products]").forEach(function (grid) {
             const category = grid.dataset.dynamicProducts;
@@ -214,6 +269,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 section.hidden = activeProducts.length === 0;
             }
         });
+
+        enhanceProductCards();
     }
 
     function renderDynamicOrderProducts(products) {
