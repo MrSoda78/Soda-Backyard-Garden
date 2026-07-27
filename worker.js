@@ -146,6 +146,7 @@ const SCHEMA_STATEMENTS = [
         ('pain-rub-balm-4oz', 'Pain Rub Balm - 4 oz', 'jar', 8000, 0, 0, 210, 1),
         ('fresh-garlic', 'Fresh Garlic', 'each', 0, 0, 0, 220, 0),
         ('fresh-onions', 'Fresh Onions', 'each', 0, 0, 0, 230, 0),
+        ('onions', 'Onions', 'each', 0, 0, 0, 235, 0),
         ('sage', 'Sage', 'bunch', 600, 0, 0, 240, 1)
     ON CONFLICT(id) DO NOTHING`,
     `UPDATE products
@@ -164,7 +165,7 @@ const SCHEMA_STATEMENTS = [
         'lebanese-zucchini', 'small-courgette', 'dragon-tongue-beans',
         'purple-beans', 'green-beans', 'yellow-beans', 'potatoes',
         'red-potatoes', 'red-fingerling-potatoes', 'white-potatoes',
-        'white-fingerling-potatoes', 'fresh-garlic', 'fresh-onions', 'sage',
+        'white-fingerling-potatoes', 'fresh-garlic', 'fresh-onions', 'onions', 'sage',
         'brown-eggs', 'white-eggs-flat'
     )`,
     `UPDATE products
