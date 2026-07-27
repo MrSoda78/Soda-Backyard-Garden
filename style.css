@@ -1456,8 +1456,51 @@ footer a:hover {
 
 .order-product-group .product-group-title {
     align-items: center;
+    flex-wrap: wrap;
     margin: 0;
     padding: 13px 0;
+}
+
+.order-product-group-controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 7px;
+    margin-left: auto;
+}
+
+.product-group-title .order-product-group-availability,
+.product-group-title .order-product-group-selection {
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.product-group-title .order-product-group-availability {
+    color: var(--text-soft);
+    background: #eef2ed;
+}
+
+.product-group-title .order-product-group-availability.is-available {
+    color: var(--green-dark);
+    background: var(--green-soft);
+}
+
+.product-group-title .order-product-group-availability.is-unavailable {
+    color: #765b19;
+    background: #fff4cf;
+}
+
+.product-group-title .order-product-group-selection {
+    color: #ffffff;
+    background: var(--green-main);
+}
+
+.order-product-group-selection[hidden] {
+    display: none;
 }
 
 .order-product-group-toggle {

@@ -205,6 +205,57 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let orderProductGroupSequence = 0;
 
+    function updateOrderProductGroupSelection(group) {
+        if (!group) {
+            return;
+        }
+
+        const selection = group.querySelector(".order-product-group-selection");
+
+        if (!selection) {
+            return;
+        }
+
+        const selectedCount = Array.from(group.querySelectorAll("input[data-product-id]")).filter(function (input) {
+            return (Number.parseInt(input.value, 10) || 0) > 0;
+        }).length;
+
+        selection.textContent = selectedCount + " selected";
+        selection.hidden = selectedCount === 0;
+    }
+
+    function updateOrderProductGroupSummaries(productMap) {
+        if (!orderForm) {
+            return;
+        }
+
+        orderForm.querySelectorAll(".order-product-group").forEach(function (group) {
+            const availability = group.querySelector(".order-product-group-availability");
+            const products = Array.from(group.querySelectorAll("input[data-product-id]")).map(function (input) {
+                return productMap.get(input.dataset.productId);
+            }).filter(Boolean);
+            const availableCount = products.filter(function (product) {
+                return product.active && product.priceCents > 0 && (product.madeToOrder || product.quantity > 0);
+            }).length;
+            const hasActivePricedProduct = products.some(function (product) {
+                return product.active && product.priceCents > 0;
+            });
+            const hasKnownPrice = products.some(function (product) {
+                return product.priceCents > 0;
+            });
+
+            if (availability) {
+                availability.textContent = availableCount > 0
+                    ? availableCount + (availableCount === 1 ? " item available" : " items available")
+                    : (hasActivePricedProduct ? "Sold out" : (hasKnownPrice ? "Unavailable" : "Coming soon"));
+                availability.classList.toggle("is-available", availableCount > 0);
+                availability.classList.toggle("is-unavailable", availableCount === 0);
+            }
+
+            updateOrderProductGroupSelection(group);
+        });
+    }
+
     function enhanceOrderProductGroups() {
         if (!orderForm) {
             return;
@@ -237,6 +288,19 @@ document.addEventListener("DOMContentLoaded", function () {
             });
 
             const categoryName = heading.textContent.trim();
+            const controls = document.createElement("span");
+            controls.className = "order-product-group-controls";
+
+            const availability = document.createElement("span");
+            availability.className = "order-product-group-availability";
+            availability.textContent = "Checking availability...";
+
+            const selection = document.createElement("span");
+            selection.className = "order-product-group-selection";
+            selection.textContent = "0 selected";
+            selection.setAttribute("aria-live", "polite");
+            selection.hidden = true;
+
             const toggle = document.createElement("button");
             toggle.type = "button";
             toggle.className = "order-product-group-toggle";
@@ -255,9 +319,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
             });
 
-            heading.appendChild(toggle);
+            controls.append(availability, selection, toggle);
+            heading.appendChild(controls);
             group.appendChild(details);
             group.dataset.orderGroupToggleReady = "true";
+            group.dataset.orderGroupName = categoryName;
             group.classList.add("order-product-group");
         });
 
@@ -269,12 +335,12 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             const group = details.closest(".order-product-group");
-            const toggle = group ? group.querySelector(":scope > .product-group-title > .order-product-group-toggle") : null;
+            const toggle = group ? group.querySelector(".order-product-group-toggle") : null;
 
             details.hidden = false;
 
             if (toggle) {
-                const categoryName = group.querySelector(":scope > .product-group-title").childNodes[0].textContent.trim();
+                const categoryName = group.dataset.orderGroupName;
                 toggle.textContent = "Hide products";
                 toggle.setAttribute("aria-expanded", "true");
                 toggle.setAttribute("aria-label", "Hide products in " + categoryName);
@@ -577,6 +643,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 ) + formatOrderLimit(product);
             }
         });
+
+        updateOrderProductGroupSummaries(productMap);
     }
 
     async function loadInventory() {
@@ -609,6 +677,11 @@ document.addEventListener("DOMContentLoaded", function () {
         loadInventory().catch(function () {
             document.querySelectorAll("[data-stock], [data-order-stock]").forEach(function (element) {
                 element.textContent = "Availability temporarily unavailable";
+            });
+
+            document.querySelectorAll(".order-product-group-availability").forEach(function (element) {
+                element.textContent = "Unavailable";
+                element.classList.add("is-unavailable");
             });
 
             if (formMessage) {
@@ -702,6 +775,7 @@ document.addEventListener("DOMContentLoaded", function () {
         orderForm.addEventListener("input", function (event) {
             if (event.target.matches("input[data-product-id]")) {
                 updateOrderTotal();
+                updateOrderProductGroupSelection(event.target.closest(".order-product-group"));
             }
         });
 
