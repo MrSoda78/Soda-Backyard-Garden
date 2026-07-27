@@ -694,6 +694,9 @@ document.addEventListener("DOMContentLoaded", function () {
     if (orderForm && orderTotal) {
         const submitButton = orderForm.querySelector('button[type="submit"]');
         const clearOrderButton = document.getElementById("clearOrderButton");
+        const clearOrderDialog = document.getElementById("clearOrderDialog");
+        const keepOrderButton = document.getElementById("keepOrderButton");
+        const confirmClearOrderButton = document.getElementById("confirmClearOrderButton");
         const orderConfirmation = document.getElementById("orderConfirmation");
         const confirmationName = document.getElementById("confirmationName");
         const confirmationOrderNumber = document.getElementById("confirmationOrderNumber");
@@ -780,30 +783,61 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
 
+        function clearOrderSelections() {
+            quantityInputs.forEach(function (input) {
+                input.value = "0";
+            });
+            orderForm.querySelectorAll(".order-product-group").forEach(function (group) {
+                updateOrderProductGroupSelection(group);
+            });
+            updateOrderTotal();
+
+            if (formMessage) {
+                formMessage.textContent = "Order selections cleared.";
+                formMessage.className = "form-message";
+            }
+        }
+
         if (clearOrderButton) {
             clearOrderButton.addEventListener("click", function () {
                 const hasSelectedProducts = quantityInputs.some(function (input) {
                     return (Number.parseInt(input.value, 10) || 0) > 0;
                 });
 
-                if (
-                    hasSelectedProducts &&
-                    !window.confirm("Clear all selected products from this order?")
-                ) {
+                if (!hasSelectedProducts) {
+                    if (formMessage) {
+                        formMessage.textContent = "There were no selected products to clear.";
+                        formMessage.className = "form-message";
+                    }
                     return;
                 }
 
-                quantityInputs.forEach(function (input) {
-                    input.value = "0";
-                });
-                orderForm.querySelectorAll(".order-product-group").forEach(function (group) {
-                    updateOrderProductGroupSelection(group);
-                });
-                updateOrderTotal();
+                if (clearOrderDialog && typeof clearOrderDialog.showModal === "function") {
+                    clearOrderDialog.showModal();
+                    return;
+                }
 
-                if (formMessage) {
-                    formMessage.textContent = hasSelectedProducts ? "Order selections cleared." : "There were no selected products to clear.";
-                    formMessage.className = "form-message";
+                clearOrderSelections();
+            });
+        }
+
+        if (keepOrderButton && clearOrderDialog) {
+            keepOrderButton.addEventListener("click", function () {
+                clearOrderDialog.close();
+            });
+        }
+
+        if (confirmClearOrderButton && clearOrderDialog) {
+            confirmClearOrderButton.addEventListener("click", function () {
+                clearOrderDialog.close();
+                clearOrderSelections();
+            });
+        }
+
+        if (clearOrderDialog) {
+            clearOrderDialog.addEventListener("click", function (event) {
+                if (event.target === clearOrderDialog) {
+                    clearOrderDialog.close();
                 }
             });
         }
