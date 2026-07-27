@@ -693,6 +693,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (orderForm && orderTotal) {
         const submitButton = orderForm.querySelector('button[type="submit"]');
+        const clearOrderButton = document.getElementById("clearOrderButton");
         const orderConfirmation = document.getElementById("orderConfirmation");
         const confirmationName = document.getElementById("confirmationName");
         const confirmationOrderNumber = document.getElementById("confirmationOrderNumber");
@@ -779,6 +780,34 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
 
+        if (clearOrderButton) {
+            clearOrderButton.addEventListener("click", function () {
+                const hasSelectedProducts = quantityInputs.some(function (input) {
+                    return (Number.parseInt(input.value, 10) || 0) > 0;
+                });
+
+                if (
+                    hasSelectedProducts &&
+                    !window.confirm("Clear all selected products from this order?")
+                ) {
+                    return;
+                }
+
+                quantityInputs.forEach(function (input) {
+                    input.value = "0";
+                });
+                orderForm.querySelectorAll(".order-product-group").forEach(function (group) {
+                    updateOrderProductGroupSelection(group);
+                });
+                updateOrderTotal();
+
+                if (formMessage) {
+                    formMessage.textContent = hasSelectedProducts ? "Order selections cleared." : "There were no selected products to clear.";
+                    formMessage.className = "form-message";
+                }
+            });
+        }
+
         orderForm.addEventListener("submit", async function (event) {
             event.preventDefault();
 
@@ -804,6 +833,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
             isSubmitting = true;
             submitButton.disabled = true;
+            if (clearOrderButton) {
+                clearOrderButton.disabled = true;
+            }
             submitButton.textContent = "Submitting order...";
             formMessage.textContent = "";
             formMessage.className = "form-message";
@@ -892,6 +924,9 @@ document.addEventListener("DOMContentLoaded", function () {
             } finally {
                 isSubmitting = false;
                 submitButton.disabled = false;
+                if (clearOrderButton) {
+                    clearOrderButton.disabled = false;
+                }
                 submitButton.textContent = "Submit Order Request";
             }
         });

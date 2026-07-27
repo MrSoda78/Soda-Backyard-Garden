@@ -1615,6 +1615,17 @@ footer a:hover {
     opacity: 0.7;
 }
 
+.order-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.order-form-actions .button {
+    margin: 0;
+}
+
 .order-confirmation[hidden] {
     display: none;
 }
@@ -2458,6 +2469,16 @@ footer a:hover {
 
     .order-form {
         padding: 22px;
+    }
+
+    .order-form-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .order-form-actions .button {
+        width: 100%;
+        text-align: center;
     }
 }
 /* ==========================================================
