@@ -889,8 +889,17 @@ textarea {
 }
 
 .order-intro {
+    max-width: 920px;
+    margin-left: auto;
+    margin-right: auto;
     margin-bottom: 35px;
     color: var(--text-soft);
+}
+
+.order-section .container > h2 {
+    max-width: 920px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .order-form {
@@ -1340,30 +1349,48 @@ footer a:hover {
 
 .order-layout {
     display: grid;
-    grid-template-columns: 1fr 1.5fr;
-    gap: 40px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
     align-items: start;
+    max-width: 920px;
+    margin: 0 auto;
 }
 
 .order-info {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 32px;
+    align-items: center;
     background: var(--green-soft);
-    padding: 28px;
+    padding: 24px 28px;
     border-radius: 14px;
     border: 1px solid var(--green-border);
 }
 
 .order-info h3 {
+    grid-column: 1;
     color: var(--green-dark);
-    margin-bottom: 14px;
+    margin-bottom: 8px;
+}
+
+.order-info p {
+    grid-column: 1;
 }
 
 .order-info ul {
-    margin: 18px 0 24px 20px;
+    grid-column: 1;
+    margin: 12px 0 0 20px;
     color: var(--text-soft);
 }
 
 .order-info li {
-    margin-bottom: 10px;
+    margin-bottom: 6px;
+}
+
+.order-info .button {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    white-space: nowrap;
 }
 
 .order-form {
@@ -2360,6 +2387,19 @@ footer a:hover {
 @media (max-width: 900px) {
     .order-layout {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    .order-info {
+        grid-template-columns: 1fr;
+    }
+
+    .order-info .button {
+        grid-column: 1;
+        grid-row: auto;
+        justify-self: start;
+        margin-top: 16px;
     }
 }
 
