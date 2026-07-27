@@ -146,7 +146,7 @@ const SCHEMA_STATEMENTS = [
         ('pain-rub-balm-4oz', 'Pain Rub Balm - 4 oz', 'jar', 8000, 0, 0, 210, 1),
         ('fresh-garlic', 'Fresh Garlic', 'each', 0, 0, 0, 220, 0),
         ('fresh-onions', 'Fresh Onions', 'each', 0, 0, 0, 230, 0),
-        ('onions', 'Onions', 'each', 0, 0, 0, 235, 0),
+        ('onions', 'Yellow Spanish Onion', 'each', 0, 0, 0, 235, 0),
         ('sage', 'Sage', 'bunch', 600, 0, 0, 240, 1)
     ON CONFLICT(id) DO NOTHING`,
     `UPDATE products
@@ -155,6 +155,9 @@ const SCHEMA_STATEMENTS = [
     `UPDATE products
     SET name = 'Pink Potatoes', sort_order = 96
     WHERE id = 'potatoes' AND name = 'Potatoes'`,
+    `UPDATE products
+    SET name = 'Yellow Spanish Onion'
+    WHERE id = 'onions' AND name IN ('Onions', 'Yellow Spanish Onions')`,
     `UPDATE products
     SET price_cents = 500, active = 1
     WHERE id = 'hardo-bread' AND price_cents = 0`,

@@ -133,12 +133,17 @@ INSERT INTO products (id, name, unit, price_cents, quantity, made_to_order, sort
     ('pain-rub-balm-4oz', 'Pain Rub Balm - 4 oz', 'jar', 8000, 0, 0, 210, 1),
     ('fresh-garlic', 'Fresh Garlic', 'each', 0, 0, 0, 220, 0),
     ('fresh-onions', 'Fresh Onions', 'each', 0, 0, 0, 230, 0),
+    ('onions', 'Yellow Spanish Onion', 'each', 0, 0, 0, 235, 0),
     ('sage', 'Sage', 'bunch', 600, 0, 0, 240, 1)
 ON CONFLICT(id) DO NOTHING;
 
 UPDATE products
 SET name = 'Turnips'
 WHERE id = 'beets' AND name IN ('Beets', 'Turnip');
+
+UPDATE products
+SET name = 'Yellow Spanish Onion'
+WHERE id = 'onions' AND name IN ('Onions', 'Yellow Spanish Onions');
 
 UPDATE products
 SET price_cents = 500, active = 1
@@ -158,7 +163,7 @@ WHERE id IN (
     'callaloo', 'beets', 'yellow-zucchini', 'green-zucchini',
     'lebanese-zucchini', 'small-courgette', 'dragon-tongue-beans',
     'purple-beans', 'green-beans', 'yellow-beans', 'potatoes', 'fresh-garlic',
-    'fresh-onions', 'sage', 'brown-eggs', 'white-eggs-flat'
+    'fresh-onions', 'onions', 'sage', 'brown-eggs', 'white-eggs-flat'
 );
 
 UPDATE products
