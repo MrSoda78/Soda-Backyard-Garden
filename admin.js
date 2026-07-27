@@ -34,6 +34,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const donationRows = document.getElementById("donationRows");
     let offlineQuantityInputs = [];
     let offlineProductsLoaded = false;
+    let orderAdjustmentProducts = [];
 
     function formatMoney(cents) {
         return "$" + (cents / 100).toFixed(2);
@@ -791,7 +792,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 adjustmentPanel.appendChild(createTextElement(
                     "p",
                     "admin-adjustment-help",
-                    "Enter the customer's new quantity. Use 0 to remove an item. Increases deduct available inventory; reductions return it. Admin changes may override the public per-order limit."
+                    "Enter the customer's new quantity, use 0 to remove an item, or add another product below. Inventory and the order total update automatically. Admin changes may override the public per-order limit."
                 ));
                 const adjustmentRows = document.createElement("div");
                 adjustmentRows.className = "admin-adjustment-rows";
@@ -819,6 +820,47 @@ document.addEventListener("DOMContentLoaded", function () {
                     row.append(label, input);
                     adjustmentRows.appendChild(row);
                 });
+
+                const existingProductIds = new Set(order.items.map(function (item) {
+                    return item.productId;
+                }));
+                const addableProducts = orderAdjustmentProducts.filter(function (product) {
+                    return !existingProductIds.has(product.id) &&
+                        (product.madeToOrder || product.quantity > 0);
+                });
+
+                if (addableProducts.length > 0) {
+                    adjustmentRows.appendChild(createTextElement(
+                        "h4",
+                        "admin-adjustment-subheading",
+                        "Add Products"
+                    ));
+
+                    addableProducts.forEach(function (product) {
+                        const row = document.createElement("div");
+                        row.className = "admin-adjustment-row";
+                        const inputId = "add-product-" + order.id + "-" + product.id;
+                        const label = document.createElement("label");
+                        label.htmlFor = inputId;
+                        const availabilityText = product.madeToOrder
+                            ? "no fixed inventory"
+                            : product.quantity + " available";
+                        label.textContent = product.name + " — " +
+                            formatMoney(product.priceCents) + " (" + availabilityText + ")";
+                        const input = document.createElement("input");
+                        input.type = "number";
+                        input.id = inputId;
+                        input.min = "0";
+                        input.max = product.madeToOrder
+                            ? "50"
+                            : Math.min(50, product.quantity).toString();
+                        input.value = "0";
+                        input.dataset.addProductId = product.id;
+                        input.dataset.productName = product.name;
+                        row.append(label, input);
+                        adjustmentRows.appendChild(row);
+                    });
+                }
 
                 adjustmentPanel.appendChild(adjustmentRows);
                 adjustmentPanel.appendChild(createActionButton(
@@ -883,6 +925,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         showDashboard();
         setMessage(adminMessage, "", "");
+        orderAdjustmentProducts = Array.isArray(result.adjustmentProducts)
+            ? result.adjustmentProducts
+            : [];
         renderOrders(result.orders);
 
         if (!offlineProductsLoaded) {
@@ -1016,10 +1061,12 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         let adjustedItems = null;
+        let addedProducts = null;
 
         if (button.dataset.action === "adjust-items") {
             const card = button.closest(".admin-order-card");
             const inputs = Array.from(card.querySelectorAll("input[data-order-item-id]"));
+            const additionInputs = Array.from(card.querySelectorAll("input[data-add-product-id]"));
             adjustedItems = inputs.map(function (input) {
                 return {
                     id: input.dataset.orderItemId,
@@ -1041,13 +1088,41 @@ document.addEventListener("DOMContentLoaded", function () {
             const changes = adjustedItems.filter(function (item) {
                 return item.quantity !== item.originalQuantity;
             });
+            addedProducts = additionInputs.map(function (input) {
+                return {
+                    productId: input.dataset.addProductId,
+                    productName: input.dataset.productName,
+                    quantity: Number.parseInt(input.value, 10),
+                    maximum: Number.parseInt(input.max, 10)
+                };
+            }).filter(function (item) {
+                return item.quantity > 0;
+            });
+            const invalidAddition = additionInputs.find(function (input) {
+                const quantity = Number.parseInt(input.value, 10);
+                const maximum = Number.parseInt(input.max, 10);
+                return !Number.isInteger(quantity) || quantity < 0 || quantity > maximum;
+            });
 
-            if (changes.length === 0) {
-                setMessage(adminMessage, "Change at least one item quantity before saving.", "error");
+            if (invalidAddition) {
+                setMessage(
+                    adminMessage,
+                    "Enter a valid quantity within the available amount for products being added.",
+                    "error"
+                );
                 return;
             }
 
-            if (!window.confirm("Save these item changes? Increases will deduct available inventory, reductions will return inventory, and the order total will be updated.")) {
+            if (changes.length === 0 && addedProducts.length === 0) {
+                setMessage(
+                    adminMessage,
+                    "Change at least one item quantity or add a product before saving.",
+                    "error"
+                );
+                return;
+            }
+
+            if (!window.confirm("Save these order changes? Added products and increases will deduct available inventory, reductions will return inventory, and the order total will be updated.")) {
                 return;
             }
         }
@@ -1076,6 +1151,9 @@ document.addEventListener("DOMContentLoaded", function () {
                             ? {
                                 items: adjustedItems.map(function (item) {
                                     return { id: item.id, quantity: item.quantity };
+                                }),
+                                additions: addedProducts.map(function (item) {
+                                    return { productId: item.productId, quantity: item.quantity };
                                 })
                             }
                             : { action: button.dataset.action })

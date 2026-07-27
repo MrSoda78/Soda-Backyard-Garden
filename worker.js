@@ -881,7 +881,8 @@ function handleAdminLogout() {
 }
 
 async function handleAdminOrders(db) {
-    const result = await db.prepare(`
+    const [result, adjustmentProducts] = await Promise.all([
+        db.prepare(`
         SELECT
             orders.id,
             orders.order_number,
@@ -907,7 +908,9 @@ async function handleAdminOrders(db) {
         LEFT JOIN products ON products.id = order_items.product_id
         ORDER BY orders.created_at DESC, order_items.id
         LIMIT 500
-    `).all();
+        `).all(),
+        getProducts(db, true)
+    ]);
     const orderMap = new Map();
 
     result.results.forEach(function (row) {
@@ -942,7 +945,12 @@ async function handleAdminOrders(db) {
         }
     });
 
-    return jsonResponse({ orders: Array.from(orderMap.values()) });
+    return jsonResponse({
+        orders: Array.from(orderMap.values()),
+        adjustmentProducts: adjustmentProducts.filter(function (product) {
+            return product.active && product.priceCents > 0;
+        })
+    });
 }
 
 async function handleAdminInventory(db) {
@@ -1410,8 +1418,9 @@ async function handleAdminOrderItemsUpdate(request, db, orderId) {
         return jsonResponse({ error: "The item changes were not valid." }, 400);
     }
 
-    if (!Array.isArray(body.items) || body.items.length === 0) {
-        return jsonResponse({ error: "No item changes were received." }, 400);
+    if (!Array.isArray(body.items) ||
+        (body.additions !== undefined && !Array.isArray(body.additions))) {
+        return jsonResponse({ error: "The item changes were not valid." }, 400);
     }
 
     const order = await db.prepare(`
@@ -1431,7 +1440,7 @@ async function handleAdminOrderItemsUpdate(request, db, orderId) {
     }
 
     const currentResult = await db.prepare(`
-        SELECT id, product_name, quantity
+        SELECT id, product_id, product_name, quantity
         FROM order_items
         WHERE order_id = ?
     `).bind(orderId).all();
@@ -1463,8 +1472,42 @@ async function handleAdminOrderItemsUpdate(request, db, orderId) {
         }
     }
 
-    if (changes.length === 0) {
-        return jsonResponse({ error: "Change at least one quantity before saving." }, 400);
+    const submittedAdditions = body.additions || [];
+    const products = await getProducts(db, true);
+    const productMap = new Map(products.map(function (product) {
+        return [product.id, product];
+    }));
+    const existingProductIds = new Set(currentResult.results.map(function (item) {
+        return item.product_id;
+    }));
+    const seenProductIds = new Set();
+    const additions = [];
+
+    for (const submitted of submittedAdditions) {
+        const productId = cleanText(submitted.productId, 100);
+        const quantity = Number(submitted.quantity);
+        const product = productMap.get(productId);
+
+        if (!product || !product.active || product.priceCents <= 0 ||
+            existingProductIds.has(productId) || seenProductIds.has(productId) ||
+            !Number.isInteger(quantity)) {
+            return jsonResponse({ error: "One of the products being added was not valid." }, 400);
+        }
+
+        if (quantity < 1 || quantity > 50) {
+            return jsonResponse({
+                error: product.name + " must have a quantity between 1 and 50."
+            }, 400);
+        }
+
+        seenProductIds.add(productId);
+        additions.push({ product, quantity });
+    }
+
+    if (changes.length === 0 && additions.length === 0) {
+        return jsonResponse({
+            error: "Change at least one quantity or add a product before saving."
+        }, 400);
     }
 
     const statements = changes.map(function (change) {
@@ -1480,6 +1523,22 @@ async function handleAdminOrderItemsUpdate(request, db, orderId) {
             SET quantity = ?, line_total_cents = unit_price_cents * ?
             WHERE id = ? AND order_id = ?
         `).bind(change.quantity, change.quantity, change.id, orderId);
+    });
+
+    additions.forEach(function (addition) {
+        statements.push(db.prepare(`
+            INSERT INTO order_items (
+                order_id, product_id, product_name,
+                unit_price_cents, quantity, line_total_cents
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        `).bind(
+            orderId,
+            addition.product.id,
+            addition.product.name,
+            addition.product.priceCents,
+            addition.quantity,
+            addition.product.priceCents * addition.quantity
+        ));
     });
 
     statements.push(

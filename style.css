@@ -1796,6 +1796,14 @@ footer a:hover {
     gap: 12px;
 }
 
+.admin-adjustment-subheading {
+    margin: 8px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--green-border);
+    color: var(--green-dark);
+    font-size: 1rem;
+}
+
 .admin-adjustment-row label {
     margin: 0;
 }
