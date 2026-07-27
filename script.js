@@ -103,10 +103,15 @@ document.addEventListener("DOMContentLoaded", function () {
             return product.priceCents > 0 ? "Currently unavailable" : "Ordering not open yet";
         }
 
+        if (
+            usesSimpleAvailability(product) &&
+            (product.madeToOrder || product.quantity > 0)
+        ) {
+            return "Available" + formatOrderLimit(product);
+        }
+
         if (product.madeToOrder) {
-            return (
-                usesSimpleAvailability(product) ? "Available" : "Made to order"
-            ) + formatOrderLimit(product);
+            return "Made to order" + formatOrderLimit(product);
         }
 
         const quantity = product.quantity;
