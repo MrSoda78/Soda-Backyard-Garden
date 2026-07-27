@@ -320,6 +320,29 @@ document.addEventListener("DOMContentLoaded", function () {
             element.classList.toggle("sold-out", !hasStock);
         });
 
+        document.querySelectorAll("[data-product-group-status]").forEach(function (element) {
+            const productsInGroup = element.dataset.productGroupStatus.split(",").map(function (productId) {
+                return productMap.get(productId);
+            }).filter(Boolean);
+            const isAvailable = productsInGroup.some(function (product) {
+                return product.active && (product.madeToOrder || product.quantity > 0);
+            });
+            const hasActiveProduct = productsInGroup.some(function (product) {
+                return product.active && product.priceCents > 0;
+            });
+            const hasKnownPrice = productsInGroup.some(function (product) {
+                return product.priceCents > 0;
+            });
+            const statusText = isAvailable
+                ? "Available"
+                : (hasActiveProduct ? "Sold out" : (hasKnownPrice ? "Unavailable" : "Coming soon"));
+
+            element.textContent = statusText;
+            element.classList.toggle("available", isAvailable);
+            element.classList.toggle("sold-out", !isAvailable && hasActiveProduct);
+            element.classList.toggle("coming", !isAvailable && !hasActiveProduct);
+        });
+
         document.querySelectorAll("[data-price-display]").forEach(function (element) {
             const product = productMap.get(element.dataset.priceDisplay);
             const hasKnownPrice = product && product.priceCents > 0;

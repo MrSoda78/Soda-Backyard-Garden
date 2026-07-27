@@ -126,7 +126,11 @@ const SCHEMA_STATEMENTS = [
         ('purple-beans', 'Purple Beans', 'litre', 600, NULL, 1, 80, 1),
         ('green-beans', 'Green Beans', 'litre', 600, NULL, 1, 90, 1),
         ('yellow-beans', 'Yellow Beans', 'litre', 600, NULL, 1, 95, 1),
-        ('potatoes', 'Potatoes', 'bag', 0, 0, 0, 100, 0),
+        ('potatoes', 'Pink Potatoes', 'bag', 0, 0, 0, 96, 0),
+        ('red-potatoes', 'Red Potatoes', 'bag', 0, 0, 0, 97, 0),
+        ('red-fingerling-potatoes', 'Red Fingerling Potatoes', 'bag', 0, 0, 0, 98, 0),
+        ('white-potatoes', 'White Potatoes', 'bag', 0, 0, 0, 99, 0),
+        ('white-fingerling-potatoes', 'White Fingerling Potatoes', 'bag', 0, 0, 0, 100, 0),
         ('cold-flu-tea', 'Cold & Flu Tea Mix', 'mix', 600, NULL, 1, 110, 1),
         ('menopause-tea', 'Perimenopause / Menopause Tea Mix', 'mix', 700, NULL, 1, 120, 1),
         ('mullein-tea', 'Mullein Tea Mix', 'mix', 600, NULL, 1, 130, 1),
@@ -148,6 +152,9 @@ const SCHEMA_STATEMENTS = [
     SET name = 'Turnips'
     WHERE id = 'beets' AND name IN ('Beets', 'Turnip')`,
     `UPDATE products
+    SET name = 'Pink Potatoes', sort_order = 96
+    WHERE id = 'potatoes' AND name = 'Potatoes'`,
+    `UPDATE products
     SET price_cents = 500, active = 1
     WHERE id = 'hardo-bread' AND price_cents = 0`,
     `UPDATE products
@@ -155,8 +162,10 @@ const SCHEMA_STATEMENTS = [
     WHERE id IN (
         'callaloo', 'beets', 'yellow-zucchini', 'green-zucchini',
         'lebanese-zucchini', 'small-courgette', 'dragon-tongue-beans',
-        'purple-beans', 'green-beans', 'yellow-beans', 'potatoes', 'fresh-garlic',
-        'fresh-onions', 'sage', 'brown-eggs', 'white-eggs-flat'
+        'purple-beans', 'green-beans', 'yellow-beans', 'potatoes',
+        'red-potatoes', 'red-fingerling-potatoes', 'white-potatoes',
+        'white-fingerling-potatoes', 'fresh-garlic', 'fresh-onions', 'sage',
+        'brown-eggs', 'white-eggs-flat'
     )`,
     `UPDATE products
     SET category = 'tea'
