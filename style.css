@@ -561,6 +561,10 @@ textarea:focus-visible {
     grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
 }
 
+.potato-photo-strip {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .product-photo-strip img {
     height: 180px;
     border-right: 2px solid var(--white);
