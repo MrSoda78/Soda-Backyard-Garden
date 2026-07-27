@@ -305,10 +305,17 @@ document.addEventListener("DOMContentLoaded", function () {
                 card.className = "product-card";
                 card.dataset.dynamicProductCard = product.id;
 
-                const placeholder = document.createElement("div");
-                placeholder.className = "product-image-placeholder dynamic-product-image";
-                placeholder.textContent = "Image coming soon";
-                card.appendChild(placeholder);
+                const image = document.createElement("img");
+                image.className = "dynamic-product-image";
+                image.src = "images/" + encodeURIComponent(product.name) + ".jpg";
+                image.alt = product.name;
+                image.addEventListener("error", function () {
+                    const placeholder = document.createElement("div");
+                    placeholder.className = "product-image-placeholder dynamic-product-image";
+                    placeholder.textContent = "Image coming soon";
+                    image.replaceWith(placeholder);
+                }, { once: true });
+                card.appendChild(image);
 
                 const content = document.createElement("div");
                 content.className = "product-card-content";
