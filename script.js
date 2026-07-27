@@ -593,6 +593,18 @@ document.addEventListener("DOMContentLoaded", function () {
             const product = productMap.get(input.dataset.productId);
             const stockLabel = document.querySelector('[data-order-stock="' + input.dataset.productId + '"]');
 
+            if (product && input.labels && input.labels.length > 0) {
+                const label = input.labels[0];
+                const priceDisplay = label.querySelector("[data-price-display]");
+                const nameNode = Array.from(label.childNodes).find(function (node) {
+                    return node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0;
+                });
+
+                if (priceDisplay && nameNode) {
+                    nameNode.textContent = product.name + " (";
+                }
+            }
+
             if (!product || !product.active || product.priceCents <= 0) {
                 input.disabled = true;
                 input.value = "0";
