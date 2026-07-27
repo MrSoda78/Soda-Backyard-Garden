@@ -203,6 +203,87 @@ document.addEventListener("DOMContentLoaded", function () {
 
     enhanceProductCards();
 
+    let orderProductGroupSequence = 0;
+
+    function enhanceOrderProductGroups() {
+        if (!orderForm) {
+            return;
+        }
+
+        orderForm.querySelectorAll(".product-box > .product-group:not([data-order-group-toggle-ready])").forEach(function (group) {
+            const heading = group.querySelector(":scope > .product-group-title");
+
+            if (!heading) {
+                return;
+            }
+
+            const productElements = Array.from(group.children).filter(function (element) {
+                return element !== heading;
+            });
+
+            if (productElements.length === 0) {
+                return;
+            }
+
+            orderProductGroupSequence += 1;
+            const detailsId = "order-product-group-" + orderProductGroupSequence;
+            const details = document.createElement("div");
+            details.className = "order-product-group-details";
+            details.id = detailsId;
+            details.hidden = true;
+
+            productElements.forEach(function (element) {
+                details.appendChild(element);
+            });
+
+            const categoryName = heading.textContent.trim();
+            const toggle = document.createElement("button");
+            toggle.type = "button";
+            toggle.className = "order-product-group-toggle";
+            toggle.textContent = "View products";
+            toggle.setAttribute("aria-expanded", "false");
+            toggle.setAttribute("aria-controls", detailsId);
+            toggle.setAttribute("aria-label", "View products in " + categoryName);
+            toggle.addEventListener("click", function () {
+                const willOpen = details.hidden;
+                details.hidden = !willOpen;
+                toggle.textContent = willOpen ? "Hide products" : "View products";
+                toggle.setAttribute("aria-expanded", willOpen.toString());
+                toggle.setAttribute(
+                    "aria-label",
+                    (willOpen ? "Hide products in " : "View products in ") + categoryName
+                );
+            });
+
+            heading.appendChild(toggle);
+            group.appendChild(details);
+            group.dataset.orderGroupToggleReady = "true";
+            group.classList.add("order-product-group");
+        });
+
+        orderForm.addEventListener("invalid", function (event) {
+            const details = event.target.closest(".order-product-group-details");
+
+            if (!details || !details.hidden) {
+                return;
+            }
+
+            const group = details.closest(".order-product-group");
+            const toggle = group ? group.querySelector(":scope > .product-group-title > .order-product-group-toggle") : null;
+
+            details.hidden = false;
+
+            if (toggle) {
+                const categoryName = group.querySelector(":scope > .product-group-title").childNodes[0].textContent.trim();
+                toggle.textContent = "Hide products";
+                toggle.setAttribute("aria-expanded", "true");
+                toggle.setAttribute("aria-label", "Hide products in " + categoryName);
+            }
+        }, true);
+    }
+
+    enhanceOrderProductGroups();
+
     function renderDynamicProductCards(products) {
         document.querySelectorAll("[data-dynamic-products]").forEach(function (grid) {
             const category = grid.dataset.dynamicProducts;

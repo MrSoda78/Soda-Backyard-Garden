@@ -1418,6 +1418,49 @@ footer a:hover {
     font-size: 0.9rem;
 }
 
+.product-box > .product-group.order-product-group,
+.product-box > .product-group.order-product-group + .product-group.order-product-group {
+    margin-top: 10px;
+    padding: 0 16px;
+    border: 1px solid var(--green-border);
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.order-product-group .product-group-title {
+    align-items: center;
+    margin: 0;
+    padding: 13px 0;
+}
+
+.order-product-group-toggle {
+    flex: 0 0 auto;
+    padding: 7px 10px;
+    border: 1px solid var(--green-border);
+    border-radius: 7px;
+    color: var(--green-dark);
+    background: var(--green-light);
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.order-product-group-toggle:hover,
+.order-product-group-toggle:focus-visible {
+    border-color: var(--green-main);
+    background: var(--green-soft);
+}
+
+.order-product-group-details {
+    padding-bottom: 4px;
+    border-top: 1px solid var(--green-border);
+}
+
+.order-product-group-details[hidden] {
+    display: none;
+}
+
 .product-row {
     display: grid;
     grid-template-columns: 1fr 100px;
