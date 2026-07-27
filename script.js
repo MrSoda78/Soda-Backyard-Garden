@@ -210,7 +210,7 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        orderForm.querySelectorAll(".product-box > .product-group:not([data-order-group-toggle-ready])").forEach(function (group) {
+        orderForm.querySelectorAll(".product-box > .product-group:not([data-order-group-toggle-ready]):not([data-order-group-always-open])").forEach(function (group) {
             const heading = group.querySelector(":scope > .product-group-title");
 
             if (!heading) {
@@ -439,7 +439,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 container.appendChild(row);
             });
 
-            if (group) {
+            if (group && !group.hasAttribute("data-dynamic-order-keep-visible")) {
                 group.hidden = activeProducts.length === 0;
             }
         });
