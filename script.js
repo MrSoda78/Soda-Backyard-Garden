@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function formatStock(product, element) {
         if (!product.active) {
-            return product.priceCents > 0 ? "Currently unavailable" : "Ordering not open yet";
+            return "Currently unavailable";
         }
 
         if (
@@ -115,6 +115,11 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         const quantity = product.quantity;
+
+        if (!Number.isFinite(quantity) || quantity <= 0) {
+            return "Sold out" + formatOrderLimit(product);
+        }
+
         const singular = element.dataset.unitSingular;
         const plural = element.dataset.unitPlural;
 
@@ -480,7 +485,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 stockLabel.textContent = (
                     product.madeToOrder
                         ? (usesSimpleAvailability(product) ? "Available" : "Made to order")
-                        : product.quantity + " available"
+                        : (product.quantity > 0 ? product.quantity + " available" : "Sold out")
                 ) + formatOrderLimit(product);
             }
         });

@@ -815,6 +815,18 @@ textarea:focus-visible {
     text-align: right;
 }
 
+.product-variant-info {
+    display: grid;
+    justify-items: end;
+    gap: 2px;
+    text-align: right;
+}
+
+.product-variant-info small {
+    color: var(--text-soft);
+    font-size: 0.82rem;
+}
+
 .product-card-content .status {
     align-self: flex-start;
     margin-top: auto;
