@@ -184,6 +184,16 @@ INSERT INTO products (
     id, name, unit, price_cents, quantity, made_to_order,
     sort_order, active, description, category, is_slot
 ) VALUES
+    ('okra', 'Okra', 'each', 0, 0, 0, 245, 0,
+        'Freshly harvested okra.', 'produce', 1),
+    ('sweet-banana-peppers', 'Sweet Banana Peppers', 'each', 0, 0, 0, 246, 0,
+        'Fresh sweet banana peppers.', 'produce', 1)
+ON CONFLICT(id) DO NOTHING;
+
+INSERT INTO products (
+    id, name, unit, price_cents, quantity, made_to_order,
+    sort_order, active, description, category, is_slot
+) VALUES
     ('slot-produce-1', 'New Product Slot 1', 'each', 0, 0, 0, 1001, 0, '', 'produce', 1),
     ('slot-produce-2', 'New Product Slot 2', 'each', 0, 0, 0, 1002, 0, '', 'produce', 1),
     ('slot-produce-3', 'New Product Slot 3', 'each', 0, 0, 0, 1003, 0, '', 'produce', 1),

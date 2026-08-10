@@ -191,7 +191,16 @@ const SCHEMA_STATEMENTS = [
     WHERE id IN ('brown-eggs', 'white-eggs-flat')
       AND active = 1
       AND made_to_order = 0
-      AND quantity = 0`
+      AND quantity = 0`,
+    `INSERT INTO products (
+        id, name, unit, price_cents, quantity, made_to_order,
+        sort_order, active, description, category, is_slot
+    ) VALUES
+        ('okra', 'Okra', 'each', 0, 0, 0, 245, 0,
+            'Freshly harvested okra.', 'produce', 1),
+        ('sweet-banana-peppers', 'Sweet Banana Peppers', 'each', 0, 0, 0, 246, 0,
+            'Fresh sweet banana peppers.', 'produce', 1)
+    ON CONFLICT(id) DO NOTHING`
 ];
 
 const PRODUCT_SLOT_INSERT = `INSERT INTO products (
