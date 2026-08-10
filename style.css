@@ -522,7 +522,7 @@ textarea:focus-visible {
 }
 
 /* ==========================================================
-   PRODUCT GRID (FRESH PRODUCE PAGE)
+   PRODUCT GRID (AVAILABLE PAGE)
 ========================================================== */
 
 .product-grid {
@@ -1863,7 +1863,6 @@ footer a:hover {
     padding: 4px 8px 4px 4px;
     overflow-y: auto;
     overscroll-behavior: contain;
-    scrollbar-gutter: stable;
     gap: 20px;
 }
 
