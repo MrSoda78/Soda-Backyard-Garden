@@ -305,45 +305,82 @@ document.addEventListener("DOMContentLoaded", function () {
         return input;
     }
 
+    function isEmptyProductSlot(product) {
+        return product.isSlot && product.name.trim().startsWith("New Product Slot");
+    }
+
+    function appendInventoryHeading(label, isCurrentSection) {
+        const sectionRow = document.createElement("tr");
+        const sectionCell = document.createElement("th");
+        sectionCell.colSpan = 8;
+        sectionCell.scope = "rowgroup";
+        sectionCell.className = "inventory-section-heading";
+        sectionCell.classList.toggle("inventory-current-heading", isCurrentSection);
+        sectionCell.textContent = label;
+        sectionRow.appendChild(sectionCell);
+        inventoryRows.appendChild(sectionRow);
+    }
+
     function renderInventory(products) {
         inventoryRows.replaceChildren();
-        const categoryLabels = {
-            produce: "Fresh Produce — New Product Slots",
-            tea: "Tea Mixes — New Product Slots",
-            baked: "Baked Goods — New Product Slots",
-            "pain-rub": "Pain Rub — New Product Slots"
-        };
-        let lastSlotCategory = "";
-        let currentProductsHeadingAdded = false;
+        const categories = [
+            { id: "produce", label: "Fresh Produce" },
+            { id: "tea", label: "Tea Mixes" },
+            { id: "baked", label: "Baked Goods" },
+            { id: "pain-rub", label: "Pain Rub" }
+        ];
+        const displayedProductIds = new Set();
+        const displayRows = [];
 
-        products.forEach(function (product) {
-            if (!product.isSlot && !currentProductsHeadingAdded) {
-                const currentRow = document.createElement("tr");
-                const currentCell = document.createElement("th");
-                currentCell.colSpan = 8;
-                currentCell.scope = "rowgroup";
-                currentCell.className = "inventory-section-heading inventory-current-heading";
-                currentCell.textContent = "Current Products";
-                currentRow.appendChild(currentCell);
-                inventoryRows.appendChild(currentRow);
-                currentProductsHeadingAdded = true;
+        categories.forEach(function (category) {
+            const currentProducts = products.filter(function (product) {
+                return product.category === category.id && !isEmptyProductSlot(product);
+            });
+            const emptySlots = products.filter(function (product) {
+                return product.category === category.id && isEmptyProductSlot(product);
+            });
+
+            if (currentProducts.length > 0) {
+                displayRows.push({ heading: category.label + " — Current Products", current: true });
+                currentProducts.forEach(function (product) {
+                    displayRows.push({ product });
+                    displayedProductIds.add(product.id);
+                });
             }
 
-            if (product.isSlot && product.category !== lastSlotCategory) {
-                const sectionRow = document.createElement("tr");
-                const sectionCell = document.createElement("th");
-                sectionCell.colSpan = 8;
-                sectionCell.scope = "rowgroup";
-                sectionCell.className = "inventory-section-heading";
-                sectionCell.textContent = categoryLabels[product.category] || "New Product Slots";
-                sectionRow.appendChild(sectionCell);
-                inventoryRows.appendChild(sectionRow);
-                lastSlotCategory = product.category;
+            if (emptySlots.length > 0) {
+                displayRows.push({ heading: category.label + " — New Product Slots", current: false });
+                emptySlots.forEach(function (product) {
+                    displayRows.push({ product });
+                    displayedProductIds.add(product.id);
+                });
             }
+        });
+
+        const uncategorizedProducts = products.filter(function (product) {
+            return !displayedProductIds.has(product.id);
+        });
+
+        if (uncategorizedProducts.length > 0) {
+            displayRows.push({ heading: "Other Products", current: true });
+            uncategorizedProducts.forEach(function (product) {
+                displayRows.push({ product });
+            });
+        }
+
+        displayRows.forEach(function (entry) {
+            if (entry.heading) {
+                appendInventoryHeading(entry.heading, entry.current);
+                return;
+            }
+
+            const product = entry.product;
+            const emptySlot = isEmptyProductSlot(product);
 
             const row = document.createElement("tr");
             row.dataset.productId = product.id;
-            row.classList.toggle("inventory-slot-row", product.isSlot);
+            row.classList.toggle("inventory-slot-row", emptySlot);
+            row.classList.toggle("inventory-custom-product-row", product.isSlot);
 
             const nameCell = document.createElement("td");
             const nameInput = createInventoryInput("text", product.name, "inventory-name");
@@ -485,7 +522,7 @@ document.addEventListener("DOMContentLoaded", function () {
             return false;
         }
 
-        if (!row.classList.contains("inventory-slot-row")) {
+        if (!row.classList.contains("inventory-custom-product-row")) {
             return true;
         }
 

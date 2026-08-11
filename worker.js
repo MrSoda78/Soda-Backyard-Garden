@@ -233,6 +233,71 @@ const PRODUCT_SLOT_INSERT = `INSERT INTO products (
         ('slot-pain-rub-5', 'New Product Slot 5', 'each', 0, 0, 0, 1305, 0, '', 'pain-rub', 1)
     ON CONFLICT(id) DO NOTHING`;
 
+const PRODUCT_SLOT_SETTINGS = [
+    { category: "produce", unit: "each", madeToOrder: false, sortBase: 1000 },
+    { category: "tea", unit: "mix", madeToOrder: true, sortBase: 1100 },
+    { category: "baked", unit: "each", madeToOrder: false, sortBase: 1200 },
+    { category: "pain-rub", unit: "each", madeToOrder: false, sortBase: 1300 }
+];
+const EMPTY_PRODUCT_SLOTS_PER_CATEGORY = 5;
+
+function isEmptyProductSlot(product) {
+    return product.is_slot === 1 && product.name.startsWith("New Product Slot");
+}
+
+async function ensureEmptyProductSlots(db) {
+    const result = await db.prepare(`
+        SELECT id, name, category, is_slot
+        FROM products
+        WHERE is_slot = 1
+    `).all();
+    const inserts = [];
+
+    PRODUCT_SLOT_SETTINGS.forEach(function (settings) {
+        const categoryProducts = result.results.filter(function (product) {
+            return product.category === settings.category;
+        });
+        const emptySlotCount = categoryProducts.filter(isEmptyProductSlot).length;
+        let nextNumber = categoryProducts.reduce(function (highest, product) {
+            const prefix = "slot-" + settings.category + "-";
+
+            if (!product.id.startsWith(prefix)) {
+                return highest;
+            }
+
+            const number = Number.parseInt(product.id.slice(prefix.length), 10);
+            return Number.isInteger(number) ? Math.max(highest, number) : highest;
+        }, 0) + 1;
+
+        for (let index = emptySlotCount; index < EMPTY_PRODUCT_SLOTS_PER_CATEGORY; index += 1) {
+            const id = "slot-" + settings.category + "-" + nextNumber;
+            const name = "New Product Slot " + nextNumber;
+
+            inserts.push(
+                db.prepare(`
+                    INSERT OR IGNORE INTO products (
+                        id, name, unit, price_cents, quantity, made_to_order,
+                        sort_order, active, description, category, is_slot
+                    ) VALUES (?, ?, ?, 0, ?, ?, ?, 0, '', ?, 1)
+                `).bind(
+                    id,
+                    name,
+                    settings.unit,
+                    settings.madeToOrder ? null : 0,
+                    settings.madeToOrder ? 1 : 0,
+                    settings.sortBase + nextNumber,
+                    settings.category
+                )
+            );
+            nextNumber += 1;
+        }
+    });
+
+    if (inserts.length > 0) {
+        await db.batch(inserts);
+    }
+}
+
 let databaseInitialization;
 
 function jsonResponse(body, status = 200) {
@@ -295,6 +360,7 @@ function ensureDatabase(db) {
             }
 
             await db.prepare(PRODUCT_SLOT_INSERT).run();
+            await ensureEmptyProductSlots(db);
             await db.prepare(`
                 UPDATE products
                 SET order_limit = COALESCE(order_limit, 1),
@@ -1389,6 +1455,7 @@ async function handleAdminInventoryUpdate(request, db) {
     }
 
     await db.batch(updates);
+    await ensureEmptyProductSlots(db);
     return jsonResponse({ success: true });
 }
 
