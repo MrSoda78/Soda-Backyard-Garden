@@ -134,6 +134,9 @@ INSERT INTO products (id, name, unit, price_cents, quantity, made_to_order, sort
     ('fresh-garlic', 'Fresh Garlic', 'each', 0, 0, 0, 220, 0),
     ('fresh-onions', 'Fresh Onions', 'each', 0, 0, 0, 230, 0),
     ('onions', 'Yellow Spanish Onion', 'each', 0, 0, 0, 235, 0),
+    ('red-onion', 'Red Onion', 'each', 0, 0, 0, 236, 0),
+    ('white-onion', 'White Onion', 'each', 0, 0, 0, 237, 0),
+    ('tri-colour-carrots', 'Tri-Colour Carrots', 'bunch', 0, 0, 0, 238, 0),
     ('sage', 'Sage', 'bunch', 600, 0, 0, 240, 1)
 ON CONFLICT(id) DO NOTHING;
 
@@ -163,7 +166,8 @@ WHERE id IN (
     'callaloo', 'beets', 'yellow-zucchini', 'green-zucchini',
     'lebanese-zucchini', 'small-courgette', 'dragon-tongue-beans',
     'purple-beans', 'green-beans', 'yellow-beans', 'potatoes', 'fresh-garlic',
-    'fresh-onions', 'onions', 'sage', 'brown-eggs', 'white-eggs-flat'
+    'fresh-onions', 'onions', 'red-onion', 'white-onion',
+    'tri-colour-carrots', 'sage', 'brown-eggs', 'white-eggs-flat'
 );
 
 UPDATE products

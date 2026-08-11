@@ -373,7 +373,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 const image = document.createElement("img");
                 image.className = "dynamic-product-image";
-                image.src = "images/" + encodeURIComponent(product.name) + ".jpg";
+                const imageFileName = product.name === "Sweet Corn"
+                    ? "Sweet Corn 2.jpg"
+                    : product.name + ".jpg";
+                image.src = "images/" + encodeURIComponent(imageFileName);
                 image.alt = product.name;
                 image.addEventListener("error", function () {
                     const placeholder = document.createElement("div");
