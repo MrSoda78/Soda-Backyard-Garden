@@ -1811,6 +1811,19 @@ footer a:hover {
     gap: 16px;
 }
 
+.button.admin-view-website {
+    border-color: var(--white);
+    color: var(--green-dark);
+    background: var(--white);
+}
+
+.button.admin-view-website:hover,
+.button.admin-view-website:focus-visible {
+    border-color: var(--white);
+    color: var(--white);
+    background: var(--green-dark);
+}
+
 .admin-dashboard-bar {
     margin-bottom: 28px;
     padding-bottom: 16px;
