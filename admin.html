@@ -59,6 +59,14 @@
                             </div>
                         </div>
                         <p id="adminMessage" class="form-message"></p>
+                        <div class="admin-search-bar">
+                            <label for="adminOrderSearch">Search orders</label>
+                            <div class="search-input-row">
+                                <input type="search" id="adminOrderSearch" placeholder="Name, order number, email, phone, or product">
+                                <button type="button" class="button secondary search-clear-button" data-clear-search="adminOrderSearch">Clear</button>
+                            </div>
+                            <p class="search-result-message" id="adminOrderSearchMessage" aria-live="polite"></p>
+                        </div>
 
                         <details class="admin-offline-order">
                             <summary>Add a Phone or In-Person Order</summary>
@@ -142,6 +150,14 @@
                             </div>
                         </div>
                         <p class="admin-inventory-help"><strong>Maximum per order:</strong> enter the most one household can request in a single order, or leave it blank for no limit. For a new product slot, enter the product details and save. It will move into that category's Current Products list and a new blank slot will appear. Check <strong>Available to order</strong> when it is ready for customers. Choose <strong>Made to order</strong> when the product does not use a fixed quantity.</p>
+                        <div class="admin-search-bar admin-search-sticky">
+                            <label for="adminInventorySearch">Search inventory</label>
+                            <div class="search-input-row">
+                                <input type="search" id="adminInventorySearch" placeholder="Product, category, description, or selling unit">
+                                <button type="button" class="button secondary search-clear-button" data-clear-search="adminInventorySearch">Clear</button>
+                            </div>
+                            <p class="search-result-message" id="adminInventorySearchMessage" aria-live="polite"></p>
+                        </div>
                         <div class="inventory-bulk-actions" aria-label="Bulk availability controls">
                             <strong>Available to order:</strong>
                             <button type="button" class="button secondary inventory-bulk-button" id="selectAllInventory">Select All</button>
@@ -181,6 +197,14 @@
                         </div>
                         <p class="admin-export-note">The Excel workbook includes confirmed sales, donations, an editable Expenses sheet, and an automatic profit summary.</p>
                         <p id="salesMessage" class="form-message"></p>
+                        <div class="admin-search-bar">
+                            <label for="adminSalesSearch">Search sales</label>
+                            <div class="search-input-row">
+                                <input type="search" id="adminSalesSearch" placeholder="Product, customer, order, donation, or amount">
+                                <button type="button" class="button secondary search-clear-button" data-clear-search="adminSalesSearch">Clear</button>
+                            </div>
+                            <p class="search-result-message" id="adminSalesSearchMessage" aria-live="polite"></p>
+                        </div>
 
                         <div class="sales-summary" aria-live="polite">
                             <article class="sales-stat sales-stat-primary">

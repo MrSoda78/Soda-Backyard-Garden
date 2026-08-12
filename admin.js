@@ -32,9 +32,17 @@ document.addEventListener("DOMContentLoaded", function () {
     const donationForm = document.getElementById("donationForm");
     const donationMessage = document.getElementById("donationMessage");
     const donationRows = document.getElementById("donationRows");
+    const orderSearch = document.getElementById("adminOrderSearch");
+    const orderSearchMessage = document.getElementById("adminOrderSearchMessage");
+    const inventorySearch = document.getElementById("adminInventorySearch");
+    const inventorySearchMessage = document.getElementById("adminInventorySearchMessage");
+    const salesSearch = document.getElementById("adminSalesSearch");
+    const salesSearchMessage = document.getElementById("adminSalesSearchMessage");
     let offlineQuantityInputs = [];
     let offlineProductsLoaded = false;
     let orderAdjustmentProducts = [];
+    const collapsedInventorySections = new Set();
+    let inventorySectionsInitialized = false;
 
     function formatMoney(cents) {
         return "$" + (cents / 100).toFixed(2);
@@ -309,16 +317,93 @@ document.addEventListener("DOMContentLoaded", function () {
         return product.isSlot && product.name.trim().startsWith("New Product Slot");
     }
 
-    function appendInventoryHeading(label, isCurrentSection) {
+    function appendInventoryHeading(label, isCurrentSection, sectionKey, productCount) {
         const sectionRow = document.createElement("tr");
         const sectionCell = document.createElement("th");
+        const toggle = document.createElement("button");
         sectionCell.colSpan = 8;
         sectionCell.scope = "rowgroup";
         sectionCell.className = "inventory-section-heading";
         sectionCell.classList.toggle("inventory-current-heading", isCurrentSection);
-        sectionCell.textContent = label;
+        sectionRow.dataset.inventoryHeading = sectionKey;
+        toggle.type = "button";
+        toggle.className = "inventory-section-toggle";
+        toggle.dataset.inventorySectionToggle = sectionKey;
+        toggle.innerHTML = "<span>" + label + " <small>(" + productCount + ")</small></span><span class=\"inventory-toggle-icon\" aria-hidden=\"true\"></span>";
+        sectionCell.appendChild(toggle);
         sectionRow.appendChild(sectionCell);
         inventoryRows.appendChild(sectionRow);
+    }
+
+    function normalizedSearch(value) {
+        return value.trim().toLocaleLowerCase();
+    }
+
+    function filterOrders() {
+        const query = normalizedSearch(orderSearch.value);
+        const cards = Array.from(ordersList.querySelectorAll(".admin-order-card"));
+        let visibleCount = 0;
+
+        cards.forEach(function (card) {
+            const matches = !query || card.dataset.orderSearch.includes(query);
+            card.hidden = !matches;
+            visibleCount += matches ? 1 : 0;
+        });
+
+        orderSearchMessage.textContent = query
+            ? (visibleCount === 0 ? "No matching orders found." : visibleCount + " matching order" + (visibleCount === 1 ? "" : "s") + ".")
+            : "";
+    }
+
+    function filterSales() {
+        const query = normalizedSearch(salesSearch.value);
+        const rows = Array.from(document.querySelectorAll(
+            "#salesProductRows tr, #recentPaymentRows tr, #donationRows tr"
+        ));
+        let visibleCount = 0;
+
+        rows.forEach(function (row) {
+            const matches = !query || row.textContent.toLocaleLowerCase().includes(query);
+            row.hidden = !matches;
+            visibleCount += matches ? 1 : 0;
+        });
+
+        salesSearchMessage.textContent = query
+            ? (visibleCount === 0 ? "No matching sales or donations found." : visibleCount + " matching record" + (visibleCount === 1 ? "" : "s") + ".")
+            : "";
+    }
+
+    function filterInventoryRows() {
+        const query = normalizedSearch(inventorySearch.value);
+        const sectionMatches = new Map();
+        let visibleCount = 0;
+
+        inventoryRows.querySelectorAll("tr[data-product-id]").forEach(function (row) {
+            const liveValues = Array.from(row.querySelectorAll("input, textarea")).map(function (input) {
+                return input.value;
+            }).join(" ").toLocaleLowerCase();
+            const matches = !query || (row.dataset.inventorySearch + " " + liveValues).includes(query);
+            const collapsed = collapsedInventorySections.has(row.dataset.inventorySection);
+            row.hidden = !matches || (!query && collapsed);
+
+            if (matches) {
+                visibleCount += 1;
+                sectionMatches.set(row.dataset.inventorySection, true);
+            }
+        });
+
+        inventoryRows.querySelectorAll("tr[data-inventory-heading]").forEach(function (row) {
+            const sectionKey = row.dataset.inventoryHeading;
+            const toggle = row.querySelector(".inventory-section-toggle");
+            const collapsed = collapsedInventorySections.has(sectionKey);
+            row.hidden = query ? !sectionMatches.get(sectionKey) : false;
+            toggle.setAttribute("aria-expanded", (!collapsed || Boolean(query)).toString());
+            toggle.classList.toggle("is-collapsed", collapsed && !query);
+        });
+
+        inventorySearchMessage.textContent = query
+            ? (visibleCount === 0 ? "No matching inventory products found." : visibleCount + " matching product" + (visibleCount === 1 ? "" : "s") + ".")
+            : "";
     }
 
     function renderInventory(products) {
@@ -341,17 +426,17 @@ document.addEventListener("DOMContentLoaded", function () {
             });
 
             if (currentProducts.length > 0) {
-                displayRows.push({ heading: category.label + " — Current Products", current: true });
+                displayRows.push({ heading: category.label + " — Current Products", current: true, sectionKey: category.id + "-current", productCount: currentProducts.length });
                 currentProducts.forEach(function (product) {
-                    displayRows.push({ product });
+                    displayRows.push({ product, sectionKey: category.id + "-current" });
                     displayedProductIds.add(product.id);
                 });
             }
 
             if (emptySlots.length > 0) {
-                displayRows.push({ heading: category.label + " — New Product Slots", current: false });
+                displayRows.push({ heading: category.label + " — New Product Slots", current: false, sectionKey: category.id + "-slots", productCount: emptySlots.length });
                 emptySlots.forEach(function (product) {
-                    displayRows.push({ product });
+                    displayRows.push({ product, sectionKey: category.id + "-slots" });
                     displayedProductIds.add(product.id);
                 });
             }
@@ -362,15 +447,24 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         if (uncategorizedProducts.length > 0) {
-            displayRows.push({ heading: "Other Products", current: true });
+            displayRows.push({ heading: "Other Products", current: true, sectionKey: "other-current", productCount: uncategorizedProducts.length });
             uncategorizedProducts.forEach(function (product) {
-                displayRows.push({ product });
+                displayRows.push({ product, sectionKey: "other-current" });
             });
+        }
+
+        if (!inventorySectionsInitialized) {
+            displayRows.filter(function (entry) {
+                return entry.sectionKey && entry.sectionKey.endsWith("-slots");
+            }).forEach(function (entry) {
+                collapsedInventorySections.add(entry.sectionKey);
+            });
+            inventorySectionsInitialized = true;
         }
 
         displayRows.forEach(function (entry) {
             if (entry.heading) {
-                appendInventoryHeading(entry.heading, entry.current);
+                appendInventoryHeading(entry.heading, entry.current, entry.sectionKey, entry.productCount);
                 return;
             }
 
@@ -379,6 +473,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
             const row = document.createElement("tr");
             row.dataset.productId = product.id;
+            row.dataset.inventorySection = entry.sectionKey;
+            row.dataset.inventorySearch = [
+                product.name,
+                product.description,
+                product.unit,
+                product.category,
+                product.active ? "available" : "unavailable",
+                product.madeToOrder ? "made to order" : "fixed quantity"
+            ].join(" ").toLocaleLowerCase();
             row.classList.toggle("inventory-slot-row", emptySlot);
             row.classList.toggle("inventory-custom-product-row", product.isSlot);
 
@@ -471,6 +574,8 @@ document.addEventListener("DOMContentLoaded", function () {
             );
             inventoryRows.appendChild(row);
         });
+
+        filterInventoryRows();
     }
 
     async function loadInventory() {
@@ -686,6 +791,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 donationRows.appendChild(row);
             });
         }
+
+        filterSales();
     }
 
     async function loadSales() {
@@ -768,12 +875,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (orders.length === 0) {
             ordersList.appendChild(createTextElement("p", "admin-empty", "No orders have been submitted yet."));
+            filterOrders();
             return;
         }
 
         orders.forEach(function (order) {
             const card = document.createElement("article");
             card.className = "admin-order-card";
+            card.dataset.orderSearch = [
+                order.orderNumber,
+                order.customerName,
+                order.phone,
+                order.email,
+                order.deliveryDay,
+                order.status,
+                order.source,
+                order.notes,
+                order.items.map(function (item) { return item.name; }).join(" ")
+            ].filter(Boolean).join(" ").toLocaleLowerCase();
             const heading = document.createElement("div");
             heading.className = "admin-order-heading";
             const headingCopy = document.createElement("div");
@@ -940,6 +1059,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
             ordersList.appendChild(card);
         });
+
+        filterOrders();
     }
 
     async function loadOrders() {
@@ -1401,6 +1522,37 @@ document.addEventListener("DOMContentLoaded", function () {
             button.disabled = false;
             setMessage(donationMessage, error.message, "error");
         }
+    });
+
+    orderSearch.addEventListener("input", filterOrders);
+    inventorySearch.addEventListener("input", filterInventoryRows);
+    salesSearch.addEventListener("input", filterSales);
+
+    document.querySelectorAll("[data-clear-search]").forEach(function (button) {
+        button.addEventListener("click", function () {
+            const input = document.getElementById(button.dataset.clearSearch);
+            input.value = "";
+            input.dispatchEvent(new Event("input"));
+            input.focus();
+        });
+    });
+
+    inventoryRows.addEventListener("click", function (event) {
+        const toggle = event.target.closest("[data-inventory-section-toggle]");
+
+        if (!toggle) {
+            return;
+        }
+
+        const sectionKey = toggle.dataset.inventorySectionToggle;
+
+        if (collapsedInventorySections.has(sectionKey)) {
+            collapsedInventorySections.delete(sectionKey);
+        } else {
+            collapsedInventorySections.add(sectionKey);
+        }
+
+        filterInventoryRows();
     });
 
     saveInventoryButton.addEventListener("click", async function () {

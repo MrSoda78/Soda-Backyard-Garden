@@ -5,6 +5,74 @@ document.addEventListener("DOMContentLoaded", function () {
     const previousButton = document.querySelector(".carousel-btn.prev");
     const nextButton = document.querySelector(".carousel-btn.next");
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let applyProductPageSearch = function () {};
+    let applyOrderProductSearch = function () {};
+
+    function createSearchControl(id, labelText, placeholder) {
+        const container = document.createElement("div");
+        const label = document.createElement("label");
+        const inputRow = document.createElement("div");
+        const input = document.createElement("input");
+        const clearButton = document.createElement("button");
+        const message = document.createElement("p");
+
+        container.className = "site-search";
+        label.htmlFor = id;
+        label.textContent = labelText;
+        inputRow.className = "search-input-row";
+        input.type = "search";
+        input.id = id;
+        input.placeholder = placeholder;
+        clearButton.type = "button";
+        clearButton.className = "button secondary search-clear-button";
+        clearButton.textContent = "Clear";
+        message.className = "search-result-message";
+        message.setAttribute("aria-live", "polite");
+        inputRow.append(input, clearButton);
+        container.append(label, inputRow, message);
+
+        clearButton.addEventListener("click", function () {
+            input.value = "";
+            input.dispatchEvent(new Event("input"));
+            input.focus();
+        });
+
+        return { container, input, message };
+    }
+
+    const productGrids = Array.from(document.querySelectorAll("main .product-grid"));
+
+    if (productGrids.length > 0) {
+        const search = createSearchControl(
+            "productPageSearch",
+            "Search products",
+            "Type a product name or description"
+        );
+        const firstGrid = productGrids[0];
+        firstGrid.parentNode.insertBefore(search.container, firstGrid);
+
+        applyProductPageSearch = function () {
+            const query = search.input.value.trim().toLocaleLowerCase();
+            const cards = Array.from(document.querySelectorAll("main .product-card"));
+            let visibleCount = 0;
+
+            cards.forEach(function (card) {
+                const imageText = Array.from(card.querySelectorAll("img")).map(function (image) {
+                    return image.alt;
+                }).join(" ");
+                const searchableText = (card.textContent + " " + imageText).toLocaleLowerCase();
+                const matches = !query || searchableText.includes(query);
+                card.hidden = !matches;
+                visibleCount += matches ? 1 : 0;
+            });
+
+            search.message.textContent = query
+                ? (visibleCount === 0 ? "No matching products found." : visibleCount + " matching product" + (visibleCount === 1 ? "" : "s") + ".")
+                : "";
+        };
+
+        search.input.addEventListener("input", applyProductPageSearch);
+    }
 
     if (carouselImages.length > 1 && !prefersReducedMotion) {
         let currentImage = 0;
@@ -350,6 +418,58 @@ document.addEventListener("DOMContentLoaded", function () {
 
     enhanceOrderProductGroups();
 
+    if (orderForm) {
+        const productBox = orderForm.querySelector(".product-box");
+        const productBoxTitle = productBox ? productBox.querySelector(".product-box-title") : null;
+
+        if (productBox && productBoxTitle) {
+            const search = createSearchControl(
+                "orderProductSearch",
+                "Search order products",
+                "Type a product name"
+            );
+            productBoxTitle.insertAdjacentElement("afterend", search.container);
+
+            applyOrderProductSearch = function () {
+                const query = search.input.value.trim().toLocaleLowerCase();
+                let visibleCount = 0;
+
+                productBox.querySelectorAll(".product-row").forEach(function (row) {
+                    const matches = !query || row.textContent.toLocaleLowerCase().includes(query);
+                    row.hidden = !matches;
+                    visibleCount += matches ? 1 : 0;
+                });
+
+                productBox.querySelectorAll(".product-group").forEach(function (group) {
+                    const matchingRows = Array.from(group.querySelectorAll(".product-row")).filter(function (row) {
+                        return !row.hidden;
+                    });
+                    group.hidden = query ? matchingRows.length === 0 : false;
+
+                    if (query && matchingRows.length > 0) {
+                        const details = group.querySelector(".order-product-group-details");
+                        const toggle = group.querySelector(".order-product-group-toggle");
+
+                        if (details) {
+                            details.hidden = false;
+                        }
+
+                        if (toggle) {
+                            toggle.textContent = "Hide products";
+                            toggle.setAttribute("aria-expanded", "true");
+                        }
+                    }
+                });
+
+                search.message.textContent = query
+                    ? (visibleCount === 0 ? "No matching order products found." : visibleCount + " matching product" + (visibleCount === 1 ? "" : "s") + ".")
+                    : "";
+            };
+
+            search.input.addEventListener("input", applyOrderProductSearch);
+        }
+    }
+
     function renderDynamicProductCards(products) {
         document.querySelectorAll("[data-dynamic-products]").forEach(function (grid) {
             const category = grid.dataset.dynamicProducts;
@@ -433,6 +553,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         enhanceProductCards();
+        applyProductPageSearch();
     }
 
     function renderDynamicOrderProducts(products) {
@@ -659,7 +780,8 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
 
-        updateOrderProductGroupSummaries(productMap);
+            updateOrderProductGroupSummaries(productMap);
+            applyOrderProductSearch();
     }
 
     async function loadInventory() {
