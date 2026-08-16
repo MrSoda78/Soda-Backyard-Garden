@@ -196,6 +196,12 @@ const SCHEMA_STATEMENTS = [
         'pain-rub-balm-2oz', 'pain-rub-balm-4oz'
     )`,
     `UPDATE products
+    SET active = 0, quantity = 0, category = 'retired'
+    WHERE id IN (
+        'beets', 'lebanese-zucchini', 'potatoes',
+        'red-fingerling-potatoes', 'white-fingerling-potatoes', 'fresh-onions'
+    )`,
+    `UPDATE products
     SET quantity = NULL, made_to_order = 1
     WHERE id IN ('brown-eggs', 'white-eggs-flat')
       AND active = 1

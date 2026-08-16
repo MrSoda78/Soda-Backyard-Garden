@@ -189,6 +189,13 @@ WHERE id IN (
     'pain-rub-balm-2oz', 'pain-rub-balm-4oz'
 );
 
+UPDATE products
+SET active = 0, quantity = 0, category = 'retired'
+WHERE id IN (
+    'beets', 'lebanese-zucchini', 'potatoes',
+    'red-fingerling-potatoes', 'white-fingerling-potatoes', 'fresh-onions'
+);
+
 INSERT INTO products (
     id, name, unit, price_cents, quantity, made_to_order,
     sort_order, active, description, category, is_slot

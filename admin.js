@@ -443,7 +443,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         const uncategorizedProducts = products.filter(function (product) {
-            return !displayedProductIds.has(product.id);
+            return !displayedProductIds.has(product.id) && product.category !== "retired";
         });
 
         if (uncategorizedProducts.length > 0) {
