@@ -101,7 +101,26 @@
                                         <input type="number" id="turnipsQty" name="turnipsQty" min="0" max="2" value="0" data-price="3" data-product-id="beets">
                                     </div>
 
+                                    <div class="product-row product-row-coming-soon">
+                                        <label for="freshBeetsQty">Beets (<span data-price-display="fresh-beets">Price to be determined</span>) <small data-order-stock="fresh-beets">Ordering not open yet</small></label>
+                                        <input type="number" id="freshBeetsQty" name="freshBeetsQty" min="0" max="0" value="0" data-price="0" data-product-id="fresh-beets" disabled>
+                                    </div>
+
                                     <div data-dynamic-order-products="produce"></div>
+                                </div>
+
+                                <div class="product-group">
+                                    <h4 class="product-group-title">Honey</h4>
+
+                                    <div class="product-row product-row-coming-soon">
+                                        <label for="honey1kgQty">Honey, 1 kg (<span data-price-display="honey-1kg">$18.00 per pail</span>) <small data-order-stock="honey-1kg">Ordering not open yet</small></label>
+                                        <input type="number" id="honey1kgQty" name="honey1kgQty" min="0" max="0" value="0" data-price="18" data-product-id="honey-1kg" disabled>
+                                    </div>
+
+                                    <div class="product-row product-row-coming-soon">
+                                        <label for="honey3kgQty">Honey, 3 kg (<span data-price-display="honey-3kg">$48.00 per pail</span>) <small data-order-stock="honey-3kg">Ordering not open yet</small></label>
+                                        <input type="number" id="honey3kgQty" name="honey3kgQty" min="0" max="0" value="0" data-price="48" data-product-id="honey-3kg" disabled>
+                                    </div>
                                 </div>
 
                                 <div class="product-group">
@@ -154,6 +173,11 @@
                                     <div class="product-row product-row-coming-soon">
                                         <label for="whiteFingerlingPotatoesQty">White Fingerling Potatoes (<span data-price-display="white-fingerling-potatoes">Price to be determined</span>) <small data-order-stock="white-fingerling-potatoes">Ordering not open yet</small></label>
                                         <input type="number" id="whiteFingerlingPotatoesQty" name="whiteFingerlingPotatoesQty" min="0" max="0" value="0" data-price="0" data-product-id="white-fingerling-potatoes" disabled>
+                                    </div>
+
+                                    <div class="product-row">
+                                        <label for="russetPotatoesQty">Russet Potatoes (<span data-price-display="russet-potatoes">$4.00 per bag</span>) <small data-order-stock="russet-potatoes">7 bags available</small></label>
+                                        <input type="number" id="russetPotatoesQty" name="russetPotatoesQty" min="0" max="7" value="0" data-price="4" data-product-id="russet-potatoes">
                                     </div>
                                 </div>
 

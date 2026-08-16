@@ -117,7 +117,10 @@ const SCHEMA_STATEMENTS = [
     END`,
     `INSERT INTO products (id, name, unit, price_cents, quantity, made_to_order, sort_order, active) VALUES
         ('callaloo', 'Callaloo, vacuum sealed', 'pack', 600, 11, 0, 10, 1),
+        ('honey-1kg', 'Honey - 1 kg', 'pail', 1800, 0, 0, 15, 0),
+        ('honey-3kg', 'Honey - 3 kg', 'pail', 4800, 0, 0, 16, 0),
         ('beets', 'Turnips', 'bundle', 300, 2, 0, 20, 1),
+        ('fresh-beets', 'Beets', 'bunch', 0, 0, 0, 21, 0),
         ('yellow-zucchini', 'Yellow Zucchini', 'each', 100, 8, 0, 30, 1),
         ('green-zucchini', 'Green Zucchini', 'each', 100, 6, 0, 40, 1),
         ('lebanese-zucchini', 'Lebanese Zucchini', 'each', 100, 2, 0, 50, 1),
@@ -131,6 +134,7 @@ const SCHEMA_STATEMENTS = [
         ('red-fingerling-potatoes', 'Red Fingerling Potatoes', 'bag', 0, 0, 0, 98, 0),
         ('white-potatoes', 'White Potatoes', 'bag', 0, 0, 0, 99, 0),
         ('white-fingerling-potatoes', 'White Fingerling Potatoes', 'bag', 0, 0, 0, 100, 0),
+        ('russet-potatoes', 'Russet Potatoes', 'bag', 400, 7, 0, 101, 1),
         ('cold-flu-tea', 'Cold & Flu Tea Mix', 'mix', 600, NULL, 1, 110, 1),
         ('menopause-tea', 'Perimenopause / Menopause Tea Mix', 'mix', 700, NULL, 1, 120, 1),
         ('mullein-tea', 'Mullein Tea Mix', 'mix', 600, NULL, 1, 130, 1),
@@ -167,11 +171,12 @@ const SCHEMA_STATEMENTS = [
     `UPDATE products
     SET category = 'produce'
     WHERE id IN (
-        'callaloo', 'beets', 'yellow-zucchini', 'green-zucchini',
+        'callaloo', 'honey-1kg', 'honey-3kg', 'beets', 'fresh-beets',
+        'yellow-zucchini', 'green-zucchini',
         'lebanese-zucchini', 'small-courgette', 'dragon-tongue-beans',
         'purple-beans', 'green-beans', 'yellow-beans', 'potatoes',
         'red-potatoes', 'red-fingerling-potatoes', 'white-potatoes',
-        'white-fingerling-potatoes', 'fresh-garlic', 'fresh-onions', 'onions',
+        'white-fingerling-potatoes', 'russet-potatoes', 'fresh-garlic', 'fresh-onions', 'onions',
         'red-onion', 'white-onion', 'tri-colour-carrots', 'sage',
         'brown-eggs', 'white-eggs-flat'
     )`,
