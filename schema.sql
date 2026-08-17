@@ -110,11 +110,14 @@ INSERT INTO products (id, name, unit, price_cents, quantity, made_to_order, sort
     ('callaloo', 'Callaloo, vacuum sealed', 'pack', 600, 11, 0, 10, 1),
     ('honey-1kg', 'Honey - 1 kg', 'pail', 1800, 0, 0, 15, 0),
     ('honey-3kg', 'Honey - 3 kg', 'pail', 4800, 0, 0, 16, 0),
+    ('pasta-sauce-1l', 'Pasta Sauce - 1 litre', 'jar', 600, 6, 0, 17, 1),
+    ('pasta-sauce-750ml', 'Pasta Sauce - 750 mL', 'jar', 500, 6, 0, 18, 1),
     ('beets', 'Turnips', 'bundle', 300, 2, 0, 20, 1),
     ('fresh-beets', 'Beets', 'bunch', 0, 0, 0, 21, 0),
     ('yellow-zucchini', 'Yellow Zucchini', 'each', 100, 8, 0, 30, 1),
     ('green-zucchini', 'Green Zucchini', 'each', 100, 6, 0, 40, 1),
     ('lebanese-zucchini', 'Lebanese Zucchini', 'each', 100, 2, 0, 50, 1),
+    ('lemon-cucumber-pack', 'Lemon Cucumber - Pack of 3', 'pack', 100, 0, 0, 55, 0),
     ('small-courgette', 'Small Courgette', 'each', 100, 2, 0, 60, 1),
     ('dragon-tongue-beans', 'Dragon Tongue Beans', 'litre', 600, NULL, 1, 70, 1),
     ('purple-beans', 'Purple Beans', 'litre', 600, NULL, 1, 80, 1),
@@ -167,13 +170,24 @@ WHERE id = 'hardo-bread';
 UPDATE products
 SET category = 'produce'
 WHERE id IN (
-    'callaloo', 'honey-1kg', 'honey-3kg', 'beets', 'fresh-beets',
+    'callaloo', 'honey-1kg', 'honey-3kg', 'pasta-sauce-1l',
+    'pasta-sauce-750ml', 'beets', 'fresh-beets', 'lemon-cucumber-pack',
     'yellow-zucchini', 'green-zucchini',
     'lebanese-zucchini', 'small-courgette', 'dragon-tongue-beans',
     'purple-beans', 'green-beans', 'yellow-beans', 'potatoes', 'russet-potatoes', 'fresh-garlic',
     'fresh-onions', 'onions', 'red-onion', 'white-onion',
     'tri-colour-carrots', 'sage', 'brown-eggs', 'white-eggs-flat'
 );
+
+UPDATE products
+SET description = 'Ingredients: Tomato, tomato paste, garlic, garlic powder, basil, oregano, thyme, and salt.'
+WHERE id IN ('pasta-sauce-1l', 'pasta-sauce-750ml')
+  AND description = '';
+
+UPDATE products
+SET description = 'Three lemon cucumbers per pack.'
+WHERE id = 'lemon-cucumber-pack'
+  AND description = '';
 
 UPDATE products
 SET category = 'tea'
