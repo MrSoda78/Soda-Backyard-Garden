@@ -482,6 +482,10 @@ function normalizeCustomerEmail(value) {
     return cleanText(value, 150).toLocaleLowerCase();
 }
 
+function normalizeCustomerName(value) {
+    return cleanText(value, 100).toLocaleLowerCase();
+}
+
 function normalizeCustomerPhone(value) {
     return cleanText(value, 40).replace(/\D/g, "");
 }
@@ -783,25 +787,28 @@ async function sendBrevoOrderRefusal(env, order) {
     return true;
 }
 
-async function findBlockedCustomer(db, email, phone) {
+async function findBlockedCustomer(db, customerName, email, phone) {
+    const normalizedName = normalizeCustomerName(customerName);
     const normalizedEmail = normalizeCustomerEmail(email);
     const normalizedPhone = normalizeCustomerPhone(phone);
 
-    if (!normalizedEmail && !normalizedPhone) {
+    if (!normalizedName && !normalizedEmail && !normalizedPhone) {
         return null;
     }
 
     return db.prepare(`
         SELECT id, customer_name, email, phone, reason, created_at
         FROM blocked_customers
-        WHERE (email <> '' AND email = ?)
+        WHERE (customer_name <> '' AND LOWER(TRIM(customer_name)) = ?)
+           OR (email <> '' AND email = ?)
            OR (phone <> '' AND phone = ?)
         ORDER BY created_at DESC
         LIMIT 1
-    `).bind(normalizedEmail, normalizedPhone).first();
+    `).bind(normalizedName, normalizedEmail, normalizedPhone).first();
 }
 
 async function blockCustomer(db, order) {
+    const normalizedName = normalizeCustomerName(order.customerName);
     const normalizedEmail = normalizeCustomerEmail(order.email);
     const normalizedPhone = normalizeCustomerPhone(order.phone);
 
@@ -812,9 +819,10 @@ async function blockCustomer(db, order) {
     await db.batch([
         db.prepare(`
             DELETE FROM blocked_customers
-            WHERE (email <> '' AND email = ?)
+            WHERE (customer_name <> '' AND LOWER(TRIM(customer_name)) = ?)
+               OR (email <> '' AND email = ?)
                OR (phone <> '' AND phone = ?)
-        `).bind(normalizedEmail, normalizedPhone),
+        `).bind(normalizedName, normalizedEmail, normalizedPhone),
         db.prepare(`
             INSERT INTO blocked_customers (
                 id, customer_name, email, phone, reason
@@ -865,7 +873,7 @@ async function createOrderRecord(body, db, options = {}) {
         return jsonResponse({ error: "Please enter a valid email address or leave it blank." }, 400);
     }
 
-    if (options.checkBlocked === true && await findBlockedCustomer(db, email, phone)) {
+    if (options.checkBlocked === true && await findBlockedCustomer(db, customerName, email, phone)) {
         return jsonResponse({
             error: "We are unable to accept this order request. Please contact Soda Backyard Garden if you believe this is an error."
         }, 403);
@@ -1240,10 +1248,12 @@ async function handleAdminOrders(db) {
     });
 
     orderMap.forEach(function (order) {
+        const orderName = normalizeCustomerName(order.customerName);
         const orderEmail = normalizeCustomerEmail(order.email);
         const orderPhone = normalizeCustomerPhone(order.phone);
         order.customerBlocked = blockedCustomers.some(function (customer) {
-            return (customer.email && customer.email === orderEmail) ||
+            return (customer.customerName && normalizeCustomerName(customer.customerName) === orderName) ||
+                (customer.email && customer.email === orderEmail) ||
                 (customer.phone && customer.phone === orderPhone);
         });
     });
@@ -1711,7 +1721,7 @@ async function handleAdminOrderAction(request, db, env, orderId) {
             return jsonResponse({
                 success: true,
                 blocked: true,
-                message: "Future website orders matching this email address or phone number are now blocked."
+                message: "Future website orders matching this customer name, email address, or phone number are now blocked."
             });
         }
 

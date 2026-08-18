@@ -1305,11 +1305,11 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        if (button.dataset.action === "refuse-block" && !window.confirm("Refuse this order, email the customer, and block future website orders matching their email address or phone number?")) {
+        if (button.dataset.action === "refuse-block" && !window.confirm("Refuse this order, email the customer, and block future website orders matching their name, email address, or phone number?")) {
             return;
         }
 
-        if (button.dataset.action === "block" && !window.confirm("Block future website orders matching this customer's email address or phone number?")) {
+        if (button.dataset.action === "block" && !window.confirm("Block future website orders matching this customer's name, email address, or phone number?")) {
             return;
         }
 
