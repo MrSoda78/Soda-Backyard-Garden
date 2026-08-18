@@ -53,6 +53,15 @@ const SCHEMA_STATEMENTS = [
         confirmed_at TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
+    `CREATE TABLE IF NOT EXISTS blocked_customers (
+        id TEXT PRIMARY KEY,
+        customer_name TEXT NOT NULL DEFAULT '',
+        email TEXT NOT NULL DEFAULT '',
+        phone TEXT NOT NULL DEFAULT '',
+        reason TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (email <> '' OR phone <> '')
+    )`,
     `CREATE TRIGGER IF NOT EXISTS deduct_inventory_before_order_item
     BEFORE INSERT ON order_items
     WHEN (SELECT made_to_order FROM products WHERE id = NEW.product_id) = 0
@@ -83,6 +92,24 @@ const SCHEMA_STATEMENTS = [
     `CREATE TRIGGER IF NOT EXISTS restock_inventory_after_order_cancel
     AFTER UPDATE OF status ON orders
     WHEN NEW.status = 'cancelled' AND OLD.status <> 'cancelled'
+    BEGIN
+        UPDATE products
+        SET quantity = quantity + COALESCE((
+            SELECT SUM(order_items.quantity)
+            FROM order_items
+            WHERE order_items.order_id = NEW.id
+              AND order_items.product_id = products.id
+        ), 0)
+        WHERE made_to_order = 0
+          AND id IN (
+              SELECT product_id
+              FROM order_items
+              WHERE order_id = NEW.id
+          );
+    END`,
+    `CREATE TRIGGER IF NOT EXISTS restock_inventory_after_order_refuse
+    AFTER UPDATE OF status ON orders
+    WHEN NEW.status = 'refused' AND OLD.status <> 'refused'
     BEGIN
         UPDATE products
         SET quantity = quantity + COALESCE((
@@ -451,6 +478,14 @@ function cleanText(value, maximumLength) {
     return typeof value === "string" ? value.trim().slice(0, maximumLength) : "";
 }
 
+function normalizeCustomerEmail(value) {
+    return cleanText(value, 150).toLocaleLowerCase();
+}
+
+function normalizeCustomerPhone(value) {
+    return cleanText(value, 40).replace(/\D/g, "");
+}
+
 function escapeHtml(value) {
     return String(value)
         .replaceAll("&", "&amp;")
@@ -674,6 +709,128 @@ async function sendBrevoOrderReceipt(env, order) {
     return true;
 }
 
+async function sendBrevoOrderRefusal(env, order) {
+    if (!env.BREVO_API_KEY || !order.email) {
+        console.error("Brevo refusal notice skipped: email service or customer email is unavailable.");
+        return false;
+    }
+
+    const firstName = order.customerName.trim().split(/\s+/)[0] || order.customerName;
+    const htmlContent = `
+        <!doctype html>
+        <html>
+            <body style="margin:0;padding:24px;background:#f5f7f2;color:#26362a;font-family:Arial,sans-serif;">
+                <div style="max-width:620px;margin:0 auto;padding:28px;border:1px solid #dce8dc;border-radius:14px;background:white;">
+                    <h1 style="margin-top:0;color:#285936;font-size:24px;">Soda Backyard Garden</h1>
+                    <p>Hello ${escapeHtml(firstName)},</p>
+                    <p>We are writing to let you know that your order request <strong>${escapeHtml(order.orderNumber)}</strong> has not been accepted and will not be fulfilled.</p>
+                    <p>Any items held for this request have been returned to availability.</p>
+                    <p>If you already sent payment, please reply to this email so the next steps can be arranged.</p>
+                    <p>Thank you,<br>Soda Backyard Garden</p>
+                </div>
+            </body>
+        </html>
+    `;
+    const textContent = [
+        "Soda Backyard Garden",
+        "",
+        "Hello " + firstName + ",",
+        "",
+        "Your order request " + order.orderNumber + " has not been accepted and will not be fulfilled.",
+        "Any items held for this request have been returned to availability.",
+        "",
+        "If you already sent payment, please reply to this email so the next steps can be arranged.",
+        "",
+        "Thank you,",
+        "Soda Backyard Garden"
+    ].join("\n");
+    const brevoRequest = new Request("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "api-key": env.BREVO_API_KEY
+        },
+        body: JSON.stringify({
+            sender: {
+                name: "Soda Backyard Garden",
+                email: "sodabackyardgarden@outlook.com"
+            },
+            to: [{
+                name: order.customerName,
+                email: order.email
+            }],
+            replyTo: {
+                name: "Soda Backyard Garden",
+                email: "sodabackyardgarden@outlook.com"
+            },
+            subject: "Update about your Soda Backyard Garden order " + order.orderNumber,
+            htmlContent,
+            textContent,
+            tags: ["garden-order-refused"]
+        })
+    });
+    const response = env.BREVO_API
+        ? await env.BREVO_API.fetch(brevoRequest)
+        : await fetch(brevoRequest);
+
+    if (!response.ok) {
+        const details = (await response.text()).slice(0, 300);
+        console.error("Brevo refusal notice failed:", response.status, details);
+        return false;
+    }
+
+    return true;
+}
+
+async function findBlockedCustomer(db, email, phone) {
+    const normalizedEmail = normalizeCustomerEmail(email);
+    const normalizedPhone = normalizeCustomerPhone(phone);
+
+    if (!normalizedEmail && !normalizedPhone) {
+        return null;
+    }
+
+    return db.prepare(`
+        SELECT id, customer_name, email, phone, reason, created_at
+        FROM blocked_customers
+        WHERE (email <> '' AND email = ?)
+           OR (phone <> '' AND phone = ?)
+        ORDER BY created_at DESC
+        LIMIT 1
+    `).bind(normalizedEmail, normalizedPhone).first();
+}
+
+async function blockCustomer(db, order) {
+    const normalizedEmail = normalizeCustomerEmail(order.email);
+    const normalizedPhone = normalizeCustomerPhone(order.phone);
+
+    if (!normalizedEmail && !normalizedPhone) {
+        return false;
+    }
+
+    await db.batch([
+        db.prepare(`
+            DELETE FROM blocked_customers
+            WHERE (email <> '' AND email = ?)
+               OR (phone <> '' AND phone = ?)
+        `).bind(normalizedEmail, normalizedPhone),
+        db.prepare(`
+            INSERT INTO blocked_customers (
+                id, customer_name, email, phone, reason
+            ) VALUES (?, ?, ?, ?, ?)
+        `).bind(
+            crypto.randomUUID(),
+            order.customerName,
+            normalizedEmail,
+            normalizedPhone,
+            "Blocked from order " + order.orderNumber
+        )
+    ]);
+
+    return true;
+}
+
 async function createOrderRecord(body, db, options = {}) {
     const requireEmail = options.requireEmail === true;
     const requirePhone = options.requirePhone === true;
@@ -706,6 +863,12 @@ async function createOrderRecord(body, db, options = {}) {
 
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return jsonResponse({ error: "Please enter a valid email address or leave it blank." }, 400);
+    }
+
+    if (options.checkBlocked === true && await findBlockedCustomer(db, email, phone)) {
+        return jsonResponse({
+            error: "We are unable to accept this order request. Please contact Soda Backyard Garden if you believe this is an error."
+        }, 403);
     }
 
     if (!allowedDeliveryDays.has(deliveryDay)) {
@@ -835,6 +998,7 @@ async function handleOrder(request, db, env) {
     const order = await createOrderRecord(body, db, {
         requireEmail: true,
         requirePhone: true,
+        checkBlocked: true,
         source: "online"
     });
 
@@ -996,7 +1160,7 @@ function handleAdminLogout() {
 }
 
 async function handleAdminOrders(db) {
-    const [result, adjustmentProducts] = await Promise.all([
+    const [result, adjustmentProducts, blockedCustomersResult] = await Promise.all([
         db.prepare(`
         SELECT
             orders.id,
@@ -1024,9 +1188,24 @@ async function handleAdminOrders(db) {
         ORDER BY orders.created_at DESC, order_items.id
         LIMIT 500
         `).all(),
-        getProducts(db, true)
+        getProducts(db, true),
+        db.prepare(`
+            SELECT id, customer_name, email, phone, reason, created_at
+            FROM blocked_customers
+            ORDER BY created_at DESC
+        `).all()
     ]);
     const orderMap = new Map();
+    const blockedCustomers = blockedCustomersResult.results.map(function (customer) {
+        return {
+            id: customer.id,
+            customerName: customer.customer_name,
+            email: customer.email,
+            phone: customer.phone,
+            reason: customer.reason,
+            createdAt: customer.created_at
+        };
+    });
 
     result.results.forEach(function (row) {
         if (!orderMap.has(row.id)) {
@@ -1060,8 +1239,18 @@ async function handleAdminOrders(db) {
         }
     });
 
+    orderMap.forEach(function (order) {
+        const orderEmail = normalizeCustomerEmail(order.email);
+        const orderPhone = normalizeCustomerPhone(order.phone);
+        order.customerBlocked = blockedCustomers.some(function (customer) {
+            return (customer.email && customer.email === orderEmail) ||
+                (customer.phone && customer.phone === orderPhone);
+        });
+    });
+
     return jsonResponse({
         orders: Array.from(orderMap.values()),
+        blockedCustomers,
         adjustmentProducts: adjustmentProducts.filter(function (product) {
             return product.active && product.priceCents > 0;
         })
@@ -1482,7 +1671,7 @@ async function handleAdminInventoryUpdate(request, db) {
     return jsonResponse({ success: true });
 }
 
-async function handleAdminOrderAction(request, db, orderId) {
+async function handleAdminOrderAction(request, db, env, orderId) {
     let body;
 
     try {
@@ -1493,6 +1682,83 @@ async function handleAdminOrderAction(request, db, orderId) {
 
     const action = cleanText(body.action, 20);
     let result;
+
+    if (action === "refuse" || action === "refuse-block" || action === "block") {
+        const order = await db.prepare(`
+            SELECT id, order_number, customer_name, phone, email, status
+            FROM orders
+            WHERE id = ?
+        `).bind(orderId).first();
+
+        if (!order) {
+            return jsonResponse({ error: "That order could not be found." }, 404);
+        }
+
+        const customer = {
+            customerName: order.customer_name,
+            email: order.email || "",
+            phone: order.phone || "",
+            orderNumber: order.order_number
+        };
+
+        if (action === "block") {
+            if (!(await blockCustomer(db, customer))) {
+                return jsonResponse({
+                    error: "This order does not have an email address or phone number to block."
+                }, 400);
+            }
+
+            return jsonResponse({
+                success: true,
+                blocked: true,
+                message: "Future website orders matching this email address or phone number are now blocked."
+            });
+        }
+
+        result = await db.prepare(`
+            UPDATE orders
+            SET status = 'refused'
+            WHERE id = ? AND status IN ('pending', 'confirmed')
+        `).bind(orderId).run();
+
+        if (!result.meta || result.meta.changes < 1) {
+            return jsonResponse({
+                error: "The order has already changed status. Refresh the order list and try again."
+            }, 409);
+        }
+
+        let blocked = false;
+
+        if (action === "refuse-block") {
+            blocked = await blockCustomer(db, customer);
+        }
+
+        let emailSent = false;
+
+        try {
+            emailSent = await sendBrevoOrderRefusal(env, customer);
+        } catch (error) {
+            console.error("Brevo refusal notice request failed:", error);
+        }
+
+        const messageParts = ["Order refused and reserved stock returned."];
+
+        if (blocked) {
+            messageParts.push("Future website orders matching this customer are blocked.");
+        }
+
+        messageParts.push(emailSent
+            ? "The customer refusal email was sent."
+            : "The automatic email was not sent; use Email Refusal on the order card.");
+
+        return jsonResponse({
+            success: true,
+            status: "refused",
+            blocked,
+            emailSent,
+            message: messageParts.join(" ")
+        });
+    }
 
     if (action === "confirm") {
         result = await db.prepare(`
@@ -1523,6 +1789,22 @@ async function handleAdminOrderAction(request, db, orderId) {
     }
 
     return jsonResponse({ success: true });
+}
+
+async function handleAdminBlockedCustomerDelete(db, blockedCustomerId) {
+    const result = await db.prepare(`
+        DELETE FROM blocked_customers
+        WHERE id = ?
+    `).bind(blockedCustomerId).run();
+
+    if (!result.meta || result.meta.changes < 1) {
+        return jsonResponse({ error: "That blocked customer could not be found." }, 404);
+    }
+
+    return jsonResponse({
+        success: true,
+        message: "Customer unblocked. Future website orders will be accepted normally."
+    });
 }
 
 async function handleAdminOrderItemsUpdate(request, db, orderId) {
@@ -1839,7 +2121,13 @@ export default {
                 const orderActionMatch = url.pathname.match(/^\/api\/admin\/orders\/([^/]+)\/action$/);
 
                 if (orderActionMatch && request.method === "POST") {
-                    return handleAdminOrderAction(request, env.DB, orderActionMatch[1]);
+                    return handleAdminOrderAction(request, env.DB, env, orderActionMatch[1]);
+                }
+
+                const blockedCustomerMatch = url.pathname.match(/^\/api\/admin\/blocked-customers\/([^/]+)$/);
+
+                if (blockedCustomerMatch && request.method === "DELETE") {
+                    return handleAdminBlockedCustomerDelete(env.DB, blockedCustomerMatch[1]);
                 }
 
                 const orderItemsMatch = url.pathname.match(/^\/api\/admin\/orders\/([^/]+)\/items$/);

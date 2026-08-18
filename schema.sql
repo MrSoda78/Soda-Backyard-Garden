@@ -54,6 +54,16 @@ CREATE TABLE IF NOT EXISTS donations (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS blocked_customers (
+    id TEXT PRIMARY KEY,
+    customer_name TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL DEFAULT '',
+    phone TEXT NOT NULL DEFAULT '',
+    reason TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK (email <> '' OR phone <> '')
+);
+
 CREATE TRIGGER IF NOT EXISTS deduct_inventory_before_order_item
 BEFORE INSERT ON order_items
 WHEN (SELECT made_to_order FROM products WHERE id = NEW.product_id) = 0
@@ -71,6 +81,25 @@ END;
 CREATE TRIGGER IF NOT EXISTS restock_inventory_after_order_cancel
 AFTER UPDATE OF status ON orders
 WHEN NEW.status = 'cancelled' AND OLD.status <> 'cancelled'
+BEGIN
+    UPDATE products
+    SET quantity = quantity + COALESCE((
+        SELECT SUM(order_items.quantity)
+        FROM order_items
+        WHERE order_items.order_id = NEW.id
+          AND order_items.product_id = products.id
+    ), 0)
+    WHERE made_to_order = 0
+      AND id IN (
+          SELECT product_id
+          FROM order_items
+          WHERE order_id = NEW.id
+      );
+END;
+
+CREATE TRIGGER IF NOT EXISTS restock_inventory_after_order_refuse
+AFTER UPDATE OF status ON orders
+WHEN NEW.status = 'refused' AND OLD.status <> 'refused'
 BEGIN
     UPDATE products
     SET quantity = quantity + COALESCE((

@@ -2123,6 +2123,16 @@ footer a:hover {
     color: #721c24;
 }
 
+.status-refused {
+    background: #f5d0d0;
+    color: #7a1c1c;
+}
+
+.admin-customer-blocked {
+    color: #8a1c1c;
+    font-weight: bold;
+}
+
 .admin-order-details {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -2215,6 +2225,68 @@ footer a:hover {
 .button.danger,
 .admin-action.danger {
     background: #a43b3b;
+}
+
+.button.block-action,
+.admin-action.block-action {
+    background: #6f1d1b;
+}
+
+.admin-blocked-customers {
+    margin: 18px 0;
+    padding: 16px 18px;
+    border: 1px solid #e2b7b5;
+    border-radius: 12px;
+    background: #fff8f7;
+}
+
+.admin-blocked-customers summary {
+    color: #7a1c1c;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.admin-blocked-customers > p {
+    margin: 12px 0;
+    color: var(--text-soft);
+}
+
+.blocked-customers-list {
+    display: grid;
+    gap: 10px;
+}
+
+.blocked-customer-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 14px;
+    border: 1px solid #efd4d2;
+    border-radius: 9px;
+    background: white;
+}
+
+.blocked-customer-card div {
+    display: grid;
+    gap: 3px;
+}
+
+.blocked-customer-card span,
+.blocked-customer-card small {
+    color: var(--text-soft);
+}
+
+.admin-empty-inline {
+    margin: 0;
+    color: var(--text-soft);
+}
+
+@media (max-width: 600px) {
+    .blocked-customer-card {
+        align-items: stretch;
+        flex-direction: column;
+    }
 }
 
 .admin-empty {

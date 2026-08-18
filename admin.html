@@ -51,7 +51,7 @@
                         <div class="admin-toolbar">
                             <div>
                                 <h2>Customer Orders</h2>
-                                <p>Confirm paid orders, cancel and return stock, notify customers of cancellations, or mark deliveries complete.</p>
+                                <p>Confirm paid orders, refuse or block customers, cancel and return stock, or mark deliveries complete.</p>
                             </div>
                             <div class="admin-toolbar-actions">
                                 <button type="button" class="button secondary" id="refreshOrders">Refresh Orders</button>
@@ -67,6 +67,12 @@
                             </div>
                             <p class="search-result-message" id="adminOrderSearchMessage" aria-live="polite"></p>
                         </div>
+
+                        <details class="admin-blocked-customers">
+                            <summary>Blocked Customers <span id="blockedCustomerCount">(0)</span></summary>
+                            <p>Website orders matching a listed email address or phone number are refused before inventory is reserved. Use Unblock if you want to accept future orders from that customer again.</p>
+                            <div id="blockedCustomersList" class="blocked-customers-list"></div>
+                        </details>
 
                         <details class="admin-offline-order">
                             <summary>Add a Phone or In-Person Order</summary>

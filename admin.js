@@ -34,6 +34,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const donationRows = document.getElementById("donationRows");
     const orderSearch = document.getElementById("adminOrderSearch");
     const orderSearchMessage = document.getElementById("adminOrderSearchMessage");
+    const blockedCustomersList = document.getElementById("blockedCustomersList");
+    const blockedCustomerCount = document.getElementById("blockedCustomerCount");
     const inventorySearch = document.getElementById("adminInventorySearch");
     const inventorySearchMessage = document.getElementById("adminInventorySearchMessage");
     const salesSearch = document.getElementById("adminSalesSearch");
@@ -117,6 +119,31 @@ document.addEventListener("DOMContentLoaded", function () {
             + "?subject=" + encodeURIComponent(subject)
             + "&body=" + encodeURIComponent(body);
         link.setAttribute("aria-label", "Email cancellation notice to " + order.customerName);
+        return link;
+    }
+
+    function createRefusalEmailLink(order) {
+        const firstName = order.customerName.trim().split(/\s+/)[0] || order.customerName;
+        const subject = "Update about your Soda Backyard Garden order " + order.orderNumber;
+        const body = [
+            "Hello " + firstName + ",",
+            "",
+            "Your order request " + order.orderNumber + " has not been accepted and will not be fulfilled.",
+            "",
+            "Any items held for this request have been returned to availability.",
+            "",
+            "If you already sent payment, please reply to this email so the next steps can be arranged.",
+            "",
+            "Thank you,",
+            "Soda Backyard Garden"
+        ].join("\r\n");
+        const link = document.createElement("a");
+        link.className = "button admin-action danger";
+        link.textContent = "Email Refusal";
+        link.href = "mailto:" + encodeURIComponent(order.email)
+            + "?subject=" + encodeURIComponent(subject)
+            + "&body=" + encodeURIComponent(body);
+        link.setAttribute("aria-label", "Email refusal notice to " + order.customerName);
         return link;
     }
 
@@ -870,6 +897,47 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    function renderBlockedCustomers(customers) {
+        blockedCustomersList.replaceChildren();
+        blockedCustomerCount.textContent = "(" + customers.length + ")";
+
+        if (customers.length === 0) {
+            blockedCustomersList.appendChild(createTextElement(
+                "p",
+                "admin-empty-inline",
+                "No customers are currently blocked."
+            ));
+            return;
+        }
+
+        customers.forEach(function (customer) {
+            const card = document.createElement("article");
+            card.className = "blocked-customer-card";
+            const details = document.createElement("div");
+            details.appendChild(createTextElement("strong", "", customer.customerName || "Unnamed customer"));
+
+            if (customer.email) {
+                details.appendChild(createTextElement("span", "", "Email: " + customer.email));
+            }
+
+            if (customer.phone) {
+                details.appendChild(createTextElement("span", "", "Phone: " + customer.phone));
+            }
+
+            const blockedDate = new Date(customer.createdAt.replace(" ", "T") + "Z");
+            details.appendChild(createTextElement("small", "", "Blocked: " + blockedDate.toLocaleString()));
+
+            const unblockButton = document.createElement("button");
+            unblockButton.type = "button";
+            unblockButton.className = "button secondary admin-action";
+            unblockButton.textContent = "Unblock";
+            unblockButton.dataset.blockedCustomerId = customer.id;
+            unblockButton.dataset.blockedCustomerName = customer.customerName || "this customer";
+            card.append(details, unblockButton);
+            blockedCustomersList.appendChild(card);
+        });
+    }
+
     function renderOrders(orders) {
         ordersList.replaceChildren();
 
@@ -923,6 +991,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
             if (order.email) {
                 details.appendChild(createTextElement("p", "", "Email: " + order.email));
+            }
+
+            if (order.customerBlocked) {
+                details.appendChild(createTextElement("p", "admin-customer-blocked", "Future website orders blocked"));
             }
 
             details.appendChild(createTextElement("p", "", "Delivery: " + order.deliveryDay));
@@ -1036,16 +1108,28 @@ document.addEventListener("DOMContentLoaded", function () {
             const actions = document.createElement("div");
             actions.className = "admin-order-actions";
 
-            if (order.email && order.status !== "cancelled") {
+            if (order.email && order.status !== "cancelled" && order.status !== "refused") {
                 actions.appendChild(createOrderReceiptEmailLink(order));
             }
 
             if (order.status === "pending") {
                 actions.appendChild(createActionButton("Confirm Payment", "confirm", order.id));
+                actions.appendChild(createActionButton("Refuse Order", "refuse", order.id, "danger"));
+                actions.appendChild(createActionButton("Refuse & Block Customer", "refuse-block", order.id, "danger block-action"));
                 actions.appendChild(createActionButton("Cancel & Return Stock", "cancel", order.id, "danger"));
             } else if (order.status === "confirmed") {
                 actions.appendChild(createActionButton("Mark Delivered", "complete", order.id));
+                actions.appendChild(createActionButton("Refuse Order", "refuse", order.id, "danger"));
+                actions.appendChild(createActionButton("Refuse & Block Customer", "refuse-block", order.id, "danger block-action"));
                 actions.appendChild(createActionButton("Cancel & Return Stock", "cancel", order.id, "danger"));
+            } else if (order.status === "refused") {
+                if (order.email) {
+                    actions.appendChild(createRefusalEmailLink(order));
+                }
+
+                if (!order.customerBlocked) {
+                    actions.appendChild(createActionButton("Block Customer", "block", order.id, "danger block-action"));
+                }
             } else if (order.status === "cancelled") {
                 if (order.email) {
                     actions.appendChild(createCancellationEmailLink(order));
@@ -1086,6 +1170,9 @@ document.addEventListener("DOMContentLoaded", function () {
         orderAdjustmentProducts = Array.isArray(result.adjustmentProducts)
             ? result.adjustmentProducts
             : [];
+        renderBlockedCustomers(Array.isArray(result.blockedCustomers)
+            ? result.blockedCustomers
+            : []);
         renderOrders(result.orders);
 
         if (!offlineProductsLoaded) {
@@ -1214,6 +1301,18 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
+        if (button.dataset.action === "refuse" && !window.confirm("Refuse this order, return its items to availability, and email the customer that the order was not accepted?")) {
+            return;
+        }
+
+        if (button.dataset.action === "refuse-block" && !window.confirm("Refuse this order, email the customer, and block future website orders matching their email address or phone number?")) {
+            return;
+        }
+
+        if (button.dataset.action === "block" && !window.confirm("Block future website orders matching this customer's email address or phone number?")) {
+            return;
+        }
+
         if (button.dataset.action === "delete" && !window.confirm("Permanently delete this cancelled order? This cannot be undone.")) {
             return;
         }
@@ -1325,6 +1424,46 @@ document.addEventListener("DOMContentLoaded", function () {
 
             offlineProductsLoaded = false;
             await loadOrders();
+
+            if (result.message) {
+                setMessage(adminMessage, result.message, result.emailSent === false ? "error" : "success");
+            }
+        } catch (error) {
+            setMessage(adminMessage, error.message, "error");
+            button.disabled = false;
+        }
+    });
+
+    blockedCustomersList.addEventListener("click", async function (event) {
+        const button = event.target.closest("button[data-blocked-customer-id]");
+
+        if (!button) {
+            return;
+        }
+
+        if (!window.confirm("Unblock " + button.dataset.blockedCustomerName + " and allow future website orders?")) {
+            return;
+        }
+
+        button.disabled = true;
+        setMessage(adminMessage, "Unblocking customer...", "success");
+
+        try {
+            const response = await fetch(
+                "/api/admin/blocked-customers/" + encodeURIComponent(button.dataset.blockedCustomerId),
+                {
+                    method: "DELETE",
+                    headers: { "Accept": "application/json" }
+                }
+            );
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The customer could not be unblocked.");
+            }
+
+            await loadOrders();
+            setMessage(adminMessage, result.message, "success");
         } catch (error) {
             setMessage(adminMessage, error.message, "error");
             button.disabled = false;
