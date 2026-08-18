@@ -720,6 +720,10 @@ async function sendBrevoOrderRefusal(env, order) {
     }
 
     const firstName = order.customerName.trim().split(/\s+/)[0] || order.customerName;
+    const hasOrderNumber = Boolean(order.orderNumber);
+    const refusalSentence = hasOrderNumber
+        ? `We are writing to let you know that your order request <strong>${escapeHtml(order.orderNumber)}</strong> has not been accepted and will not be fulfilled.`
+        : "We are writing to let you know that your order request has not been accepted and will not be fulfilled.";
     const htmlContent = `
         <!doctype html>
         <html>
@@ -727,8 +731,8 @@ async function sendBrevoOrderRefusal(env, order) {
                 <div style="max-width:620px;margin:0 auto;padding:28px;border:1px solid #dce8dc;border-radius:14px;background:white;">
                     <h1 style="margin-top:0;color:#285936;font-size:24px;">Soda Backyard Garden</h1>
                     <p>Hello ${escapeHtml(firstName)},</p>
-                    <p>We are writing to let you know that your order request <strong>${escapeHtml(order.orderNumber)}</strong> has not been accepted and will not be fulfilled.</p>
-                    <p>Any items held for this request have been returned to availability.</p>
+                    <p>${refusalSentence}</p>
+                    ${hasOrderNumber ? "<p>Any items held for this request have been returned to availability.</p>" : ""}
                     <p>If you already sent payment, please reply to this email so the next steps can be arranged.</p>
                     <p>Thank you,<br>Soda Backyard Garden</p>
                 </div>
@@ -740,8 +744,8 @@ async function sendBrevoOrderRefusal(env, order) {
         "",
         "Hello " + firstName + ",",
         "",
-        "Your order request " + order.orderNumber + " has not been accepted and will not be fulfilled.",
-        "Any items held for this request have been returned to availability.",
+        "Your order request" + (hasOrderNumber ? " " + order.orderNumber : "") + " has not been accepted and will not be fulfilled.",
+        ...(hasOrderNumber ? ["Any items held for this request have been returned to availability."] : []),
         "",
         "If you already sent payment, please reply to this email so the next steps can be arranged.",
         "",
@@ -768,7 +772,7 @@ async function sendBrevoOrderRefusal(env, order) {
                 name: "Soda Backyard Garden",
                 email: "sodabackyardgarden@outlook.com"
             },
-            subject: "Update about your Soda Backyard Garden order " + order.orderNumber,
+            subject: "Update about your Soda Backyard Garden order" + (hasOrderNumber ? " " + order.orderNumber : " request"),
             htmlContent,
             textContent,
             tags: ["garden-order-refused"]
@@ -874,6 +878,16 @@ async function createOrderRecord(body, db, options = {}) {
     }
 
     if (options.checkBlocked === true && await findBlockedCustomer(db, customerName, email, phone)) {
+        try {
+            await sendBrevoOrderRefusal(options.env || {}, {
+                customerName,
+                email,
+                orderNumber: ""
+            });
+        } catch (error) {
+            console.error("Blocked-order refusal notice failed:", error);
+        }
+
         return jsonResponse({
             error: "We are unable to accept this order request. Please contact Soda Backyard Garden if you believe this is an error."
         }, 403);
@@ -1007,6 +1021,7 @@ async function handleOrder(request, db, env) {
         requireEmail: true,
         requirePhone: true,
         checkBlocked: true,
+        env,
         source: "online"
     });
 
