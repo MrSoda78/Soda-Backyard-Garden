@@ -71,6 +71,29 @@
                         <details class="admin-blocked-customers">
                             <summary>Blocked Customers <span id="blockedCustomerCount">(0)</span></summary>
                             <p>Website orders matching a listed customer name, email address, or phone number are refused before inventory is reserved. Use Unblock if you want to accept future orders from that customer again.</p>
+                            <form id="blockedCustomerForm" class="blocked-customer-form">
+                                <p class="blocked-customer-form-help">Enter at least one identifying detail. Add more than one when possible for a stronger match.</p>
+                                <div class="blocked-customer-form-grid">
+                                    <div class="form-group">
+                                        <label for="blockedCustomerName">Customer Name</label>
+                                        <input type="text" id="blockedCustomerName" name="customerName" autocomplete="off">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="blockedCustomerEmail">Email Address</label>
+                                        <input type="email" id="blockedCustomerEmail" name="email" autocomplete="off">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="blockedCustomerPhone">Phone Number</label>
+                                        <input type="tel" id="blockedCustomerPhone" name="phone" autocomplete="off">
+                                    </div>
+                                    <div class="form-group blocked-customer-reason">
+                                        <label for="blockedCustomerReason">Private Note <span>(optional)</span></label>
+                                        <input type="text" id="blockedCustomerReason" name="reason" maxlength="300" placeholder="Reason for your records">
+                                    </div>
+                                </div>
+                                <button type="submit" class="button danger block-action">Block Customer</button>
+                                <p id="blockedCustomerMessage" class="form-message" aria-live="polite"></p>
+                            </form>
                             <div id="blockedCustomersList" class="blocked-customers-list"></div>
                         </details>
 

@@ -2251,6 +2251,44 @@ footer a:hover {
     color: var(--text-soft);
 }
 
+.blocked-customer-form {
+    max-width: none;
+    margin: 16px 0;
+    padding: 18px;
+    border: 1px solid #efd4d2;
+    border-radius: 10px;
+    background: white;
+}
+
+.blocked-customer-form-help {
+    margin: 0 0 14px;
+    color: var(--text-soft);
+}
+
+.blocked-customer-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+    gap: 14px;
+}
+
+.blocked-customer-form .form-group {
+    margin-bottom: 14px;
+}
+
+.blocked-customer-form label span {
+    color: var(--text-soft);
+    font-size: 0.78rem;
+    font-weight: normal;
+}
+
+.blocked-customer-reason {
+    grid-column: 1 / -1;
+}
+
+.blocked-customer-form .form-message {
+    margin-bottom: 0;
+}
+
 .blocked-customers-list {
     display: grid;
     gap: 10px;
@@ -2283,6 +2321,14 @@ footer a:hover {
 }
 
 @media (max-width: 600px) {
+    .blocked-customer-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .blocked-customer-reason {
+        grid-column: auto;
+    }
+
     .blocked-customer-card {
         align-items: stretch;
         flex-direction: column;

@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS blocked_customers (
     phone TEXT NOT NULL DEFAULT '',
     reason TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CHECK (email <> '' OR phone <> '')
+    CHECK (customer_name <> '' OR email <> '' OR phone <> '')
 );
 
 CREATE TRIGGER IF NOT EXISTS deduct_inventory_before_order_item

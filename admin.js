@@ -36,6 +36,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const orderSearchMessage = document.getElementById("adminOrderSearchMessage");
     const blockedCustomersList = document.getElementById("blockedCustomersList");
     const blockedCustomerCount = document.getElementById("blockedCustomerCount");
+    const blockedCustomerForm = document.getElementById("blockedCustomerForm");
+    const blockedCustomerMessage = document.getElementById("blockedCustomerMessage");
     const inventorySearch = document.getElementById("adminInventorySearch");
     const inventorySearchMessage = document.getElementById("adminInventorySearchMessage");
     const salesSearch = document.getElementById("adminSalesSearch");
@@ -924,6 +926,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 details.appendChild(createTextElement("span", "", "Phone: " + customer.phone));
             }
 
+            if (customer.reason) {
+                details.appendChild(createTextElement("span", "", "Private note: " + customer.reason));
+            }
+
             const blockedDate = new Date(customer.createdAt.replace(" ", "T") + "Z");
             details.appendChild(createTextElement("small", "", "Blocked: " + blockedDate.toLocaleString()));
 
@@ -1467,6 +1473,54 @@ document.addEventListener("DOMContentLoaded", function () {
         } catch (error) {
             setMessage(adminMessage, error.message, "error");
             button.disabled = false;
+        }
+    });
+
+    blockedCustomerForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        const submitButton = blockedCustomerForm.querySelector('button[type="submit"]');
+        const formData = new FormData(blockedCustomerForm);
+        const customer = {
+            customerName: String(formData.get("customerName") || "").trim(),
+            email: String(formData.get("email") || "").trim(),
+            phone: String(formData.get("phone") || "").trim(),
+            reason: String(formData.get("reason") || "").trim()
+        };
+
+        if (!customer.customerName && !customer.email && !customer.phone) {
+            setMessage(blockedCustomerMessage, "Enter at least a customer name, email address, or phone number.", "error");
+            return;
+        }
+
+        if (!window.confirm("Block website orders matching the information entered?")) {
+            return;
+        }
+
+        submitButton.disabled = true;
+        setMessage(blockedCustomerMessage, "Adding customer to the blocked list...", "success");
+
+        try {
+            const response = await fetch("/api/admin/blocked-customers", {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(customer)
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The customer could not be blocked.");
+            }
+
+            blockedCustomerForm.reset();
+            await loadOrders();
+            setMessage(blockedCustomerMessage, result.message, "success");
+        } catch (error) {
+            setMessage(blockedCustomerMessage, error.message, "error");
+        } finally {
+            submitButton.disabled = false;
         }
     });
 

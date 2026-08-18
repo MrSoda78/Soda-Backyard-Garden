@@ -60,7 +60,7 @@ const SCHEMA_STATEMENTS = [
         phone TEXT NOT NULL DEFAULT '',
         reason TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (email <> '' OR phone <> '')
+        CHECK (customer_name <> '' OR email <> '' OR phone <> '')
     )`,
     `CREATE TRIGGER IF NOT EXISTS deduct_inventory_before_order_item
     BEFORE INSERT ON order_items
@@ -368,6 +368,39 @@ function ensureDatabase(db) {
                 return db.prepare(statement);
             });
             await db.batch(statements);
+
+            const blockedCustomerTable = await db.prepare(`
+                SELECT sql
+                FROM sqlite_master
+                WHERE type = 'table' AND name = 'blocked_customers'
+            `).first();
+            const blockedCustomerSchema = String(blockedCustomerTable && blockedCustomerTable.sql || "");
+
+            if (!blockedCustomerSchema.includes("customer_name <> '' OR email <> '' OR phone <> ''")) {
+                await db.batch([
+                    db.prepare("DROP TABLE IF EXISTS blocked_customers_rebuild"),
+                    db.prepare(`
+                        CREATE TABLE blocked_customers_rebuild (
+                            id TEXT PRIMARY KEY,
+                            customer_name TEXT NOT NULL DEFAULT '',
+                            email TEXT NOT NULL DEFAULT '',
+                            phone TEXT NOT NULL DEFAULT '',
+                            reason TEXT NOT NULL DEFAULT '',
+                            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            CHECK (customer_name <> '' OR email <> '' OR phone <> '')
+                        )
+                    `),
+                    db.prepare(`
+                        INSERT INTO blocked_customers_rebuild (
+                            id, customer_name, email, phone, reason, created_at
+                        )
+                        SELECT id, customer_name, email, phone, reason, created_at
+                        FROM blocked_customers
+                    `),
+                    db.prepare("DROP TABLE blocked_customers"),
+                    db.prepare("ALTER TABLE blocked_customers_rebuild RENAME TO blocked_customers")
+                ]);
+            }
 
             const orderColumns = await db.prepare("PRAGMA table_info(orders)").all();
             const hasPaidAt = orderColumns.results.some(function (column) {
@@ -721,9 +754,12 @@ async function sendBrevoOrderRefusal(env, order) {
 
     const firstName = order.customerName.trim().split(/\s+/)[0] || order.customerName;
     const hasOrderNumber = Boolean(order.orderNumber);
-    const refusalSentence = hasOrderNumber
-        ? `We are writing to let you know that your order request <strong>${escapeHtml(order.orderNumber)}</strong> has not been accepted and will not be fulfilled.`
-        : "We are writing to let you know that your order request has not been accepted and will not be fulfilled.";
+    const futureOrdersRefused = order.futureOrdersRefused === true;
+    const refusalSentence = futureOrdersRefused
+        ? "We are writing to let you know that your current order request has not been accepted and future order requests will not be accepted."
+        : hasOrderNumber
+            ? `We are writing to let you know that your order request <strong>${escapeHtml(order.orderNumber)}</strong> has not been accepted and will not be fulfilled.`
+            : "We are writing to let you know that your order request has not been accepted and will not be fulfilled.";
     const htmlContent = `
         <!doctype html>
         <html>
@@ -744,7 +780,9 @@ async function sendBrevoOrderRefusal(env, order) {
         "",
         "Hello " + firstName + ",",
         "",
-        "Your order request" + (hasOrderNumber ? " " + order.orderNumber : "") + " has not been accepted and will not be fulfilled.",
+        futureOrdersRefused
+            ? "Your current order request has not been accepted and future order requests will not be accepted."
+            : "Your order request" + (hasOrderNumber ? " " + order.orderNumber : "") + " has not been accepted and will not be fulfilled.",
         ...(hasOrderNumber ? ["Any items held for this request have been returned to availability."] : []),
         "",
         "If you already sent payment, please reply to this email so the next steps can be arranged.",
@@ -816,7 +854,7 @@ async function blockCustomer(db, order) {
     const normalizedEmail = normalizeCustomerEmail(order.email);
     const normalizedPhone = normalizeCustomerPhone(order.phone);
 
-    if (!normalizedEmail && !normalizedPhone) {
+    if (!normalizedName && !normalizedEmail && !normalizedPhone) {
         return false;
     }
 
@@ -836,7 +874,9 @@ async function blockCustomer(db, order) {
             order.customerName,
             normalizedEmail,
             normalizedPhone,
-            "Blocked from order " + order.orderNumber
+            cleanText(order.reason, 300) || (order.orderNumber
+                ? "Blocked from order " + order.orderNumber
+                : "Added manually by an administrator")
         )
     ]);
 
@@ -882,14 +922,15 @@ async function createOrderRecord(body, db, options = {}) {
             await sendBrevoOrderRefusal(options.env || {}, {
                 customerName,
                 email,
-                orderNumber: ""
+                orderNumber: "",
+                futureOrdersRefused: true
             });
         } catch (error) {
             console.error("Blocked-order refusal notice failed:", error);
         }
 
         return jsonResponse({
-            error: "We are unable to accept this order request. Please contact Soda Backyard Garden if you believe this is an error."
+            error: "Your current order request has not been accepted, and future order requests will not be accepted."
         }, 403);
     }
 
@@ -1756,6 +1797,7 @@ async function handleAdminOrderAction(request, db, env, orderId) {
 
         if (action === "refuse-block") {
             blocked = await blockCustomer(db, customer);
+            customer.futureOrdersRefused = blocked;
         }
 
         let emailSent = false;
@@ -1814,6 +1856,53 @@ async function handleAdminOrderAction(request, db, env, orderId) {
     }
 
     return jsonResponse({ success: true });
+}
+
+async function handleAdminBlockedCustomerCreate(request, db) {
+    let body;
+
+    try {
+        body = await request.json();
+    } catch (_error) {
+        return jsonResponse({ error: "The blocked customer information was not valid." }, 400);
+    }
+
+    const customerName = cleanText(body.customerName, 100);
+    const email = cleanText(body.email, 150);
+    const phone = cleanText(body.phone, 40);
+    const reason = cleanText(body.reason, 300);
+
+    if (!customerName && !email && !phone) {
+        return jsonResponse({ error: "Enter at least a customer name, email address, or phone number." }, 400);
+    }
+
+    if (customerName && customerName.length < 2) {
+        return jsonResponse({ error: "Enter at least two characters for the customer name." }, 400);
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return jsonResponse({ error: "Enter a valid email address or leave it blank." }, 400);
+    }
+
+    if (phone && normalizeCustomerPhone(phone).length < 7) {
+        return jsonResponse({ error: "Enter a valid phone number or leave it blank." }, 400);
+    }
+
+    const blocked = await blockCustomer(db, {
+        customerName,
+        email,
+        phone,
+        reason
+    });
+
+    if (!blocked) {
+        return jsonResponse({ error: "The customer could not be blocked." }, 400);
+    }
+
+    return jsonResponse({
+        success: true,
+        message: "Customer added to the blocked list. Matching website orders will now be refused."
+    }, 201);
 }
 
 async function handleAdminBlockedCustomerDelete(db, blockedCustomerId) {
@@ -2150,6 +2239,10 @@ export default {
                 }
 
                 const blockedCustomerMatch = url.pathname.match(/^\/api\/admin\/blocked-customers\/([^/]+)$/);
+
+                if (url.pathname === "/api/admin/blocked-customers" && request.method === "POST") {
+                    return handleAdminBlockedCustomerCreate(request, env.DB);
+                }
 
                 if (blockedCustomerMatch && request.method === "DELETE") {
                     return handleAdminBlockedCustomerDelete(env.DB, blockedCustomerMatch[1]);
