@@ -839,7 +839,104 @@ document.addEventListener("DOMContentLoaded", function () {
         const confirmationOrderNumber = document.getElementById("confirmationOrderNumber");
         const confirmationTotal = document.getElementById("confirmationTotal");
         const confirmationItemList = document.getElementById("confirmationItemList");
+        const validationSummary = document.getElementById("orderValidationSummary");
+        const requiredFields = Array.from(orderForm.querySelectorAll("[required]"));
         let isSubmitting = false;
+        let validationFocusScheduled = false;
+
+        function getFieldLabel(field) {
+            const label = orderForm.querySelector('label[for="' + field.id + '"]');
+            return label ? label.childNodes[0].textContent.trim() : "This field";
+        }
+
+        function getFieldValidationMessage(field) {
+            const label = getFieldLabel(field);
+
+            if (field.validity.valueMissing) {
+                return "Please enter your " + label.toLowerCase() + ".";
+            }
+
+            if (field.validity.typeMismatch && field.type === "email") {
+                return "Please enter a valid email address, such as name@example.com.";
+            }
+
+            return "Please check your " + label.toLowerCase() + ".";
+        }
+
+        function showFieldError(field) {
+            const group = field.closest(".form-group");
+            const error = field.getAttribute("aria-describedby")
+                ? document.getElementById(field.getAttribute("aria-describedby"))
+                : null;
+
+            field.classList.add("field-invalid");
+            field.setAttribute("aria-invalid", "true");
+
+            if (group) {
+                group.classList.add("has-error");
+            }
+
+            if (error) {
+                error.textContent = getFieldValidationMessage(field);
+                error.hidden = false;
+            }
+        }
+
+        function clearFieldError(field) {
+            const group = field.closest(".form-group");
+            const error = field.getAttribute("aria-describedby")
+                ? document.getElementById(field.getAttribute("aria-describedby"))
+                : null;
+
+            field.classList.remove("field-invalid");
+            field.removeAttribute("aria-invalid");
+
+            if (group) {
+                group.classList.remove("has-error");
+            }
+
+            if (error) {
+                error.textContent = "";
+                error.hidden = true;
+            }
+        }
+
+        function focusFirstInvalidField() {
+            const firstInvalidField = requiredFields.find(function (field) {
+                return !field.validity.valid;
+            });
+
+            if (!firstInvalidField) {
+                return;
+            }
+
+            const label = getFieldLabel(firstInvalidField);
+
+            if (validationSummary) {
+                validationSummary.textContent = "Your order has not been submitted. Please complete " + label + ".";
+                validationSummary.hidden = false;
+            }
+
+            firstInvalidField.focus({ preventScroll: true });
+            firstInvalidField.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+
+        orderForm.addEventListener("invalid", function (event) {
+            if (!requiredFields.includes(event.target)) {
+                return;
+            }
+
+            event.preventDefault();
+            showFieldError(event.target);
+
+            if (!validationFocusScheduled) {
+                validationFocusScheduled = true;
+                window.setTimeout(function () {
+                    focusFirstInvalidField();
+                    validationFocusScheduled = false;
+                }, 0);
+            }
+        }, true);
 
         function updateOrderTotal() {
             const total = quantityInputs.reduce(function (sum, input) {
@@ -914,6 +1011,21 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         orderForm.addEventListener("input", function (event) {
+            if (requiredFields.includes(event.target)) {
+                if (event.target.validity.valid) {
+                    clearFieldError(event.target);
+
+                    if (validationSummary && requiredFields.every(function (field) {
+                        return field.validity.valid;
+                    })) {
+                        validationSummary.textContent = "";
+                        validationSummary.hidden = true;
+                    }
+                } else if (event.target.classList.contains("field-invalid")) {
+                    showFieldError(event.target);
+                }
+            }
+
             if (event.target.matches("input[data-product-id]")) {
                 updateOrderTotal();
                 updateOrderProductGroupSelection(event.target.closest(".order-product-group"));

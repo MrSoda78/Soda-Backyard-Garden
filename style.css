@@ -844,6 +844,41 @@ form {
     margin-bottom: 22px;
 }
 
+.required-field {
+    color: var(--text-soft);
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+.form-validation-summary {
+    margin: 0 0 20px;
+    padding: 13px 15px;
+    border: 2px solid #b42318;
+    border-radius: 8px;
+    background: #fff1f0;
+    color: #7a271a;
+    font-weight: 700;
+}
+
+.form-group.has-error label {
+    color: #b42318;
+}
+
+.form-group input.field-invalid,
+.form-group select.field-invalid,
+.form-group textarea.field-invalid {
+    border-color: #b42318;
+    background: #fff8f7;
+    box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.12);
+}
+
+.field-error {
+    margin-top: 7px;
+    color: #b42318;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
 label {
     display: block;
     margin-bottom: 8px;

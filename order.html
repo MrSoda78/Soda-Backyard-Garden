@@ -65,22 +65,27 @@
                                 <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
                             </div>
 
+                            <p id="orderValidationSummary" class="form-validation-summary" role="alert" tabindex="-1" hidden></p>
+
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="customerName">Full Name</label>
-                                    <input type="text" id="customerName" name="customerName" required>
+                                    <label for="customerName">Full Name <span class="required-field">(required)</span></label>
+                                    <input type="text" id="customerName" name="customerName" aria-describedby="customerNameError" required>
+                                    <p id="customerNameError" class="field-error" hidden></p>
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="phone">Phone Number</label>
-                                    <input type="tel" id="phone" name="phone" required>
+                                    <label for="phone">Phone Number <span class="required-field">(required)</span></label>
+                                    <input type="tel" id="phone" name="phone" aria-describedby="phoneError" required>
+                                    <p id="phoneError" class="field-error" hidden></p>
                                 </div>
                             </div>
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="email">Email Address</label>
-                                    <input type="email" id="email" name="email" autocomplete="email" required>
+                                    <label for="email">Email Address <span class="required-field">(required)</span></label>
+                                    <input type="email" id="email" name="email" autocomplete="email" aria-describedby="emailError" required>
+                                    <p id="emailError" class="field-error" hidden></p>
                                 </div>
 
                             </div>
