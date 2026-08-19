@@ -924,17 +924,12 @@ textarea {
 }
 
 .order-intro {
-    max-width: 920px;
-    margin-left: auto;
-    margin-right: auto;
     margin-bottom: 35px;
     color: var(--text-soft);
 }
 
 .order-section .container > h2 {
-    max-width: 920px;
-    margin-left: auto;
-    margin-right: auto;
+    width: 100%;
 }
 
 .order-form {
@@ -1387,8 +1382,7 @@ footer a:hover {
     grid-template-columns: minmax(0, 1fr);
     gap: 24px;
     align-items: start;
-    max-width: 920px;
-    margin: 0 auto;
+    width: 100%;
 }
 
 .order-info {
