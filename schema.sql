@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS orders (
     customer_name TEXT NOT NULL,
     phone TEXT NOT NULL,
     email TEXT,
+    household TEXT NOT NULL DEFAULT '',
     delivery_day TEXT NOT NULL,
     notes TEXT,
     total_cents INTEGER NOT NULL CHECK (total_cents >= 0),
@@ -59,9 +60,10 @@ CREATE TABLE IF NOT EXISTS blocked_customers (
     customer_name TEXT NOT NULL DEFAULT '',
     email TEXT NOT NULL DEFAULT '',
     phone TEXT NOT NULL DEFAULT '',
+    household TEXT NOT NULL DEFAULT '',
     reason TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CHECK (customer_name <> '' OR email <> '' OR phone <> '')
+    CHECK (customer_name <> '' OR email <> '' OR phone <> '' OR household <> '')
 );
 
 CREATE TRIGGER IF NOT EXISTS deduct_inventory_before_order_item

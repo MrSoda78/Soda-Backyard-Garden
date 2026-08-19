@@ -926,6 +926,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 details.appendChild(createTextElement("span", "", "Phone: " + customer.phone));
             }
 
+            if (customer.household) {
+                details.appendChild(createTextElement("span", "", "Address / Household: " + customer.household));
+            }
+
             if (customer.reason) {
                 details.appendChild(createTextElement("span", "", "Private note: " + customer.reason));
             }
@@ -961,6 +965,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 order.customerName,
                 order.phone,
                 order.email,
+                order.household,
                 order.deliveryDay,
                 order.status,
                 order.source,
@@ -997,6 +1002,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
             if (order.email) {
                 details.appendChild(createTextElement("p", "", "Email: " + order.email));
+            }
+
+            if (order.household) {
+                details.appendChild(createTextElement("p", "", "Address / Household: " + order.household));
             }
 
             if (order.customerBlocked) {
@@ -1267,6 +1276,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     source: offlineOrderForm.source.value,
                     phone: offlineOrderForm.phone.value,
                     email: offlineOrderForm.email.value,
+                    household: offlineOrderForm.household.value,
                     deliveryDay: offlineOrderForm.deliveryDay.value,
                     paymentReceived: offlineOrderForm.paymentReceived.checked,
                     notes: offlineOrderForm.notes.value,
@@ -1311,11 +1321,11 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        if (button.dataset.action === "refuse-block" && !window.confirm("Refuse this order, email the customer, and block future website orders matching their name, email address, or phone number?")) {
+        if (button.dataset.action === "refuse-block" && !window.confirm("Refuse this order, email the customer, and block future website orders matching their name, email address, phone number, or address/household?")) {
             return;
         }
 
-        if (button.dataset.action === "block" && !window.confirm("Block future website orders matching this customer's name, email address, or phone number?")) {
+        if (button.dataset.action === "block" && !window.confirm("Block future website orders matching this customer's name, email address, phone number, or address/household?")) {
             return;
         }
 
@@ -1484,11 +1494,12 @@ document.addEventListener("DOMContentLoaded", function () {
             customerName: String(formData.get("customerName") || "").trim(),
             email: String(formData.get("email") || "").trim(),
             phone: String(formData.get("phone") || "").trim(),
+            household: String(formData.get("household") || "").trim(),
             reason: String(formData.get("reason") || "").trim()
         };
 
-        if (!customer.customerName && !customer.email && !customer.phone) {
-            setMessage(blockedCustomerMessage, "Enter at least a customer name, email address, or phone number.", "error");
+        if (!customer.customerName && !customer.email && !customer.phone && !customer.household) {
+            setMessage(blockedCustomerMessage, "Enter at least a customer name, email address, phone number, or address/household.", "error");
             return;
         }
 

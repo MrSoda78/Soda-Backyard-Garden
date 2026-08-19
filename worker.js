@@ -21,6 +21,7 @@ const SCHEMA_STATEMENTS = [
         customer_name TEXT NOT NULL,
         phone TEXT NOT NULL,
         email TEXT,
+        household TEXT NOT NULL DEFAULT '',
         delivery_day TEXT NOT NULL,
         notes TEXT,
         total_cents INTEGER NOT NULL CHECK (total_cents >= 0),
@@ -58,9 +59,10 @@ const SCHEMA_STATEMENTS = [
         customer_name TEXT NOT NULL DEFAULT '',
         email TEXT NOT NULL DEFAULT '',
         phone TEXT NOT NULL DEFAULT '',
+        household TEXT NOT NULL DEFAULT '',
         reason TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CHECK (customer_name <> '' OR email <> '' OR phone <> '')
+        CHECK (customer_name <> '' OR email <> '' OR phone <> '' OR household <> '')
     )`,
     `CREATE TRIGGER IF NOT EXISTS deduct_inventory_before_order_item
     BEFORE INSERT ON order_items
@@ -375,8 +377,12 @@ function ensureDatabase(db) {
                 WHERE type = 'table' AND name = 'blocked_customers'
             `).first();
             const blockedCustomerSchema = String(blockedCustomerTable && blockedCustomerTable.sql || "");
+            const blockedCustomerColumns = await db.prepare("PRAGMA table_info(blocked_customers)").all();
+            const hasBlockedHousehold = blockedCustomerColumns.results.some(function (column) {
+                return column.name === "household";
+            });
 
-            if (!blockedCustomerSchema.includes("customer_name <> '' OR email <> '' OR phone <> ''")) {
+            if (!hasBlockedHousehold || !blockedCustomerSchema.includes("OR household <> ''")) {
                 await db.batch([
                     db.prepare("DROP TABLE IF EXISTS blocked_customers_rebuild"),
                     db.prepare(`
@@ -385,16 +391,17 @@ function ensureDatabase(db) {
                             customer_name TEXT NOT NULL DEFAULT '',
                             email TEXT NOT NULL DEFAULT '',
                             phone TEXT NOT NULL DEFAULT '',
+                            household TEXT NOT NULL DEFAULT '',
                             reason TEXT NOT NULL DEFAULT '',
                             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                            CHECK (customer_name <> '' OR email <> '' OR phone <> '')
+                            CHECK (customer_name <> '' OR email <> '' OR phone <> '' OR household <> '')
                         )
                     `),
                     db.prepare(`
                         INSERT INTO blocked_customers_rebuild (
-                            id, customer_name, email, phone, reason, created_at
+                            id, customer_name, email, phone, household, reason, created_at
                         )
-                        SELECT id, customer_name, email, phone, reason, created_at
+                        SELECT id, customer_name, email, phone, ${hasBlockedHousehold ? "household" : "''"}, reason, created_at
                         FROM blocked_customers
                     `),
                     db.prepare("DROP TABLE blocked_customers"),
@@ -417,6 +424,14 @@ function ensureDatabase(db) {
 
             if (!hasSource) {
                 await db.prepare("ALTER TABLE orders ADD COLUMN source TEXT NOT NULL DEFAULT 'online'").run();
+            }
+
+            const hasHousehold = orderColumns.results.some(function (column) {
+                return column.name === "household";
+            });
+
+            if (!hasHousehold) {
+                await db.prepare("ALTER TABLE orders ADD COLUMN household TEXT NOT NULL DEFAULT ''").run();
             }
 
             await db.prepare(`
@@ -521,6 +536,10 @@ function normalizeCustomerName(value) {
 
 function normalizeCustomerPhone(value) {
     return cleanText(value, 40).replace(/\D/g, "");
+}
+
+function normalizeHousehold(value) {
+    return cleanText(value, 200).replace(/\s+/g, " ").toLocaleLowerCase();
 }
 
 function escapeHtml(value) {
@@ -829,32 +848,35 @@ async function sendBrevoOrderRefusal(env, order) {
     return true;
 }
 
-async function findBlockedCustomer(db, customerName, email, phone) {
+async function findBlockedCustomer(db, customerName, email, phone, household) {
     const normalizedName = normalizeCustomerName(customerName);
     const normalizedEmail = normalizeCustomerEmail(email);
     const normalizedPhone = normalizeCustomerPhone(phone);
+    const normalizedHousehold = normalizeHousehold(household);
 
-    if (!normalizedName && !normalizedEmail && !normalizedPhone) {
+    if (!normalizedName && !normalizedEmail && !normalizedPhone && !normalizedHousehold) {
         return null;
     }
 
     return db.prepare(`
-        SELECT id, customer_name, email, phone, reason, created_at
+        SELECT id, customer_name, email, phone, household, reason, created_at
         FROM blocked_customers
         WHERE (customer_name <> '' AND LOWER(TRIM(customer_name)) = ?)
            OR (email <> '' AND email = ?)
            OR (phone <> '' AND phone = ?)
+           OR (household <> '' AND LOWER(TRIM(household)) = ?)
         ORDER BY created_at DESC
         LIMIT 1
-    `).bind(normalizedName, normalizedEmail, normalizedPhone).first();
+    `).bind(normalizedName, normalizedEmail, normalizedPhone, normalizedHousehold).first();
 }
 
 async function blockCustomer(db, order) {
     const normalizedName = normalizeCustomerName(order.customerName);
     const normalizedEmail = normalizeCustomerEmail(order.email);
     const normalizedPhone = normalizeCustomerPhone(order.phone);
+    const normalizedHousehold = normalizeHousehold(order.household);
 
-    if (!normalizedName && !normalizedEmail && !normalizedPhone) {
+    if (!normalizedName && !normalizedEmail && !normalizedPhone && !normalizedHousehold) {
         return false;
     }
 
@@ -864,16 +886,18 @@ async function blockCustomer(db, order) {
             WHERE (customer_name <> '' AND LOWER(TRIM(customer_name)) = ?)
                OR (email <> '' AND email = ?)
                OR (phone <> '' AND phone = ?)
-        `).bind(normalizedName, normalizedEmail, normalizedPhone),
+               OR (household <> '' AND LOWER(TRIM(household)) = ?)
+        `).bind(normalizedName, normalizedEmail, normalizedPhone, normalizedHousehold),
         db.prepare(`
             INSERT INTO blocked_customers (
-                id, customer_name, email, phone, reason
-            ) VALUES (?, ?, ?, ?, ?)
+                id, customer_name, email, phone, household, reason
+            ) VALUES (?, ?, ?, ?, ?, ?)
         `).bind(
             crypto.randomUUID(),
             order.customerName,
             normalizedEmail,
             normalizedPhone,
+            cleanText(order.household, 200).replace(/\s+/g, " "),
             cleanText(order.reason, 300) || (order.orderNumber
                 ? "Blocked from order " + order.orderNumber
                 : "Added manually by an administrator")
@@ -891,6 +915,7 @@ async function createOrderRecord(body, db, options = {}) {
     const customerName = cleanText(body.customerName, 100);
     const phone = cleanText(body.phone, 40);
     const email = cleanText(body.email, 150);
+    const household = cleanText(body.household, 200).replace(/\s+/g, " ");
     const deliveryDay = cleanText(body.deliveryDay, 20);
     const notes = cleanText(body.notes, 1000);
     const allowedDeliveryDays = new Set([
@@ -917,7 +942,7 @@ async function createOrderRecord(body, db, options = {}) {
         return jsonResponse({ error: "Please enter a valid email address or leave it blank." }, 400);
     }
 
-    if (options.checkBlocked === true && await findBlockedCustomer(db, customerName, email, phone)) {
+    if (options.checkBlocked === true && await findBlockedCustomer(db, customerName, email, phone, household)) {
         try {
             await sendBrevoOrderRefusal(options.env || {}, {
                 customerName,
@@ -977,9 +1002,9 @@ async function createOrderRecord(body, db, options = {}) {
     const statements = [
         db.prepare(`
             INSERT INTO orders (
-                id, order_number, customer_name, phone, email,
+                id, order_number, customer_name, phone, email, household,
                 delivery_day, notes, total_cents, status, paid_at, source
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE NULL END, ?)
         `).bind(
             orderId,
@@ -987,6 +1012,7 @@ async function createOrderRecord(body, db, options = {}) {
             customerName,
             phone,
             email || null,
+            household,
             deliveryDay,
             notes || null,
             totalCents,
@@ -1037,6 +1063,7 @@ async function createOrderRecord(body, db, options = {}) {
     return {
         customerName,
         email,
+        household,
         notes,
         orderNumber,
         total: "$" + (totalCents / 100).toFixed(2),
@@ -1232,6 +1259,7 @@ async function handleAdminOrders(db) {
             orders.customer_name,
             orders.phone,
             orders.email,
+            orders.household,
             orders.delivery_day,
             orders.notes,
             orders.total_cents,
@@ -1254,7 +1282,7 @@ async function handleAdminOrders(db) {
         `).all(),
         getProducts(db, true),
         db.prepare(`
-            SELECT id, customer_name, email, phone, reason, created_at
+            SELECT id, customer_name, email, phone, household, reason, created_at
             FROM blocked_customers
             ORDER BY created_at DESC
         `).all()
@@ -1266,6 +1294,7 @@ async function handleAdminOrders(db) {
             customerName: customer.customer_name,
             email: customer.email,
             phone: customer.phone,
+            household: customer.household,
             reason: customer.reason,
             createdAt: customer.created_at
         };
@@ -1279,6 +1308,7 @@ async function handleAdminOrders(db) {
                 customerName: row.customer_name,
                 phone: row.phone,
                 email: row.email,
+                household: row.household,
                 deliveryDay: row.delivery_day,
                 notes: row.notes,
                 totalCents: row.total_cents,
@@ -1307,10 +1337,12 @@ async function handleAdminOrders(db) {
         const orderName = normalizeCustomerName(order.customerName);
         const orderEmail = normalizeCustomerEmail(order.email);
         const orderPhone = normalizeCustomerPhone(order.phone);
+        const orderHousehold = normalizeHousehold(order.household);
         order.customerBlocked = blockedCustomers.some(function (customer) {
             return (customer.customerName && normalizeCustomerName(customer.customerName) === orderName) ||
                 (customer.email && customer.email === orderEmail) ||
-                (customer.phone && customer.phone === orderPhone);
+                (customer.phone && customer.phone === orderPhone) ||
+                (customer.household && normalizeHousehold(customer.household) === orderHousehold);
         });
     });
 
@@ -1751,7 +1783,7 @@ async function handleAdminOrderAction(request, db, env, orderId) {
 
     if (action === "refuse" || action === "refuse-block" || action === "block") {
         const order = await db.prepare(`
-            SELECT id, order_number, customer_name, phone, email, status
+            SELECT id, order_number, customer_name, phone, email, household, status
             FROM orders
             WHERE id = ?
         `).bind(orderId).first();
@@ -1764,6 +1796,7 @@ async function handleAdminOrderAction(request, db, env, orderId) {
             customerName: order.customer_name,
             email: order.email || "",
             phone: order.phone || "",
+            household: order.household || "",
             orderNumber: order.order_number
         };
 
@@ -1777,7 +1810,7 @@ async function handleAdminOrderAction(request, db, env, orderId) {
             return jsonResponse({
                 success: true,
                 blocked: true,
-                message: "Future website orders matching this customer name, email address, or phone number are now blocked."
+                message: "Future website orders matching this customer name, email address, phone number, or address/household are now blocked."
             });
         }
 
@@ -1870,10 +1903,11 @@ async function handleAdminBlockedCustomerCreate(request, db) {
     const customerName = cleanText(body.customerName, 100);
     const email = cleanText(body.email, 150);
     const phone = cleanText(body.phone, 40);
+    const household = cleanText(body.household, 200).replace(/\s+/g, " ");
     const reason = cleanText(body.reason, 300);
 
-    if (!customerName && !email && !phone) {
-        return jsonResponse({ error: "Enter at least a customer name, email address, or phone number." }, 400);
+    if (!customerName && !email && !phone && !household) {
+        return jsonResponse({ error: "Enter at least a customer name, email address, phone number, or address/household." }, 400);
     }
 
     if (customerName && customerName.length < 2) {
@@ -1888,10 +1922,15 @@ async function handleAdminBlockedCustomerCreate(request, db) {
         return jsonResponse({ error: "Enter a valid phone number or leave it blank." }, 400);
     }
 
+    if (household && household.length < 3) {
+        return jsonResponse({ error: "Enter at least three characters for the address/household or leave it blank." }, 400);
+    }
+
     const blocked = await blockCustomer(db, {
         customerName,
         email,
         phone,
+        household,
         reason
     });
 

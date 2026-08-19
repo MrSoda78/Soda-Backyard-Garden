@@ -977,6 +977,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const customerName = orderForm.elements.namedItem("customerName").value.trim();
             const customerEmail = orderForm.elements.namedItem("email").value.trim();
             const phone = orderForm.elements.namedItem("phone").value.trim();
+            const household = orderForm.elements.namedItem("household").value.trim();
             const notes = orderForm.elements.namedItem("notes").value.trim();
             const emailData = new FormData();
             emailData.set("_subject", "New Garden Order " + orderNumber);
@@ -986,6 +987,10 @@ document.addEventListener("DOMContentLoaded", function () {
             emailData.set("Customer", customerName);
             emailData.set("email", customerEmail);
             emailData.set("Phone", phone);
+
+            if (household) {
+                emailData.set("Address / Household", household);
+            }
             emailData.set(
                 "Items",
                 items.map(function (item) {
@@ -1134,6 +1139,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         customerName: orderForm.elements.namedItem("customerName").value,
                         phone: orderForm.elements.namedItem("phone").value,
                         email: orderForm.elements.namedItem("email").value,
+                        household: orderForm.elements.namedItem("household").value,
                         deliveryDay: orderForm.elements.namedItem("deliveryDay")
                             ? orderForm.elements.namedItem("deliveryDay").value
                             : "To be confirmed",

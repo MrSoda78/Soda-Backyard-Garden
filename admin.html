@@ -62,7 +62,7 @@
                         <div class="admin-search-bar">
                             <label for="adminOrderSearch">Search orders</label>
                             <div class="search-input-row">
-                                <input type="search" id="adminOrderSearch" placeholder="Name, order number, email, phone, or product">
+                                <input type="search" id="adminOrderSearch" placeholder="Name, order number, email, phone, household, or product">
                                 <button type="button" class="button secondary search-clear-button" data-clear-search="adminOrderSearch">Clear</button>
                             </div>
                             <p class="search-result-message" id="adminOrderSearchMessage" aria-live="polite"></p>
@@ -70,7 +70,7 @@
 
                         <details class="admin-blocked-customers">
                             <summary>Blocked Customers <span id="blockedCustomerCount">(0)</span></summary>
-                            <p>Website orders matching a listed customer name, email address, or phone number are refused before inventory is reserved. Use Unblock if you want to accept future orders from that customer again.</p>
+                            <p>Website orders matching a listed customer name, email address, phone number, or address/household are refused before inventory is reserved. Use Unblock if you want to accept future orders from that customer again.</p>
                             <form id="blockedCustomerForm" class="blocked-customer-form">
                                 <p class="blocked-customer-form-help">Enter at least one identifying detail. Add more than one when possible for a stronger match.</p>
                                 <div class="blocked-customer-form-grid">
@@ -85,6 +85,10 @@
                                     <div class="form-group">
                                         <label for="blockedCustomerPhone">Phone Number</label>
                                         <input type="tel" id="blockedCustomerPhone" name="phone" autocomplete="off">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="blockedCustomerHousehold">Address / Household</label>
+                                        <input type="text" id="blockedCustomerHousehold" name="household" autocomplete="off" maxlength="200" placeholder="Street address, apartment, or household name">
                                     </div>
                                     <div class="form-group blocked-customer-reason">
                                         <label for="blockedCustomerReason">Private Note <span>(optional)</span></label>
@@ -125,6 +129,10 @@
                                     <div class="form-group">
                                         <label for="offlineEmail">Email Address (optional)</label>
                                         <input type="email" id="offlineEmail" name="email">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="offlineHousehold">Address / Household (optional)</label>
+                                        <input type="text" id="offlineHousehold" name="household" maxlength="200">
                                     </div>
                                 </div>
 
