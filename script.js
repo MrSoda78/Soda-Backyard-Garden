@@ -901,20 +901,47 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
 
-        function focusFirstInvalidField() {
-            const firstInvalidField = requiredFields.find(function (field) {
+        function formatFieldList(fields) {
+            const labels = fields.map(getFieldLabel);
+
+            if (labels.length < 2) {
+                return labels[0] || "";
+            }
+
+            if (labels.length === 2) {
+                return labels[0] + " and " + labels[1];
+            }
+
+            return labels.slice(0, -1).join(", ") + ", and " + labels[labels.length - 1];
+        }
+
+        function updateValidationSummary() {
+            if (!validationSummary) {
+                return [];
+            }
+
+            const invalidFields = requiredFields.filter(function (field) {
                 return !field.validity.valid;
             });
 
-            if (!firstInvalidField) {
-                return;
+            if (invalidFields.length === 0) {
+                validationSummary.textContent = "";
+                validationSummary.hidden = true;
+                return invalidFields;
             }
 
-            const label = getFieldLabel(firstInvalidField);
+            validationSummary.textContent = "Your order has not been submitted. Please complete or correct: " +
+                formatFieldList(invalidFields) + ".";
+            validationSummary.hidden = false;
+            return invalidFields;
+        }
 
-            if (validationSummary) {
-                validationSummary.textContent = "Your order has not been submitted. Please complete " + label + ".";
-                validationSummary.hidden = false;
+        function focusFirstInvalidField() {
+            const invalidFields = updateValidationSummary();
+            const firstInvalidField = invalidFields[0];
+
+            if (!firstInvalidField) {
+                return;
             }
 
             firstInvalidField.focus({ preventScroll: true });
@@ -1020,11 +1047,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (event.target.validity.valid) {
                     clearFieldError(event.target);
 
-                    if (validationSummary && requiredFields.every(function (field) {
-                        return field.validity.valid;
-                    })) {
-                        validationSummary.textContent = "";
-                        validationSummary.hidden = true;
+                    if (validationSummary && !validationSummary.hidden) {
+                        updateValidationSummary();
                     }
                 } else if (event.target.classList.contains("field-invalid")) {
                     showFieldError(event.target);
