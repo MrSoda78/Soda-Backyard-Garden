@@ -15,9 +15,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const ordersTab = document.getElementById("ordersTab");
     const inventoryTab = document.getElementById("inventoryTab");
     const salesTab = document.getElementById("salesTab");
+    const blockedTab = document.getElementById("blockedTab");
     const ordersPanel = document.getElementById("ordersPanel");
     const inventoryPanel = document.getElementById("inventoryPanel");
     const salesPanel = document.getElementById("salesPanel");
+    const blockedPanel = document.getElementById("blockedPanel");
     const inventoryRows = document.getElementById("inventoryRows");
     const inventoryMessage = document.getElementById("inventoryMessage");
     const refreshInventoryButton = document.getElementById("refreshInventory");
@@ -313,7 +315,8 @@ document.addEventListener("DOMContentLoaded", function () {
         const panels = {
             orders: { tab: ordersTab, panel: ordersPanel },
             inventory: { tab: inventoryTab, panel: inventoryPanel },
-            sales: { tab: salesTab, panel: salesPanel }
+            sales: { tab: salesTab, panel: salesPanel },
+            blocked: { tab: blockedTab, panel: blockedPanel }
         };
 
         Object.entries(panels).forEach(function ([name, entry]) {
@@ -1130,20 +1133,14 @@ document.addEventListener("DOMContentLoaded", function () {
             if (order.status === "pending") {
                 actions.appendChild(createActionButton("Confirm Payment", "confirm", order.id));
                 actions.appendChild(createActionButton("Refuse Order", "refuse", order.id, "danger"));
-                actions.appendChild(createActionButton("Refuse & Block Customer", "refuse-block", order.id, "danger block-action"));
                 actions.appendChild(createActionButton("Cancel & Return Stock", "cancel", order.id, "danger"));
             } else if (order.status === "confirmed") {
                 actions.appendChild(createActionButton("Mark Delivered", "complete", order.id));
                 actions.appendChild(createActionButton("Refuse Order", "refuse", order.id, "danger"));
-                actions.appendChild(createActionButton("Refuse & Block Customer", "refuse-block", order.id, "danger block-action"));
                 actions.appendChild(createActionButton("Cancel & Return Stock", "cancel", order.id, "danger"));
             } else if (order.status === "refused") {
                 if (order.email) {
                     actions.appendChild(createRefusalEmailLink(order));
-                }
-
-                if (!order.customerBlocked) {
-                    actions.appendChild(createActionButton("Block Customer", "block", order.id, "danger block-action"));
                 }
             } else if (order.status === "cancelled") {
                 if (order.email) {
@@ -1318,14 +1315,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         if (button.dataset.action === "refuse" && !window.confirm("Refuse this order, return its items to availability, and email the customer that the order was not accepted?")) {
-            return;
-        }
-
-        if (button.dataset.action === "refuse-block" && !window.confirm("Refuse this order, email the customer, and block future website orders matching their name, email address, phone number, or address/household?")) {
-            return;
-        }
-
-        if (button.dataset.action === "block" && !window.confirm("Block future website orders matching this customer's name, email address, phone number, or address/household?")) {
             return;
         }
 
@@ -1586,6 +1575,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     salesTab.addEventListener("click", function () {
         switchPanel("sales");
+    });
+
+    blockedTab.addEventListener("click", function () {
+        switchPanel("blocked");
     });
 
     exportSalesButton.addEventListener("click", exportSalesWorkbook);

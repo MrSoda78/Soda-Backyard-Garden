@@ -1964,6 +1964,7 @@ footer a:hover {
 
 .admin-tabs {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
 }
 
@@ -2720,7 +2721,7 @@ footer a:hover {
     }
 
     .admin-tab {
-        flex: 1;
+        flex: 1 1 calc(50% - 8px);
     }
 }
 
