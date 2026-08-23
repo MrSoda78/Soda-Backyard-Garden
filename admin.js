@@ -528,10 +528,7 @@ document.addEventListener("DOMContentLoaded", function () {
             descriptionInput.className = "inventory-description";
             descriptionInput.rows = 3;
             descriptionInput.maxLength = 500;
-            descriptionInput.disabled = !product.isSlot;
-            descriptionInput.placeholder = product.isSlot
-                ? "Describe the product for customers"
-                : "Existing card description is managed on its page";
+            descriptionInput.placeholder = "Describe the product for customers";
             descriptionInput.setAttribute("aria-label", product.name + " description");
             descriptionCell.appendChild(descriptionInput);
 

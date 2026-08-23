@@ -673,6 +673,11 @@ textarea:focus-visible {
     font-size: 0.9rem;
 }
 
+.admin-product-description {
+    margin-bottom: 14px;
+    line-height: 1.55;
+}
+
 .product-notice {
     margin: -4px 0 14px;
 }

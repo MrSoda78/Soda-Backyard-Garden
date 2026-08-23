@@ -637,6 +637,104 @@ document.addEventListener("DOMContentLoaded", function () {
         quantityInputs = Array.from(orderForm.querySelectorAll("input[data-product-id]"));
     }
 
+    function productDescriptions(productIds, productMap) {
+        const descriptions = [];
+
+        productIds.forEach(function (productId) {
+            const product = productMap.get(productId.trim());
+            const description = product ? product.description.trim() : "";
+
+            if (description && !descriptions.includes(description)) {
+                descriptions.push(description);
+            }
+        });
+
+        return descriptions.join(" ");
+    }
+
+    function renderProductDescriptions(productMap) {
+        document.querySelectorAll("[data-description-display]").forEach(function (element) {
+            let description = productDescriptions(element.dataset.descriptionDisplay.split(","), productMap);
+            const stripLabel = element.dataset.descriptionStripLabel;
+
+            if (
+                stripLabel &&
+                description.toLocaleLowerCase().startsWith(stripLabel.toLocaleLowerCase() + ":")
+            ) {
+                description = description.slice(stripLabel.length + 1).trim();
+            }
+
+            element.textContent = description;
+            element.hidden = description.length === 0;
+
+            const container = element.closest("[data-description-container]");
+
+            if (container) {
+                container.hidden = description.length === 0;
+            }
+        });
+
+        document.querySelectorAll(".product-card:not([data-dynamic-product-card])").forEach(function (card) {
+            const content = card.querySelector(".product-card-content");
+
+            if (!content || content.querySelector("[data-description-display]")) {
+                return;
+            }
+
+            const productIds = [];
+            const productIdAttributes = [
+                "data-price-display",
+                "data-stock",
+                "data-product-status",
+                "data-stock-status",
+                "data-product-group-status"
+            ];
+
+            productIdAttributes.forEach(function (attribute) {
+                content.querySelectorAll("[" + attribute + "]").forEach(function (element) {
+                    element.getAttribute(attribute).split(",").forEach(function (productId) {
+                        const cleanProductId = productId.trim();
+
+                        if (cleanProductId && !productIds.includes(cleanProductId)) {
+                            productIds.push(cleanProductId);
+                        }
+                    });
+                });
+            });
+
+            const description = productDescriptions(productIds, productMap);
+            let descriptionElement = content.querySelector(".admin-product-description");
+
+            if (!description) {
+                if (descriptionElement) {
+                    descriptionElement.remove();
+                }
+
+                return;
+            }
+
+            if (!descriptionElement) {
+                descriptionElement = document.createElement("p");
+                descriptionElement.className = "product-note admin-product-description";
+
+                const detailsContainer = content.querySelector(":scope > .product-card-details");
+                const insertionContainer = detailsContainer || content;
+
+                const insertionPoint = insertionContainer.querySelector(
+                    ".availability-list, .ingredient-list, .stock-count, .status"
+                );
+
+                if (insertionPoint) {
+                    insertionContainer.insertBefore(descriptionElement, insertionPoint);
+                } else {
+                    insertionContainer.appendChild(descriptionElement);
+                }
+            }
+
+            descriptionElement.textContent = description;
+        });
+    }
+
     function renderInventory(products) {
         renderDynamicProductCards(products);
         renderDynamicOrderProducts(products);
@@ -644,6 +742,8 @@ document.addEventListener("DOMContentLoaded", function () {
         const productMap = new Map(products.map(function (product) {
             return [product.id, product];
         }));
+
+        renderProductDescriptions(productMap);
 
         document.querySelectorAll("[data-stock]").forEach(function (element) {
             const product = productMap.get(element.dataset.stock);
