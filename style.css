@@ -2503,14 +2503,15 @@ footer a:hover {
 
 .inventory-image-editor {
     display: grid;
-    min-width: 230px;
+    width: 260px;
+    min-width: 260px;
     gap: 8px;
 }
 
 .inventory-image-preview {
     display: grid;
     width: 100%;
-    height: 110px;
+    height: 180px;
     place-items: center;
     overflow: hidden;
     border: 1px dashed var(--green-border);
@@ -2524,6 +2525,7 @@ footer a:hover {
 .inventory-image-preview img {
     width: 100%;
     height: 100%;
+    display: block;
 }
 
 .admin-inventory-table .inventory-image-file,
