@@ -470,6 +470,29 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    function createProductDescriptionElement(description, className) {
+        const ingredientMatch = description.trim().match(/^ingredients\s*:\s*([\s\S]*)$/i);
+
+        if (ingredientMatch) {
+            const container = document.createElement("div");
+            container.className = "ingredient-list " + className;
+
+            const heading = document.createElement("h4");
+            heading.textContent = "Ingredients";
+
+            const ingredientText = document.createElement("p");
+            ingredientText.textContent = ingredientMatch[1].trim();
+
+            container.append(heading, ingredientText);
+            return container;
+        }
+
+        const descriptionElement = document.createElement("p");
+        descriptionElement.className = className;
+        descriptionElement.textContent = description;
+        return descriptionElement;
+    }
+
     function renderDynamicProductCards(products) {
         document.querySelectorAll("[data-dynamic-products]").forEach(function (grid) {
             const category = grid.dataset.dynamicProducts;
@@ -517,9 +540,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 price.dataset.priceDisplay = product.id;
                 price.textContent = formatProductPrice(product);
 
-                const description = document.createElement("p");
-                description.className = "dynamic-product-description";
-                description.textContent = product.description;
+                const description = createProductDescriptionElement(
+                    product.description,
+                    "dynamic-product-description"
+                );
 
                 const stock = document.createElement("p");
                 stock.className = "stock-count";
@@ -703,35 +727,32 @@ document.addEventListener("DOMContentLoaded", function () {
             });
 
             const description = productDescriptions(productIds, productMap);
-            let descriptionElement = content.querySelector(".admin-product-description");
+            const existingDescription = content.querySelector(".admin-product-description");
+
+            if (existingDescription) {
+                existingDescription.remove();
+            }
 
             if (!description) {
-                if (descriptionElement) {
-                    descriptionElement.remove();
-                }
-
                 return;
             }
 
-            if (!descriptionElement) {
-                descriptionElement = document.createElement("p");
-                descriptionElement.className = "product-note admin-product-description";
+            const descriptionElement = createProductDescriptionElement(
+                description,
+                "product-note admin-product-description"
+            );
+            const detailsContainer = content.querySelector(":scope > .product-card-details");
+            const insertionContainer = detailsContainer || content;
 
-                const detailsContainer = content.querySelector(":scope > .product-card-details");
-                const insertionContainer = detailsContainer || content;
+            const insertionPoint = insertionContainer.querySelector(
+                ".availability-list, .ingredient-list, .stock-count, .status"
+            );
 
-                const insertionPoint = insertionContainer.querySelector(
-                    ".availability-list, .ingredient-list, .stock-count, .status"
-                );
-
-                if (insertionPoint) {
-                    insertionContainer.insertBefore(descriptionElement, insertionPoint);
-                } else {
-                    insertionContainer.appendChild(descriptionElement);
-                }
+            if (insertionPoint) {
+                insertionContainer.insertBefore(descriptionElement, insertionPoint);
+            } else {
+                insertionContainer.appendChild(descriptionElement);
             }
-
-            descriptionElement.textContent = description;
         });
     }
 

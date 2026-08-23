@@ -528,7 +528,7 @@ document.addEventListener("DOMContentLoaded", function () {
             descriptionInput.className = "inventory-description";
             descriptionInput.rows = 3;
             descriptionInput.maxLength = 500;
-            descriptionInput.placeholder = "Describe the product for customers";
+            descriptionInput.placeholder = "Describe the product, or begin with Ingredients:";
             descriptionInput.setAttribute("aria-label", product.name + " description");
             descriptionCell.appendChild(descriptionInput);
 
