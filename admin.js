@@ -1447,7 +1447,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         orders.forEach(function (order) {
-            const card = document.createElement("article");
+            const card = document.createElement("details");
             card.className = "admin-order-card";
             card.dataset.orderSearch = [
                 order.orderNumber,
@@ -1461,18 +1461,33 @@ document.addEventListener("DOMContentLoaded", function () {
                 order.notes,
                 order.items.map(function (item) { return item.name; }).join(" ")
             ].filter(Boolean).join(" ").toLocaleLowerCase();
-            const heading = document.createElement("div");
-            heading.className = "admin-order-heading";
+            const submitted = new Date(order.createdAt.replace(" ", "T") + "Z");
+            const summary = document.createElement("summary");
+            summary.className = "admin-order-summary";
             const headingCopy = document.createElement("div");
             headingCopy.appendChild(createTextElement("h3", "", order.customerName));
             headingCopy.appendChild(createTextElement("p", "admin-order-number", order.orderNumber));
+            const summaryMeta = document.createElement("div");
+            summaryMeta.className = "admin-order-summary-meta";
+            summaryMeta.appendChild(createTextElement(
+                "span",
+                "admin-order-summary-date",
+                submitted.toLocaleDateString()
+            ));
+            summaryMeta.appendChild(createTextElement(
+                "strong",
+                "admin-order-summary-total",
+                formatMoney(order.totalCents)
+            ));
             const status = createTextElement("span", "admin-status status-" + order.status, order.status);
-            heading.append(headingCopy, status);
-            card.appendChild(heading);
+            summary.append(headingCopy, summaryMeta, status);
+            card.appendChild(summary);
+
+            const body = document.createElement("div");
+            body.className = "admin-order-body";
 
             const details = document.createElement("div");
             details.className = "admin-order-details";
-            const submitted = new Date(order.createdAt.replace(" ", "T") + "Z");
             const sourceLabels = {
                 online: "Website",
                 phone: "Phone",
@@ -1502,7 +1517,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             details.appendChild(createTextElement("p", "", "Delivery: " + order.deliveryDay));
-            card.appendChild(details);
+            body.appendChild(details);
 
             const itemList = document.createElement("ul");
             itemList.className = "admin-item-list";
@@ -1513,7 +1528,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     item.quantity + " × " + item.name + " — " + formatMoney(item.lineTotalCents)
                 ));
             });
-            card.appendChild(itemList);
+            body.appendChild(itemList);
 
             if (order.status === "pending" || order.status === "confirmed") {
                 const adjustmentPanel = document.createElement("details");
@@ -1600,13 +1615,13 @@ document.addEventListener("DOMContentLoaded", function () {
                     "adjust-items",
                     order.id
                 ));
-                card.appendChild(adjustmentPanel);
+                body.appendChild(adjustmentPanel);
             }
 
-            card.appendChild(createTextElement("p", "admin-order-total", "Total: " + formatMoney(order.totalCents)));
+            body.appendChild(createTextElement("p", "admin-order-total", "Total: " + formatMoney(order.totalCents)));
 
             if (order.notes) {
-                card.appendChild(createTextElement("p", "admin-order-notes", "Notes: " + order.notes));
+                body.appendChild(createTextElement("p", "admin-order-notes", "Notes: " + order.notes));
             }
 
             const actions = document.createElement("div");
@@ -1636,9 +1651,10 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             if (actions.children.length > 0) {
-                card.appendChild(actions);
+                body.appendChild(actions);
             }
 
+            card.appendChild(body);
             ordersList.appendChild(card);
         });
 
