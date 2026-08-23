@@ -388,6 +388,91 @@ document.addEventListener("DOMContentLoaded", function () {
         { value: "right", label: "Right" }
     ];
 
+    const existingProductImageUrls = {
+        "callaloo": "images/Callalo.jpg",
+        "honey-1kg": "images/Honey 2.jpg",
+        "honey-3kg": "images/Honey 1.jpg",
+        "pasta-sauce-1l": "images/Pasta Sause.jpg",
+        "pasta-sauce-750ml": "images/Pasta Sause.jpg",
+        "hot-sauce-250ml": "images/Hot Sauce.jpg",
+        "fresh-beets": "images/Beets 2.jpg",
+        "yellow-zucchini": "images/Yellow Zuccinni.jpg",
+        "green-zucchini": "images/Green Zuccinni.jpg",
+        "lebanese-zucchini": "images/Lebanese Zuccinni.jpg",
+        "lemon-cucumber-pack": "images/Lemon Cucumber.jpg",
+        "dragon-tongue-beans": "images/Dragon Tongue Beans.jpg",
+        "purple-beans": "images/Purple Beans.jpg",
+        "green-beans": "images/Green Beans.jpg",
+        "yellow-beans": "images/Yellow Beans.jpg",
+        "potatoes": "images/Pink Potatoes.jpg",
+        "red-potatoes": "images/Red Potatoes.jpg",
+        "red-fingerling-potatoes": "images/Red Fingerling Potatoes.jpg",
+        "white-potatoes": "images/White Potatoes.jpg",
+        "white-fingerling-potatoes": "images/White Fingerling Potatoes.jpg",
+        "russet-potatoes": "images/Russet Potatoes.jpg",
+        "fresh-garlic": "images/Garlic Bunches.jpg",
+        "fresh-onions": "images/Fresh Onions.jpg",
+        "onions": "images/Yellow Spanish Onion.jpg",
+        "red-onion": "images/Red Onion.jpg",
+        "white-onion": "images/White Onion.jpg",
+        "tri-colour-carrots": "images/Tri-Colour Carrots.jpg",
+        "sage": "images/Sage.jpg",
+        "brown-eggs": "images/Brown Eggs - Large.jpg",
+        "white-eggs-flat": "images/Flat of White Eggs - Large.jpg",
+        "cold-flu-tea": "images/Cold and Flu.jpg",
+        "menopause-tea": "images/Perimenopause - Menopause.jpg",
+        "mullein-tea": "images/Mullein.jpg",
+        "red-raspberry-leaf-tea": "images/Red Raspberry Leaf.jpg",
+        "bloating-tea": "images/Bloating Blend.jpg",
+        "sleep-tea": "images/Sleep Blend.jpg",
+        "hardo-bread": "images/Hardo Bread.jpg",
+        "pain-rub-oil-2oz": "images/2 oz Bottle.jpg",
+        "pain-rub-oil-4oz": "images/4 oz Bottle.jpg",
+        "pain-rub-balm-2oz": "images/2 oz Jar.jpg",
+        "pain-rub-balm-4oz": "images/4 oz Jar.jpg"
+    };
+    const existingContainedProductImages = new Set([
+        "hardo-bread",
+        "pain-rub-oil-2oz",
+        "pain-rub-oil-4oz",
+        "pain-rub-balm-2oz",
+        "pain-rub-balm-4oz"
+    ]);
+
+    function existingProductImageUrl(product) {
+        if (existingProductImageUrls[product.id]) {
+            return existingProductImageUrls[product.id];
+        }
+
+        if (!product.isSlot || product.name.startsWith("New Product Slot")) {
+            return "";
+        }
+
+        const fileName = product.name === "Sweet Corn"
+            ? "Sweet Corn 2.jpg"
+            : product.name + ".jpg";
+        return "images/" + encodeURIComponent(fileName);
+    }
+
+    function displayInventoryImage(preview, imageUrl, altText, imageFit, imagePosition) {
+        preview.replaceChildren();
+
+        if (!imageUrl) {
+            preview.textContent = "No current image";
+            return;
+        }
+
+        const image = document.createElement("img");
+        image.src = imageUrl;
+        image.alt = altText;
+        image.style.objectFit = imageFit;
+        image.style.objectPosition = imagePosition;
+        image.addEventListener("error", function () {
+            preview.textContent = "No current image";
+        }, { once: true });
+        preview.appendChild(image);
+    }
+
     function loadImageElement(file) {
         return new Promise(function (resolve, reject) {
             const image = new Image();
@@ -587,9 +672,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
             const product = entry.product;
             const emptySlot = isEmptyProductSlot(product);
+            const fallbackImageUrl = existingProductImageUrl(product);
+            const currentImageUrl = product.imageUrl || fallbackImageUrl;
+            const currentImageFit = product.imageUrl
+                ? product.imageFit
+                : (existingContainedProductImages.has(product.id) ? "contain" : product.imageFit);
 
             const row = document.createElement("tr");
             row.dataset.productId = product.id;
+            row.dataset.fallbackImageUrl = fallbackImageUrl;
             row.dataset.inventorySection = entry.sectionKey;
             row.dataset.inventorySearch = [
                 product.name,
@@ -613,17 +704,13 @@ document.addEventListener("DOMContentLoaded", function () {
             const imagePreview = document.createElement("div");
             imagePreview.className = "inventory-image-preview";
             imagePreview.dataset.productImagePreview = product.id;
-
-            if (product.imageUrl) {
-                const previewImage = document.createElement("img");
-                previewImage.src = product.imageUrl;
-                previewImage.alt = "Current managed image for " + product.name;
-                previewImage.style.objectFit = product.imageFit;
-                previewImage.style.objectPosition = product.imagePosition;
-                imagePreview.appendChild(previewImage);
-            } else {
-                imagePreview.textContent = "Uses existing page image";
-            }
+            displayInventoryImage(
+                imagePreview,
+                currentImageUrl,
+                "Current image for " + product.name,
+                currentImageFit,
+                product.imagePosition
+            );
 
             const imageFile = document.createElement("input");
             imageFile.type = "file";
@@ -632,7 +719,7 @@ document.addEventListener("DOMContentLoaded", function () {
             imageFile.setAttribute("aria-label", "Choose an image for " + product.name);
             const imageFit = createImageSelect(
                 "inventory-image-fit",
-                product.imageFit,
+                currentImageFit,
                 imageFitOptions,
                 product.name + " image display"
             );
@@ -648,7 +735,7 @@ document.addEventListener("DOMContentLoaded", function () {
             uploadImageButton.type = "button";
             uploadImageButton.className = "button inventory-image-upload";
             uploadImageButton.dataset.inventoryImageAction = "upload";
-            uploadImageButton.textContent = product.imageUrl ? "Replace" : "Upload";
+            uploadImageButton.textContent = currentImageUrl ? "Replace" : "Upload";
             const removeImageButton = document.createElement("button");
             removeImageButton.type = "button";
             removeImageButton.className = "button secondary inventory-image-remove";
@@ -793,22 +880,16 @@ document.addEventListener("DOMContentLoaded", function () {
         const preview = row.querySelector(".inventory-image-preview");
         const removeButton = row.querySelector(".inventory-image-remove");
         const uploadButton = row.querySelector(".inventory-image-upload");
-        preview.replaceChildren();
-
-        if (imageUrl) {
-            const image = document.createElement("img");
-            image.src = imageUrl;
-            image.alt = "Current managed image for " + row.querySelector(".inventory-name").value;
-            image.style.objectFit = row.querySelector(".inventory-image-fit").value;
-            image.style.objectPosition = row.querySelector(".inventory-image-position").value;
-            preview.appendChild(image);
-            removeButton.hidden = false;
-            uploadButton.textContent = "Replace";
-        } else {
-            preview.textContent = "Uses existing page image";
-            removeButton.hidden = true;
-            uploadButton.textContent = "Upload";
-        }
+        const currentImageUrl = imageUrl || row.dataset.fallbackImageUrl;
+        displayInventoryImage(
+            preview,
+            currentImageUrl,
+            "Current image for " + row.querySelector(".inventory-name").value,
+            row.querySelector(".inventory-image-fit").value,
+            row.querySelector(".inventory-image-position").value
+        );
+        removeButton.hidden = !imageUrl;
+        uploadButton.textContent = currentImageUrl ? "Replace" : "Upload";
     }
 
     async function uploadInventoryImage(row, button) {
