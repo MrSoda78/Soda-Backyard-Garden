@@ -227,6 +227,26 @@ WHERE id = 'lemon-cucumber-pack'
   AND description = '';
 
 UPDATE products
+SET description = 'Ingredients: Mullein, hibiscus, sage, mint, lemon balm, lemon pieces, and ginger pieces.'
+WHERE id = 'cold-flu-tea'
+  AND description = '';
+
+UPDATE products
+SET description = 'Ingredients: Red clover, raspberry leaf, hibiscus, sage, lavender, and lemon balm.'
+WHERE id = 'menopause-tea'
+  AND description = '';
+
+UPDATE products
+SET description = 'Ingredients: Mint, fennel, clove, nettle, and anise.'
+WHERE id = 'bloating-tea'
+  AND description = '';
+
+UPDATE products
+SET description = 'Ingredients: Chamomile, mint, lemon balm, lemongrass, lavender, bee balm, blue vervain, and rosemary.'
+WHERE id = 'sleep-tea'
+  AND description = '';
+
+UPDATE products
 SET category = 'tea'
 WHERE id IN (
     'cold-flu-tea', 'menopause-tea', 'mullein-tea',
