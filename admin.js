@@ -15,11 +15,13 @@ document.addEventListener("DOMContentLoaded", function () {
     const ordersTab = document.getElementById("ordersTab");
     const inventoryTab = document.getElementById("inventoryTab");
     const homeTab = document.getElementById("homeTab");
+    const supportTab = document.getElementById("supportTab");
     const salesTab = document.getElementById("salesTab");
     const blockedTab = document.getElementById("blockedTab");
     const ordersPanel = document.getElementById("ordersPanel");
     const inventoryPanel = document.getElementById("inventoryPanel");
     const homePanel = document.getElementById("homePanel");
+    const supportPanel = document.getElementById("supportPanel");
     const salesPanel = document.getElementById("salesPanel");
     const blockedPanel = document.getElementById("blockedPanel");
     const inventoryRows = document.getElementById("inventoryRows");
@@ -54,10 +56,18 @@ document.addEventListener("DOMContentLoaded", function () {
     const carouselProductImage = document.getElementById("carouselProductImage");
     const refreshCarouselButton = document.getElementById("refreshCarousel");
     const saveCarouselButton = document.getElementById("saveCarousel");
+    const supportImagesMessage = document.getElementById("supportImagesMessage");
+    const supportImageItems = document.getElementById("supportImageItems");
+    const supportImageUploadForm = document.getElementById("supportImageUploadForm");
+    const supportProductImageForm = document.getElementById("supportProductImageForm");
+    const supportProductImage = document.getElementById("supportProductImage");
+    const refreshSupportImagesButton = document.getElementById("refreshSupportImages");
+    const saveSupportImagesButton = document.getElementById("saveSupportImages");
     let offlineQuantityInputs = [];
     let offlineProductsLoaded = false;
     let orderAdjustmentProducts = [];
     let carouselLoaded = false;
+    let supportImagesLoaded = false;
     let activeOrderStatusFilter = "pending";
     const collapsedInventorySections = new Set();
     const expandedMobileInventoryProducts = new Set();
@@ -329,6 +339,7 @@ document.addEventListener("DOMContentLoaded", function () {
             orders: { tab: ordersTab, panel: ordersPanel },
             inventory: { tab: inventoryTab, panel: inventoryPanel },
             home: { tab: homeTab, panel: homePanel },
+            support: { tab: supportTab, panel: supportPanel },
             sales: { tab: salesTab, panel: salesPanel },
             blocked: { tab: blockedTab, panel: blockedPanel }
         };
@@ -347,6 +358,10 @@ document.addEventListener("DOMContentLoaded", function () {
         } else if (panelName === "home") {
             loadCarousel().catch(function (error) {
                 setMessage(carouselMessage, error.message, "error");
+            });
+        } else if (panelName === "support") {
+            loadSupportImages().catch(function (error) {
+                setMessage(supportImagesMessage, error.message, "error");
             });
         } else if (panelName === "sales") {
             loadSales().catch(function (error) {
@@ -1036,6 +1051,7 @@ document.addEventListener("DOMContentLoaded", function () {
             fileInput.value = "";
             updateInventoryImagePreview(row, result.imageUrl);
             carouselLoaded = false;
+            supportImagesLoaded = false;
             setMessage(inventoryMessage, result.message, "success");
         } catch (error) {
             setMessage(inventoryMessage, error.message, "error");
@@ -1067,6 +1083,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             updateInventoryImagePreview(row, "");
             carouselLoaded = false;
+            supportImagesLoaded = false;
             setMessage(inventoryMessage, result.message, "success");
         } catch (error) {
             setMessage(inventoryMessage, error.message, "error");
@@ -1300,6 +1317,185 @@ document.addEventListener("DOMContentLoaded", function () {
         } catch (error) {
             button.disabled = false;
             setMessage(carouselMessage, error.message, "error");
+        }
+    }
+
+    function renderSupportImages(supportImages, productImages) {
+        supportImageItems.replaceChildren();
+        supportProductImage.replaceChildren();
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = productImages.length > 0
+            ? "Choose a product image"
+            : "Upload a product image in Inventory first";
+        supportProductImage.appendChild(placeholder);
+        supportProductImage.disabled = productImages.length === 0;
+
+        productImages.forEach(function (product) {
+            const option = document.createElement("option");
+            option.value = product.id;
+            option.textContent = product.name;
+            supportProductImage.appendChild(option);
+        });
+
+        if (supportImages.length === 0) {
+            supportImageItems.appendChild(createTextElement(
+                "p",
+                "admin-empty",
+                "No Support page images are available. Upload one above."
+            ));
+            return;
+        }
+
+        supportImages.forEach(function (image, index) {
+            const card = document.createElement("article");
+            card.className = "admin-carousel-card";
+            card.dataset.supportImageId = image.id;
+
+            const order = createTextElement("span", "admin-carousel-order", "Image " + (index + 1));
+            const preview = document.createElement("img");
+            preview.className = "admin-carousel-preview";
+            preview.src = image.imageUrl;
+            preview.alt = image.altText;
+            preview.style.objectFit = image.imageFit;
+            preview.style.objectPosition = image.imagePosition;
+
+            const fields = document.createElement("div");
+            fields.className = "admin-carousel-fields";
+            const altGroup = document.createElement("div");
+            altGroup.className = "form-group";
+            const altLabel = document.createElement("label");
+            altLabel.textContent = "Image description";
+            const altInput = createInventoryInput("text", image.altText, "support-image-alt-text");
+            altInput.maxLength = 160;
+            altInput.required = true;
+            altInput.setAttribute("aria-label", "Description for Support page image " + (index + 1));
+            altGroup.append(altLabel, altInput);
+
+            const displayOptions = document.createElement("div");
+            displayOptions.className = "image-display-options";
+            const fitGroup = document.createElement("div");
+            fitGroup.className = "form-group";
+            const fitLabel = document.createElement("label");
+            fitLabel.textContent = "Display";
+            const fitSelect = createImageSelect(
+                "support-image-fit",
+                image.imageFit,
+                imageFitOptions,
+                "Display for Support page image " + (index + 1)
+            );
+            fitGroup.append(fitLabel, fitSelect);
+            const positionGroup = document.createElement("div");
+            positionGroup.className = "form-group";
+            const positionLabel = document.createElement("label");
+            positionLabel.textContent = "Focal point";
+            const positionSelect = createImageSelect(
+                "support-image-position",
+                image.imagePosition,
+                imagePositionOptions,
+                "Focal point for Support page image " + (index + 1)
+            );
+            positionGroup.append(positionLabel, positionSelect);
+            displayOptions.append(fitGroup, positionGroup);
+
+            const visibleLabel = document.createElement("label");
+            visibleLabel.className = "carousel-visible-control";
+            const visibleInput = document.createElement("input");
+            visibleInput.type = "checkbox";
+            visibleInput.className = "support-image-active";
+            visibleInput.checked = image.active;
+            visibleLabel.append(visibleInput, " Show on Support the Garden page");
+            fields.append(altGroup, displayOptions, visibleLabel);
+
+            const actions = document.createElement("div");
+            actions.className = "admin-carousel-actions";
+            [
+                { label: "Move Up", action: "up", disabled: index === 0 },
+                { label: "Move Down", action: "down", disabled: index === supportImages.length - 1 },
+                { label: "Remove", action: "remove", danger: true, disabled: false }
+            ].forEach(function (definition) {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "button " + (definition.danger ? "danger" : "secondary");
+                button.dataset.supportImageAction = definition.action;
+                button.textContent = definition.label;
+                button.disabled = definition.disabled;
+                actions.appendChild(button);
+            });
+
+            card.append(order, preview, fields, actions);
+            supportImageItems.appendChild(card);
+        });
+    }
+
+    async function loadSupportImages() {
+        setMessage(supportImagesMessage, "Loading Support page images...", "success");
+        const response = await fetch("/api/admin/support-images", {
+            headers: { "Accept": "application/json" },
+            cache: "no-store"
+        });
+
+        if (response.status === 401) {
+            showLogin();
+            return;
+        }
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || "Support page images could not be loaded.");
+        }
+
+        renderSupportImages(result.supportImages, result.productImages);
+        supportImagesLoaded = true;
+        setMessage(supportImagesMessage, "", "");
+    }
+
+    function collectSupportImages() {
+        return Array.from(supportImageItems.querySelectorAll("[data-support-image-id]")).map(function (card) {
+            return {
+                id: card.dataset.supportImageId,
+                altText: card.querySelector(".support-image-alt-text").value,
+                imageFit: card.querySelector(".support-image-fit").value,
+                imagePosition: card.querySelector(".support-image-position").value,
+                active: card.querySelector(".support-image-active").checked
+            };
+        });
+    }
+
+    function refreshSupportImageOrderControls() {
+        const cards = Array.from(supportImageItems.querySelectorAll("[data-support-image-id]"));
+        cards.forEach(function (card, index) {
+            card.querySelector(".admin-carousel-order").textContent = "Image " + (index + 1);
+            card.querySelector('[data-support-image-action="up"]').disabled = index === 0;
+            card.querySelector('[data-support-image-action="down"]').disabled = index === cards.length - 1;
+        });
+    }
+
+    async function removeSupportImage(card, button) {
+        if (!window.confirm("Remove this image from the Support the Garden page?")) {
+            return;
+        }
+
+        button.disabled = true;
+        setMessage(supportImagesMessage, "Removing Support page image...", "success");
+
+        try {
+            const response = await fetch(
+                "/api/admin/support-images/" + encodeURIComponent(card.dataset.supportImageId),
+                { method: "DELETE", headers: { "Accept": "application/json" } }
+            );
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The Support page image could not be removed.");
+            }
+
+            await loadSupportImages();
+            setMessage(supportImagesMessage, result.message, "success");
+        } catch (error) {
+            button.disabled = false;
+            setMessage(supportImagesMessage, error.message, "error");
         }
     }
 
@@ -2196,6 +2392,10 @@ document.addEventListener("DOMContentLoaded", function () {
         switchPanel("home");
     });
 
+    supportTab.addEventListener("click", function () {
+        switchPanel("support");
+    });
+
     salesTab.addEventListener("click", function () {
         switchPanel("sales");
     });
@@ -2414,6 +2614,142 @@ document.addEventListener("DOMContentLoaded", function () {
             setMessage(carouselMessage, result.message, "success");
         } catch (error) {
             setMessage(carouselMessage, error.message, "error");
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+
+    refreshSupportImagesButton.addEventListener("click", function () {
+        loadSupportImages().catch(function (error) {
+            setMessage(supportImagesMessage, error.message, "error");
+        });
+    });
+
+    saveSupportImagesButton.addEventListener("click", async function () {
+        saveSupportImagesButton.disabled = true;
+        setMessage(supportImagesMessage, "Saving Support page images...", "success");
+
+        try {
+            const response = await fetch("/api/admin/support-images", {
+                method: "PUT",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ supportImages: collectSupportImages() })
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The Support page images could not be saved.");
+            }
+
+            await loadSupportImages();
+            setMessage(supportImagesMessage, result.message, "success");
+        } catch (error) {
+            setMessage(supportImagesMessage, error.message, "error");
+        } finally {
+            saveSupportImagesButton.disabled = false;
+        }
+    });
+
+    supportImageItems.addEventListener("change", function (event) {
+        if (
+            !event.target.classList.contains("support-image-fit") &&
+            !event.target.classList.contains("support-image-position")
+        ) {
+            return;
+        }
+
+        const card = event.target.closest("[data-support-image-id]");
+        const preview = card.querySelector(".admin-carousel-preview");
+        preview.style.objectFit = card.querySelector(".support-image-fit").value;
+        preview.style.objectPosition = card.querySelector(".support-image-position").value;
+    });
+
+    supportImageItems.addEventListener("click", function (event) {
+        const button = event.target.closest("[data-support-image-action]");
+
+        if (!button) {
+            return;
+        }
+
+        const card = button.closest("[data-support-image-id]");
+        const action = button.dataset.supportImageAction;
+
+        if (action === "remove") {
+            removeSupportImage(card, button);
+            return;
+        }
+
+        if (action === "up" && card.previousElementSibling) {
+            supportImageItems.insertBefore(card, card.previousElementSibling);
+        } else if (action === "down" && card.nextElementSibling) {
+            supportImageItems.insertBefore(card.nextElementSibling, card);
+        }
+
+        refreshSupportImageOrderControls();
+        setMessage(supportImagesMessage, "Order changed. Click Save Images to publish it.", "success");
+    });
+
+    supportImageUploadForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        const submitButton = supportImageUploadForm.querySelector('button[type="submit"]');
+        const file = supportImageUploadForm.image.files[0];
+        submitButton.disabled = true;
+        setMessage(supportImagesMessage, "Preparing and uploading the Support page image...", "success");
+
+        try {
+            const preparedImage = await prepareImageForUpload(file);
+            const formData = new FormData(supportImageUploadForm);
+            formData.set("image", preparedImage, preparedImage.name);
+            const response = await fetch("/api/admin/support-images/upload", {
+                method: "POST",
+                headers: { "Accept": "application/json" },
+                body: formData
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The Support page image could not be uploaded.");
+            }
+
+            supportImageUploadForm.reset();
+            await loadSupportImages();
+            setMessage(supportImagesMessage, result.message, "success");
+        } catch (error) {
+            setMessage(supportImagesMessage, error.message, "error");
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+
+    supportProductImageForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        const submitButton = supportProductImageForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        setMessage(supportImagesMessage, "Adding product image to the Support page...", "success");
+
+        try {
+            const response = await fetch("/api/admin/support-images/product-image", {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ productId: supportProductImage.value })
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The product image could not be added.");
+            }
+
+            supportProductImageForm.reset();
+            await loadSupportImages();
+            setMessage(supportImagesMessage, result.message, "success");
+        } catch (error) {
+            setMessage(supportImagesMessage, error.message, "error");
         } finally {
             submitButton.disabled = false;
         }

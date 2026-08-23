@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const dotsContainer = document.querySelector(".carousel-dots");
     const previousButton = document.querySelector(".carousel-btn.prev");
     const nextButton = document.querySelector(".carousel-btn.next");
+    const supportImagesContainer = document.querySelector(".support-images");
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let applyProductPageSearch = function () {};
     let applyOrderProductSearch = function () {};
@@ -194,6 +195,41 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     loadHomeCarousel();
+
+    async function loadSupportImages() {
+        if (!supportImagesContainer) {
+            return;
+        }
+
+        try {
+            const response = await fetch("/api/site-content", {
+                headers: { "Accept": "application/json" },
+                cache: "no-store"
+            });
+
+            if (!response.ok) {
+                throw new Error("Support page images could not be loaded.");
+            }
+
+            const result = await response.json();
+
+            if (Array.isArray(result.supportImages) && result.supportImages.length > 0) {
+                supportImagesContainer.replaceChildren();
+                result.supportImages.forEach(function (managedImage) {
+                    const image = document.createElement("img");
+                    image.src = managedImage.imageUrl;
+                    image.alt = managedImage.altText;
+                    image.style.objectFit = managedImage.imageFit;
+                    image.style.objectPosition = managedImage.imagePosition;
+                    supportImagesContainer.appendChild(image);
+                });
+            }
+        } catch (_error) {
+            // Keep the built-in Support page images if the content service is unavailable.
+        }
+    }
+
+    loadSupportImages();
 
     const orderForm = document.getElementById("orderForm");
     const orderTotal = document.getElementById("orderTotal");

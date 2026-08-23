@@ -66,6 +66,21 @@ CREATE TABLE IF NOT EXISTS blocked_customers (
     CHECK (customer_name <> '' OR email <> '' OR phone <> '' OR household <> '')
 );
 
+CREATE TABLE IF NOT EXISTS support_images (
+    id TEXT PRIMARY KEY,
+    image_key TEXT NOT NULL DEFAULT '',
+    static_path TEXT NOT NULL DEFAULT '',
+    alt_text TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+    image_fit TEXT NOT NULL DEFAULT 'cover',
+    image_position TEXT NOT NULL DEFAULT 'center',
+    source_product_id TEXT,
+    deleted INTEGER NOT NULL DEFAULT 0 CHECK (deleted IN (0, 1)),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK (image_key <> '' OR static_path <> '')
+);
+
 CREATE TRIGGER IF NOT EXISTS deduct_inventory_before_order_item
 BEFORE INSERT ON order_items
 WHEN (SELECT made_to_order FROM products WHERE id = NEW.product_id) = 0

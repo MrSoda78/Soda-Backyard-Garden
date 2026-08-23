@@ -32,6 +32,20 @@ const SCHEMA_STATEMENTS = [
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CHECK (image_key <> '' OR static_path <> '')
     )`,
+    `CREATE TABLE IF NOT EXISTS support_images (
+        id TEXT PRIMARY KEY,
+        image_key TEXT NOT NULL DEFAULT '',
+        static_path TEXT NOT NULL DEFAULT '',
+        alt_text TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+        image_fit TEXT NOT NULL DEFAULT 'cover',
+        image_position TEXT NOT NULL DEFAULT 'center',
+        source_product_id TEXT,
+        deleted INTEGER NOT NULL DEFAULT 0 CHECK (deleted IN (0, 1)),
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (image_key <> '' OR static_path <> '')
+    )`,
     `CREATE TABLE IF NOT EXISTS orders (
         id TEXT PRIMARY KEY,
         order_number TEXT NOT NULL UNIQUE,
@@ -219,6 +233,12 @@ const SCHEMA_STATEMENTS = [
         ('home-red-sunflower', 'images/Red Sunflower.jpg', 'Red Sunflower', 80, 1, 'cover', 'center'),
         ('home-peppers-2', 'images/Peppers 2.jpg', 'Peppers growing in a bucket', 90, 1, 'cover', 'center'),
         ('home-peppers', 'images/Peppers.jpg', 'Peppers growing in a bucket', 100, 1, 'cover', 'center')
+    ON CONFLICT(id) DO NOTHING`,
+    `INSERT INTO support_images (
+        id, static_path, alt_text, sort_order, active, image_fit, image_position
+    ) VALUES
+        ('support-artichoke', 'images/Artichoke.jpg', 'Artichoke growing in the garden', 10, 1, 'cover', 'center'),
+        ('support-pea-aisle', 'images/Pea Aisle.jpg', 'Pea plants growing along a garden aisle', 20, 1, 'cover', 'center')
     ON CONFLICT(id) DO NOTHING`,
     `UPDATE products
     SET name = 'Turnips'
@@ -761,8 +781,36 @@ async function getCarouselSlides(db, includeInactive = false) {
     });
 }
 
+async function getSupportImages(db, includeInactive = false) {
+    const result = await db.prepare(`
+        SELECT
+            id, image_key, static_path, alt_text, sort_order, active,
+            image_fit, image_position, source_product_id
+        FROM support_images
+        WHERE deleted = 0 ${includeInactive ? "" : "AND active = 1"}
+        ORDER BY sort_order, created_at, id
+    `).all();
+
+    return result.results.map(function (image) {
+        return {
+            id: image.id,
+            imageUrl: imageUrlForRecord(image),
+            altText: image.alt_text,
+            sortOrder: image.sort_order,
+            active: image.active === 1,
+            imageFit: normalizeImageFit(image.image_fit),
+            imagePosition: normalizeImagePosition(image.image_position),
+            sourceProductId: image.source_product_id || ""
+        };
+    });
+}
+
 async function handleSiteContent(db) {
-    return jsonResponse({ carousel: await getCarouselSlides(db) });
+    const [carousel, supportImages] = await Promise.all([
+        getCarouselSlides(db),
+        getSupportImages(db)
+    ]);
+    return jsonResponse({ carousel, supportImages });
 }
 
 async function sendBrevoOrderReceipt(env, order) {
@@ -1934,9 +1982,10 @@ async function deleteMediaIfUnused(db, bucket, key) {
     const usage = await db.prepare(`
         SELECT
             (SELECT COUNT(*) FROM products WHERE image_key = ?) +
-            (SELECT COUNT(*) FROM carousel_images WHERE image_key = ? AND deleted = 0)
+            (SELECT COUNT(*) FROM carousel_images WHERE image_key = ? AND deleted = 0) +
+            (SELECT COUNT(*) FROM support_images WHERE image_key = ? AND deleted = 0)
             AS reference_count
-    `).bind(key, key).first();
+    `).bind(key, key, key).first();
 
     if (!usage || Number(usage.reference_count) === 0) {
         await bucket.delete(key);
@@ -2013,6 +2062,11 @@ async function handleAdminProductImageUpload(request, db, bucket, productId) {
             `).bind(stored.key, imageFit, imagePosition, productId),
             db.prepare(`
                 UPDATE carousel_images
+                SET image_key = ?
+                WHERE source_product_id = ? AND deleted = 0
+            `).bind(stored.key, productId),
+            db.prepare(`
+                UPDATE support_images
                 SET image_key = ?
                 WHERE source_product_id = ? AND deleted = 0
             `).bind(stored.key, productId)
@@ -2257,6 +2311,217 @@ async function handleAdminCarouselDelete(db, bucket, carouselId) {
     `).bind(carouselId).run();
     await deleteMediaIfUnused(db, bucket, slide.image_key);
     return jsonResponse({ success: true, message: "Carousel image removed." });
+}
+
+async function handleAdminSupportImages(db) {
+    const productImages = await db.prepare(`
+        SELECT id, name, image_key
+        FROM products
+        WHERE image_key <> '' AND category <> 'retired'
+        ORDER BY name
+    `).all();
+
+    return jsonResponse({
+        supportImages: await getSupportImages(db, true),
+        productImages: productImages.results.map(function (product) {
+            return {
+                id: product.id,
+                name: product.name,
+                imageUrl: mediaUrlForKey(product.image_key)
+            };
+        })
+    });
+}
+
+async function handleAdminSupportImageUpload(request, db, bucket) {
+    if (!bucket) {
+        return imageStorageUnavailable();
+    }
+
+    let stored;
+
+    try {
+        stored = await storeUploadedImage(request, bucket, "support");
+    } catch (error) {
+        return jsonResponse({ error: error.message || "The Support page image could not be uploaded." }, 400);
+    }
+
+    const altText = cleanText(stored.formData.get("altText"), 160);
+
+    if (altText.length < 2) {
+        await bucket.delete(stored.key);
+        return jsonResponse({ error: "Add a short image description for accessibility." }, 400);
+    }
+
+    const imageFit = normalizeImageFit(cleanText(stored.formData.get("imageFit"), 20));
+    const imagePosition = normalizeImagePosition(cleanText(stored.formData.get("imagePosition"), 20));
+    const maximum = await db.prepare(`
+        SELECT COALESCE(MAX(sort_order), 0) AS maximum
+        FROM support_images
+        WHERE deleted = 0
+    `).first();
+    const id = "support-" + crypto.randomUUID();
+
+    try {
+        await db.prepare(`
+            INSERT INTO support_images (
+                id, image_key, alt_text, sort_order, active, image_fit, image_position
+            ) VALUES (?, ?, ?, ?, 1, ?, ?)
+        `).bind(
+            id,
+            stored.key,
+            altText,
+            Number(maximum && maximum.maximum || 0) + 10,
+            imageFit,
+            imagePosition
+        ).run();
+    } catch (error) {
+        await bucket.delete(stored.key);
+        throw error;
+    }
+
+    return jsonResponse({ success: true, message: "Support page image uploaded." }, 201);
+}
+
+async function handleAdminSupportProductImage(request, db) {
+    let body;
+
+    try {
+        body = await request.json();
+    } catch (_error) {
+        return jsonResponse({ error: "Choose a product image to add." }, 400);
+    }
+
+    const productId = cleanText(body.productId, 100);
+    const product = await db.prepare(`
+        SELECT id, name, image_key
+        FROM products
+        WHERE id = ? AND image_key <> ''
+    `).bind(productId).first();
+
+    if (!product) {
+        return jsonResponse({ error: "That product does not have a managed image." }, 404);
+    }
+
+    const maximum = await db.prepare(`
+        SELECT COALESCE(MAX(sort_order), 0) AS maximum
+        FROM support_images
+        WHERE deleted = 0
+    `).first();
+
+    await db.prepare(`
+        INSERT INTO support_images (
+            id, image_key, alt_text, sort_order, active,
+            image_fit, image_position, source_product_id
+        ) VALUES (?, ?, ?, ?, 1, 'cover', 'center', ?)
+    `).bind(
+        "support-" + crypto.randomUUID(),
+        product.image_key,
+        product.name,
+        Number(maximum && maximum.maximum || 0) + 10,
+        product.id
+    ).run();
+
+    return jsonResponse({ success: true, message: product.name + " was added to the Support page." }, 201);
+}
+
+async function handleAdminSupportImagesUpdate(request, db) {
+    let body;
+
+    try {
+        body = await request.json();
+    } catch (_error) {
+        return jsonResponse({ error: "The Support page image changes were not valid." }, 400);
+    }
+
+    if (!Array.isArray(body.supportImages) || body.supportImages.length === 0) {
+        return jsonResponse({ error: "Keep at least one Support page image." }, 400);
+    }
+
+    const existing = await db.prepare(`
+        SELECT id
+        FROM support_images
+        WHERE deleted = 0
+    `).all();
+    const existingIds = new Set(existing.results.map(function (image) { return image.id; }));
+    const seenIds = new Set();
+    const updates = [];
+    let activeCount = 0;
+
+    for (let index = 0; index < body.supportImages.length; index += 1) {
+        const image = body.supportImages[index];
+        const id = cleanText(image.id, 100);
+        const altText = cleanText(image.altText, 160);
+
+        if (!existingIds.has(id) || seenIds.has(id)) {
+            return jsonResponse({
+                error: "One of the Support page images was not recognized. Refresh and try again."
+            }, 400);
+        }
+
+        if (altText.length < 2) {
+            return jsonResponse({ error: "Every Support page image needs a short description." }, 400);
+        }
+
+        const active = image.active === true;
+        activeCount += active ? 1 : 0;
+        seenIds.add(id);
+        updates.push(db.prepare(`
+            UPDATE support_images
+            SET alt_text = ?, sort_order = ?, active = ?, image_fit = ?, image_position = ?
+            WHERE id = ? AND deleted = 0
+        `).bind(
+            altText,
+            (index + 1) * 10,
+            active ? 1 : 0,
+            normalizeImageFit(image.imageFit),
+            normalizeImagePosition(image.imagePosition),
+            id
+        ));
+    }
+
+    if (seenIds.size !== existingIds.size) {
+        return jsonResponse({ error: "The Support page images changed elsewhere. Refresh and try again." }, 409);
+    }
+
+    if (activeCount === 0) {
+        return jsonResponse({ error: "Keep at least one Support page image visible." }, 400);
+    }
+
+    await db.batch(updates);
+    return jsonResponse({ success: true, message: "Support the Garden images saved." });
+}
+
+async function handleAdminSupportImageDelete(db, bucket, imageId) {
+    const image = await db.prepare(`
+        SELECT id, image_key, active
+        FROM support_images
+        WHERE id = ? AND deleted = 0
+    `).bind(imageId).first();
+
+    if (!image) {
+        return jsonResponse({ error: "That Support page image was not found." }, 404);
+    }
+
+    if (image.active === 1) {
+        const activeCount = await db.prepare(`
+            SELECT COUNT(*) AS count
+            FROM support_images
+            WHERE deleted = 0 AND active = 1
+        `).first();
+
+        if (Number(activeCount && activeCount.count) <= 1) {
+            return jsonResponse({ error: "Keep at least one Support page image visible." }, 400);
+        }
+    }
+
+    await db.prepare(`
+        UPDATE support_images
+        SET deleted = 1, active = 0
+        WHERE id = ?
+    `).bind(imageId).run();
+    await deleteMediaIfUnused(db, bucket, image.image_key);
+    return jsonResponse({ success: true, message: "Support page image removed." });
 }
 
 async function handleAdminOrderAction(request, db, env, orderId) {
@@ -2790,6 +3055,32 @@ export default {
                         env.DB,
                         env.MEDIA_BUCKET,
                         decodeURIComponent(carouselMatch[1])
+                    );
+                }
+
+                if (url.pathname === "/api/admin/support-images" && request.method === "GET") {
+                    return handleAdminSupportImages(env.DB);
+                }
+
+                if (url.pathname === "/api/admin/support-images" && request.method === "PUT") {
+                    return handleAdminSupportImagesUpdate(request, env.DB);
+                }
+
+                if (url.pathname === "/api/admin/support-images/upload" && request.method === "POST") {
+                    return handleAdminSupportImageUpload(request, env.DB, env.MEDIA_BUCKET);
+                }
+
+                if (url.pathname === "/api/admin/support-images/product-image" && request.method === "POST") {
+                    return handleAdminSupportProductImage(request, env.DB);
+                }
+
+                const supportImageMatch = url.pathname.match(/^\/api\/admin\/support-images\/([^/]+)$/);
+
+                if (supportImageMatch && request.method === "DELETE") {
+                    return handleAdminSupportImageDelete(
+                        env.DB,
+                        env.MEDIA_BUCKET,
+                        decodeURIComponent(supportImageMatch[1])
                     );
                 }
 

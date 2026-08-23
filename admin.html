@@ -41,6 +41,7 @@
                             <button type="button" class="admin-tab active" id="ordersTab" role="tab" aria-selected="true" aria-controls="ordersPanel">Customer Orders</button>
                             <button type="button" class="admin-tab" id="inventoryTab" role="tab" aria-selected="false" aria-controls="inventoryPanel">Inventory</button>
                             <button type="button" class="admin-tab" id="homeTab" role="tab" aria-selected="false" aria-controls="homePanel">Home Page</button>
+                            <button type="button" class="admin-tab" id="supportTab" role="tab" aria-selected="false" aria-controls="supportPanel">Support Page</button>
                             <button type="button" class="admin-tab" id="salesTab" role="tab" aria-selected="false" aria-controls="salesPanel">Sales</button>
                             <button type="button" class="admin-tab" id="blockedTab" role="tab" aria-selected="false" aria-controls="blockedPanel">Blocked Customers</button>
                         </div>
@@ -270,6 +271,70 @@
                         </div>
 
                         <div id="carouselItems" class="admin-carousel-list" aria-live="polite"></div>
+                    </section>
+
+                    <section id="supportPanel" role="tabpanel" aria-labelledby="supportTab" hidden>
+                        <div class="admin-toolbar">
+                            <div>
+                                <h2>Support the Garden Images</h2>
+                                <p>Add or remove photos, change their order, hide individual images, and choose how each photo is framed on the Support the Garden page.</p>
+                            </div>
+                            <div class="admin-toolbar-actions">
+                                <button type="button" class="button secondary" id="refreshSupportImages">Discard Changes</button>
+                                <button type="button" class="button" id="saveSupportImages">Save Images</button>
+                            </div>
+                        </div>
+
+                        <p class="admin-inventory-help">Images are resized before upload to keep the site fast. <strong>Fill frame</strong> may crop an image; <strong>Show whole image</strong> keeps the entire photo visible. Use the focal point to keep the important part of the picture in view.</p>
+                        <p id="supportImagesMessage" class="form-message" aria-live="polite"></p>
+
+                        <div class="home-admin-tools">
+                            <form id="supportImageUploadForm" class="home-admin-card">
+                                <h3>Upload a New Support Page Photo</h3>
+                                <div class="form-group">
+                                    <label for="supportImageFile">Photo</label>
+                                    <input type="file" id="supportImageFile" name="image" accept="image/jpeg,image/png,image/webp" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="supportImageAltText">Short image description</label>
+                                    <input type="text" id="supportImageAltText" name="altText" maxlength="160" placeholder="Example: Garden harvest ready to share" required>
+                                </div>
+                                <div class="image-display-options">
+                                    <div class="form-group">
+                                        <label for="supportImageFit">Display</label>
+                                        <select id="supportImageFit" name="imageFit">
+                                            <option value="cover">Fill frame</option>
+                                            <option value="contain">Show whole image</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="supportImagePosition">Focal point</label>
+                                        <select id="supportImagePosition" name="imagePosition">
+                                            <option value="center">Centre</option>
+                                            <option value="top">Top</option>
+                                            <option value="bottom">Bottom</option>
+                                            <option value="left">Left</option>
+                                            <option value="right">Right</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button type="submit" class="button">Upload Photo</button>
+                            </form>
+
+                            <form id="supportProductImageForm" class="home-admin-card">
+                                <h3>Reuse a Product Image</h3>
+                                <p>Add an image already uploaded through Inventory without uploading it twice.</p>
+                                <div class="form-group">
+                                    <label for="supportProductImage">Product image</label>
+                                    <select id="supportProductImage" name="productId" required>
+                                        <option value="">Choose a product image</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="button secondary">Add to Support Page</button>
+                            </form>
+                        </div>
+
+                        <div id="supportImageItems" class="admin-carousel-list" aria-live="polite"></div>
                     </section>
 
                     <section id="salesPanel" role="tabpanel" aria-labelledby="salesTab" hidden>
