@@ -1914,6 +1914,59 @@ footer a:hover {
     background: var(--green-dark);
 }
 
+.order-status-filters {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin: 18px 0 4px;
+}
+
+.order-status-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 13px;
+    border: 1px solid var(--green-border);
+    border-radius: 999px;
+    color: var(--green-dark);
+    background: var(--white);
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.order-status-filter:hover,
+.order-status-filter:focus-visible {
+    border-color: var(--green-dark);
+    background: var(--green-light);
+}
+
+.order-status-filter.active {
+    border-color: var(--green-dark);
+    color: var(--white);
+    background: var(--green-dark);
+}
+
+.order-status-filter span {
+    display: inline-grid;
+    min-width: 24px;
+    height: 24px;
+    place-items: center;
+    padding: 0 6px;
+    border-radius: 999px;
+    color: var(--green-dark);
+    background: var(--green-light);
+    font-size: 0.78rem;
+}
+
+.order-status-filter.active span {
+    color: var(--green-dark);
+    background: var(--white);
+}
+
 .site-search,
 .admin-search-bar {
     margin: 20px 0 26px;
@@ -2567,6 +2620,10 @@ footer a:hover {
     min-width: 210px;
 }
 
+.inventory-mobile-product-toggle {
+    display: none;
+}
+
 .inventory-image-editor {
     display: grid;
     width: 260px;
@@ -3182,5 +3239,215 @@ footer a:hover {
     .questions-layout {
         grid-template-columns: 1fr;
         gap: 40px;
+    }
+}
+
+/* ==========================================================
+   ADMIN INVENTORY — PORTRAIT PHONE CARDS
+========================================================== */
+
+@media (max-width: 700px) {
+    #inventoryPanel:not([hidden]) {
+        padding-bottom: 92px;
+    }
+
+    #inventoryPanel:not([hidden]) > .admin-toolbar .admin-toolbar-actions {
+        position: fixed;
+        right: 10px;
+        bottom: max(10px, env(safe-area-inset-bottom));
+        left: 10px;
+        z-index: 50;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+        padding: 10px;
+        border: 1px solid var(--green-border);
+        border-radius: 13px;
+        background: rgba(255, 255, 255, 0.97);
+        box-shadow: 0 8px 26px rgba(20, 55, 30, 0.2);
+        backdrop-filter: blur(8px);
+    }
+
+    #inventoryPanel:not([hidden]) > .admin-toolbar .admin-toolbar-actions .button {
+        width: 100%;
+        padding: 11px 8px;
+    }
+
+    .order-status-filters {
+        gap: 7px;
+    }
+
+    .order-status-filter {
+        flex: 1 1 calc(50% - 7px);
+        justify-content: space-between;
+    }
+
+    .admin-inventory-wrap {
+        max-height: none;
+        overflow: visible;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .admin-inventory-table {
+        display: block;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .admin-inventory-table thead {
+        display: none;
+    }
+
+    .admin-inventory-table tbody {
+        display: grid;
+        width: 100%;
+        gap: 13px;
+    }
+
+    .admin-inventory-table tbody tr {
+        display: block;
+        width: 100%;
+    }
+
+    .admin-inventory-table tbody tr[data-inventory-heading] {
+        margin-top: 5px;
+        overflow: hidden;
+        border-radius: 11px;
+    }
+
+    .admin-inventory-table tbody tr[data-inventory-heading] > th {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .admin-inventory-table tbody tr[data-product-id] {
+        overflow: hidden;
+        border: 1px solid #dce8dc;
+        border-radius: 13px;
+        background: var(--white);
+        box-shadow: 0 4px 15px rgba(20, 55, 30, 0.08);
+    }
+
+    .admin-inventory-table tbody tr[data-product-id] > td {
+        display: none;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 14px 16px;
+        border-bottom: 1px solid #e4ece4;
+    }
+
+    .admin-inventory-table tbody tr[data-product-id] > td:first-child,
+    .admin-inventory-table tbody tr.inventory-mobile-expanded > td {
+        display: block;
+    }
+
+    .admin-inventory-table tbody tr[data-product-id] > td:first-child {
+        position: static;
+        left: auto;
+        z-index: auto;
+        background: var(--white);
+        box-shadow: none;
+    }
+
+    .admin-inventory-table tbody tr.inventory-slot-row > td:first-child {
+        background: #fbfefb;
+    }
+
+    .admin-inventory-table tbody tr.inventory-mobile-expanded > td:not(:first-child)::before {
+        content: attr(data-field-label);
+        display: block;
+        margin-bottom: 8px;
+        color: var(--green-dark);
+        font-size: 0.82rem;
+        font-weight: bold;
+    }
+
+    .admin-inventory-table tbody tr.inventory-mobile-expanded > td:last-child {
+        border-bottom: 0;
+    }
+
+    .inventory-mobile-product-toggle {
+        display: grid;
+        width: 100%;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 3px 12px;
+        padding: 0;
+        border: 0;
+        color: var(--text-main);
+        background: transparent;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .inventory-mobile-product-name {
+        overflow-wrap: anywhere;
+        color: var(--green-dark);
+        font-weight: bold;
+    }
+
+    .inventory-mobile-product-summary {
+        grid-column: 1;
+        color: var(--text-soft);
+        font-size: 0.82rem;
+    }
+
+    .inventory-mobile-product-icon {
+        display: grid;
+        width: 30px;
+        height: 30px;
+        grid-column: 2;
+        grid-row: 1 / 3;
+        place-items: center;
+        border-radius: 50%;
+        color: var(--green-dark);
+        background: var(--green-light);
+        font-size: 1.25rem;
+        font-weight: bold;
+    }
+
+    .inventory-mobile-product-icon::before {
+        content: "+";
+    }
+
+    .inventory-mobile-expanded .inventory-mobile-product-icon::before {
+        content: "−";
+    }
+
+    .admin-inventory-table tr:not(.inventory-mobile-expanded) .inventory-name {
+        display: none;
+    }
+
+    .admin-inventory-table tr.inventory-mobile-expanded .inventory-name {
+        margin-top: 13px;
+    }
+
+    .admin-inventory-table input[type="text"],
+    .admin-inventory-table input[type="number"],
+    .admin-inventory-table textarea,
+    .admin-inventory-table .inventory-name,
+    .admin-inventory-table .inventory-description,
+    .admin-inventory-table .inventory-order-limit {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    .inventory-image-editor {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .inventory-image-preview {
+        height: clamp(170px, 52vw, 230px);
+    }
+
+    .inventory-image-actions {
+        flex-wrap: wrap;
     }
 }

@@ -61,6 +61,23 @@
                             </div>
                         </div>
                         <p id="adminMessage" class="form-message"></p>
+                        <div class="order-status-filters" role="group" aria-label="Filter customer orders by status">
+                            <button type="button" class="order-status-filter active" data-order-status-filter="pending" aria-pressed="true">
+                                Pending <span data-order-status-count="pending">0</span>
+                            </button>
+                            <button type="button" class="order-status-filter" data-order-status-filter="confirmed" aria-pressed="false">
+                                Confirmed <span data-order-status-count="confirmed">0</span>
+                            </button>
+                            <button type="button" class="order-status-filter" data-order-status-filter="completed" aria-pressed="false">
+                                Completed <span data-order-status-count="completed">0</span>
+                            </button>
+                            <button type="button" class="order-status-filter" data-order-status-filter="closed" aria-pressed="false">
+                                Closed <span data-order-status-count="closed">0</span>
+                            </button>
+                            <button type="button" class="order-status-filter" data-order-status-filter="all" aria-pressed="false">
+                                All Orders <span data-order-status-count="all">0</span>
+                            </button>
+                        </div>
                         <div class="admin-search-bar">
                             <label for="adminOrderSearch">Search orders</label>
                             <div class="search-input-row">

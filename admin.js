@@ -38,6 +38,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const donationRows = document.getElementById("donationRows");
     const orderSearch = document.getElementById("adminOrderSearch");
     const orderSearchMessage = document.getElementById("adminOrderSearchMessage");
+    const orderStatusFilters = Array.from(document.querySelectorAll("[data-order-status-filter]"));
     const blockedCustomersList = document.getElementById("blockedCustomersList");
     const blockedCustomerCount = document.getElementById("blockedCustomerCount");
     const blockedCustomerForm = document.getElementById("blockedCustomerForm");
@@ -57,7 +58,9 @@ document.addEventListener("DOMContentLoaded", function () {
     let offlineProductsLoaded = false;
     let orderAdjustmentProducts = [];
     let carouselLoaded = false;
+    let activeOrderStatusFilter = "pending";
     const collapsedInventorySections = new Set();
+    const expandedMobileInventoryProducts = new Set();
     let inventorySectionsInitialized = false;
 
     function formatMoney(cents) {
@@ -545,16 +548,89 @@ document.addEventListener("DOMContentLoaded", function () {
         const query = normalizedSearch(orderSearch.value);
         const cards = Array.from(ordersList.querySelectorAll(".admin-order-card"));
         let visibleCount = 0;
+        const filterLabels = {
+            pending: "pending",
+            confirmed: "confirmed",
+            completed: "completed",
+            closed: "closed",
+            all: ""
+        };
 
         cards.forEach(function (card) {
-            const matches = !query || card.dataset.orderSearch.includes(query);
+            const matchesSearch = !query || card.dataset.orderSearch.includes(query);
+            const matchesStatus = activeOrderStatusFilter === "all" ||
+                card.dataset.orderStatus === activeOrderStatusFilter ||
+                (
+                    activeOrderStatusFilter === "closed" &&
+                    ["cancelled", "refused"].includes(card.dataset.orderStatus)
+                );
+            const matches = matchesSearch && matchesStatus;
             card.hidden = !matches;
             visibleCount += matches ? 1 : 0;
         });
 
-        orderSearchMessage.textContent = query
-            ? (visibleCount === 0 ? "No matching orders found." : visibleCount + " matching order" + (visibleCount === 1 ? "" : "s") + ".")
-            : "";
+        const filterLabel = filterLabels[activeOrderStatusFilter];
+
+        if (visibleCount === 0) {
+            orderSearchMessage.textContent = query
+                ? "No matching " + (filterLabel ? filterLabel + " " : "") + "orders found."
+                : "No " + (filterLabel ? filterLabel + " " : "") + "orders.";
+        } else if (query) {
+            orderSearchMessage.textContent = visibleCount + " matching order" +
+                (visibleCount === 1 ? "" : "s") + ".";
+        } else {
+            orderSearchMessage.textContent = "";
+        }
+    }
+
+    function updateOrderStatusCounts() {
+        const cards = Array.from(ordersList.querySelectorAll(".admin-order-card"));
+        const counts = {
+            pending: 0,
+            confirmed: 0,
+            completed: 0,
+            closed: 0,
+            all: cards.length
+        };
+
+        cards.forEach(function (card) {
+            if (Object.hasOwn(counts, card.dataset.orderStatus)) {
+                counts[card.dataset.orderStatus] += 1;
+            }
+
+            if (["cancelled", "refused"].includes(card.dataset.orderStatus)) {
+                counts.closed += 1;
+            }
+        });
+
+        Object.entries(counts).forEach(function ([status, count]) {
+            const element = document.querySelector('[data-order-status-count="' + status + '"]');
+
+            if (element) {
+                element.textContent = count.toString();
+            }
+        });
+    }
+
+    function updateMobileInventorySummary(row) {
+        if (!row) {
+            return;
+        }
+
+        const nameInput = row.querySelector(".inventory-name");
+        const activeInput = row.querySelector(".inventory-active");
+        const madeToOrderInput = row.querySelector(".inventory-made-to-order");
+        const quantityInput = row.querySelector(".inventory-quantity");
+        const name = nameInput.value.trim() || "Unnamed product";
+        const quantity = Number.parseInt(quantityInput.value, 10);
+        const stockText = madeToOrderInput.checked
+            ? "Made to order"
+            : (Number.isInteger(quantity) ? quantity : 0) + " in stock";
+        const title = row.querySelector(".inventory-mobile-product-name");
+        const summary = row.querySelector(".inventory-mobile-product-summary");
+
+        title.textContent = name;
+        summary.textContent = (activeInput.checked ? "Available" : "Unavailable") + " • " + stockText;
     }
 
     function filterSales() {
@@ -692,13 +768,41 @@ document.addEventListener("DOMContentLoaded", function () {
             ].join(" ").toLocaleLowerCase();
             row.classList.toggle("inventory-slot-row", emptySlot);
             row.classList.toggle("inventory-custom-product-row", product.isSlot);
+            row.classList.toggle(
+                "inventory-mobile-expanded",
+                expandedMobileInventoryProducts.has(product.id)
+            );
 
             const nameCell = document.createElement("td");
+            nameCell.dataset.fieldLabel = "Product name";
+            const mobileToggle = document.createElement("button");
+            mobileToggle.type = "button";
+            mobileToggle.className = "inventory-mobile-product-toggle";
+            mobileToggle.dataset.inventoryProductToggle = product.id;
+            mobileToggle.setAttribute(
+                "aria-expanded",
+                expandedMobileInventoryProducts.has(product.id).toString()
+            );
+            mobileToggle.setAttribute("aria-label", "Edit " + product.name);
+            const mobileTitle = createTextElement(
+                "span",
+                "inventory-mobile-product-name",
+                product.name
+            );
+            const mobileSummary = createTextElement(
+                "span",
+                "inventory-mobile-product-summary",
+                ""
+            );
+            const mobileIcon = createTextElement("span", "inventory-mobile-product-icon", "");
+            mobileIcon.setAttribute("aria-hidden", "true");
+            mobileToggle.append(mobileTitle, mobileSummary, mobileIcon);
             const nameInput = createInventoryInput("text", product.name, "inventory-name");
             nameInput.setAttribute("aria-label", "Product name");
-            nameCell.appendChild(nameInput);
+            nameCell.append(mobileToggle, nameInput);
 
             const imageCell = document.createElement("td");
+            imageCell.dataset.fieldLabel = "Current image";
             const imageEditor = document.createElement("div");
             imageEditor.className = "inventory-image-editor";
             const imagePreview = document.createElement("div");
@@ -747,6 +851,7 @@ document.addEventListener("DOMContentLoaded", function () {
             imageCell.appendChild(imageEditor);
 
             const descriptionCell = document.createElement("td");
+            descriptionCell.dataset.fieldLabel = "Description";
             const descriptionInput = document.createElement("textarea");
             descriptionInput.value = product.description || "";
             descriptionInput.className = "inventory-description";
@@ -757,6 +862,7 @@ document.addEventListener("DOMContentLoaded", function () {
             descriptionCell.appendChild(descriptionInput);
 
             const priceCell = document.createElement("td");
+            priceCell.dataset.fieldLabel = "Price";
             const priceWrap = document.createElement("label");
             priceWrap.className = "inventory-price";
             priceWrap.append("$");
@@ -769,6 +875,7 @@ document.addEventListener("DOMContentLoaded", function () {
             priceCell.appendChild(priceWrap);
 
             const quantityCell = document.createElement("td");
+            quantityCell.dataset.fieldLabel = "Quantity";
             const quantityInput = createInventoryInput(
                 "number",
                 product.quantity === null ? "" : product.quantity,
@@ -782,6 +889,7 @@ document.addEventListener("DOMContentLoaded", function () {
             quantityCell.appendChild(quantityInput);
 
             const orderLimitCell = document.createElement("td");
+            orderLimitCell.dataset.fieldLabel = "Maximum per order";
             const orderLimitInput = createInventoryInput(
                 "number",
                 product.orderLimit === null ? "" : product.orderLimit,
@@ -795,11 +903,13 @@ document.addEventListener("DOMContentLoaded", function () {
             orderLimitCell.appendChild(orderLimitInput);
 
             const unitCell = document.createElement("td");
+            unitCell.dataset.fieldLabel = "Selling unit";
             const unitInput = createInventoryInput("text", product.unit, "inventory-unit");
             unitInput.setAttribute("aria-label", product.name + " selling unit");
             unitCell.appendChild(unitInput);
 
             const madeCell = document.createElement("td");
+            madeCell.dataset.fieldLabel = "Made to order";
             const madeInput = document.createElement("input");
             madeInput.type = "checkbox";
             madeInput.checked = product.madeToOrder;
@@ -808,6 +918,7 @@ document.addEventListener("DOMContentLoaded", function () {
             madeCell.appendChild(madeInput);
 
             const activeCell = document.createElement("td");
+            activeCell.dataset.fieldLabel = "Available to order";
             const activeInput = document.createElement("input");
             activeInput.type = "checkbox";
             activeInput.checked = product.active;
@@ -827,6 +938,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 activeCell
             );
             inventoryRows.appendChild(row);
+            updateMobileInventorySummary(row);
         });
 
         filterInventoryRows();
@@ -988,10 +1100,12 @@ document.addEventListener("DOMContentLoaded", function () {
             if (available && !canBeMadeAvailable(row)) {
                 checkbox.checked = false;
                 skipped += 1;
+                updateMobileInventorySummary(row);
                 return;
             }
 
             checkbox.checked = available;
+            updateMobileInventorySummary(row);
         });
 
         if (available) {
@@ -1442,6 +1556,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (orders.length === 0) {
             ordersList.appendChild(createTextElement("p", "admin-empty", "No orders have been submitted yet."));
+            updateOrderStatusCounts();
             filterOrders();
             return;
         }
@@ -1449,6 +1564,7 @@ document.addEventListener("DOMContentLoaded", function () {
         orders.forEach(function (order) {
             const card = document.createElement("details");
             card.className = "admin-order-card";
+            card.dataset.orderStatus = order.status;
             card.dataset.orderSearch = [
                 order.orderNumber,
                 order.customerName,
@@ -1658,6 +1774,7 @@ document.addEventListener("DOMContentLoaded", function () {
             ordersList.appendChild(card);
         });
 
+        updateOrderStatusCounts();
         filterOrders();
     }
 
@@ -2104,15 +2221,29 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        if (!event.target.classList.contains("inventory-made-to-order")) {
+        const row = event.target.closest("tr[data-product-id]");
+
+        if (!row) {
             return;
         }
 
-        const quantityInput = event.target.closest("tr").querySelector(".inventory-quantity");
-        quantityInput.disabled = event.target.checked;
+        if (event.target.classList.contains("inventory-made-to-order")) {
+            const quantityInput = row.querySelector(".inventory-quantity");
+            quantityInput.disabled = event.target.checked;
 
-        if (!event.target.checked && quantityInput.value === "") {
-            quantityInput.value = "0";
+            if (!event.target.checked && quantityInput.value === "") {
+                quantityInput.value = "0";
+            }
+        }
+
+        updateMobileInventorySummary(row);
+    });
+
+    inventoryRows.addEventListener("input", function (event) {
+        const row = event.target.closest("tr[data-product-id]");
+
+        if (row) {
+            updateMobileInventorySummary(row);
         }
     });
 
@@ -2393,6 +2524,18 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
+    orderStatusFilters.forEach(function (button) {
+        button.addEventListener("click", function () {
+            activeOrderStatusFilter = button.dataset.orderStatusFilter;
+            orderStatusFilters.forEach(function (filterButton) {
+                const isActive = filterButton === button;
+                filterButton.classList.toggle("active", isActive);
+                filterButton.setAttribute("aria-pressed", isActive.toString());
+            });
+            filterOrders();
+        });
+    });
+
     orderSearch.addEventListener("input", filterOrders);
     inventorySearch.addEventListener("input", filterInventoryRows);
     salesSearch.addEventListener("input", filterSales);
@@ -2407,6 +2550,24 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     inventoryRows.addEventListener("click", function (event) {
+        const productToggle = event.target.closest("[data-inventory-product-toggle]");
+
+        if (productToggle) {
+            const row = productToggle.closest("tr[data-product-id]");
+            const productId = row.dataset.productId;
+
+            if (expandedMobileInventoryProducts.has(productId)) {
+                expandedMobileInventoryProducts.delete(productId);
+            } else {
+                expandedMobileInventoryProducts.add(productId);
+            }
+
+            const isExpanded = expandedMobileInventoryProducts.has(productId);
+            row.classList.toggle("inventory-mobile-expanded", isExpanded);
+            productToggle.setAttribute("aria-expanded", isExpanded.toString());
+            return;
+        }
+
         const toggle = event.target.closest("[data-inventory-section-toggle]");
 
         if (!toggle) {
