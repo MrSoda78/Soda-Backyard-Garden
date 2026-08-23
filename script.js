@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
     const carouselImages = Array.from(document.querySelectorAll(".carousel-image"));
-    const slides = Array.from(document.querySelectorAll(".slide"));
+    const slidesContainer = document.querySelector(".slides");
     const dotsContainer = document.querySelector(".carousel-dots");
     const previousButton = document.querySelector(".carousel-btn.prev");
     const nextButton = document.querySelector(".carousel-btn.next");
@@ -84,12 +84,19 @@ document.addEventListener("DOMContentLoaded", function () {
         }, 3500);
     }
 
-    if (slides.length > 0) {
+    function initializeHomeCarousel() {
+        const slides = Array.from(document.querySelectorAll(".slide"));
+
+        if (slides.length === 0) {
+            return;
+        }
+
         const dots = [];
         let currentSlide = 0;
         let slideTimer;
 
         if (dotsContainer) {
+            dotsContainer.replaceChildren();
             slides.forEach(function (_slide, slideIndex) {
                 const dot = document.createElement("button");
                 dot.className = "dot";
@@ -149,6 +156,44 @@ document.addEventListener("DOMContentLoaded", function () {
         showSlide(0);
         restartSlideTimer();
     }
+
+    async function loadHomeCarousel() {
+        if (!slidesContainer) {
+            return;
+        }
+
+        try {
+            const response = await fetch("/api/site-content", {
+                headers: { "Accept": "application/json" },
+                cache: "no-store"
+            });
+
+            if (!response.ok) {
+                throw new Error("Home page images could not be loaded.");
+            }
+
+            const result = await response.json();
+
+            if (Array.isArray(result.carousel) && result.carousel.length > 0) {
+                slidesContainer.replaceChildren();
+                result.carousel.forEach(function (slide, index) {
+                    const image = document.createElement("img");
+                    image.src = slide.imageUrl;
+                    image.className = "slide" + (index === 0 ? " active" : "");
+                    image.alt = slide.altText;
+                    image.style.objectFit = slide.imageFit;
+                    image.style.objectPosition = slide.imagePosition;
+                    slidesContainer.appendChild(image);
+                });
+            }
+        } catch (_error) {
+            // Keep the built-in images as a safe fallback if the content service is unavailable.
+        }
+
+        initializeHomeCarousel();
+    }
+
+    loadHomeCarousel();
 
     const orderForm = document.getElementById("orderForm");
     const orderTotal = document.getElementById("orderTotal");
@@ -519,8 +564,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 const imageFileName = product.name === "Sweet Corn"
                     ? "Sweet Corn 2.jpg"
                     : product.name + ".jpg";
-                image.src = "images/" + encodeURIComponent(imageFileName);
+                image.src = product.imageUrl || ("images/" + encodeURIComponent(imageFileName));
                 image.alt = product.name;
+                image.style.objectFit = product.imageFit || "cover";
+                image.style.objectPosition = product.imagePosition || "center";
                 image.addEventListener("error", function () {
                     const placeholder = document.createElement("div");
                     placeholder.className = "product-image-placeholder dynamic-product-image";
@@ -756,6 +803,25 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    function renderManagedProductImages(productMap) {
+        document.querySelectorAll("[data-product-image]").forEach(function (image) {
+            const product = image.dataset.productImage.split(",").map(function (productId) {
+                return productMap.get(productId.trim());
+            }).find(function (candidate) {
+                return candidate && candidate.imageUrl;
+            });
+
+            if (!product) {
+                return;
+            }
+
+            image.src = product.imageUrl;
+            image.alt = product.name;
+            image.style.objectFit = product.imageFit || "cover";
+            image.style.objectPosition = product.imagePosition || "center";
+        });
+    }
+
     function renderInventory(products) {
         renderDynamicProductCards(products);
         renderDynamicOrderProducts(products);
@@ -765,6 +831,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }));
 
         renderProductDescriptions(productMap);
+        renderManagedProductImages(productMap);
 
         document.querySelectorAll("[data-stock]").forEach(function (element) {
             const product = productMap.get(element.dataset.stock);

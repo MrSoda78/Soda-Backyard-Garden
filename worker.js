@@ -13,7 +13,24 @@ const SCHEMA_STATEMENTS = [
         description TEXT NOT NULL DEFAULT '',
         category TEXT NOT NULL DEFAULT '',
         is_slot INTEGER NOT NULL DEFAULT 0 CHECK (is_slot IN (0, 1)),
-        order_limit INTEGER CHECK (order_limit IS NULL OR order_limit > 0)
+        order_limit INTEGER CHECK (order_limit IS NULL OR order_limit > 0),
+        image_key TEXT NOT NULL DEFAULT '',
+        image_fit TEXT NOT NULL DEFAULT 'cover',
+        image_position TEXT NOT NULL DEFAULT 'center'
+    )`,
+    `CREATE TABLE IF NOT EXISTS carousel_images (
+        id TEXT PRIMARY KEY,
+        image_key TEXT NOT NULL DEFAULT '',
+        static_path TEXT NOT NULL DEFAULT '',
+        alt_text TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+        image_fit TEXT NOT NULL DEFAULT 'cover',
+        image_position TEXT NOT NULL DEFAULT 'center',
+        source_product_id TEXT,
+        deleted INTEGER NOT NULL DEFAULT 0 CHECK (deleted IN (0, 1)),
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (image_key <> '' OR static_path <> '')
     )`,
     `CREATE TABLE IF NOT EXISTS orders (
         id TEXT PRIMARY KEY,
@@ -188,6 +205,20 @@ const SCHEMA_STATEMENTS = [
         ('white-onion', 'White Onion', 'each', 0, 0, 0, 237, 0),
         ('tri-colour-carrots', 'Tri-Colour Carrots', 'bunch', 0, 0, 0, 238, 0),
         ('sage', 'Sage', 'bunch', 600, 0, 0, 240, 1)
+    ON CONFLICT(id) DO NOTHING`,
+    `INSERT INTO carousel_images (
+        id, static_path, alt_text, sort_order, active, image_fit, image_position
+    ) VALUES
+        ('home-watermelon', 'images/Watermelon.jpg', 'Watermelon', 10, 1, 'cover', 'center'),
+        ('home-peppers-3', 'images/Peppers 3.jpg', 'Peppers growing in a bucket', 20, 1, 'cover', 'center'),
+        ('home-flowers-8', 'images/Flowers 8.jpg', 'Flowers', 30, 1, 'cover', 'center'),
+        ('home-flowers-7', 'images/Flowers 7.jpg', 'Flowers', 40, 1, 'cover', 'center'),
+        ('home-onions-2', 'images/Onions 2.jpg', 'Onions ready to pick', 50, 1, 'cover', 'center'),
+        ('home-red-sunflower-2', 'images/Red Sunflower 2 - dimensions.jpg', 'Red Sunflower', 60, 1, 'cover', 'center'),
+        ('home-yellow-red-sunflowers', 'images/Yellow and Red Sunflowers.jpg', 'Yellow and Red Sunflowers', 70, 1, 'cover', 'center'),
+        ('home-red-sunflower', 'images/Red Sunflower.jpg', 'Red Sunflower', 80, 1, 'cover', 'center'),
+        ('home-peppers-2', 'images/Peppers 2.jpg', 'Peppers growing in a bucket', 90, 1, 'cover', 'center'),
+        ('home-peppers', 'images/Peppers.jpg', 'Peppers growing in a bucket', 100, 1, 'cover', 'center')
     ON CONFLICT(id) DO NOTHING`,
     `UPDATE products
     SET name = 'Turnips'
@@ -469,7 +500,10 @@ function ensureDatabase(db) {
                 ["description", "ALTER TABLE products ADD COLUMN description TEXT NOT NULL DEFAULT ''"],
                 ["category", "ALTER TABLE products ADD COLUMN category TEXT NOT NULL DEFAULT ''"],
                 ["is_slot", "ALTER TABLE products ADD COLUMN is_slot INTEGER NOT NULL DEFAULT 0"],
-                ["order_limit", "ALTER TABLE products ADD COLUMN order_limit INTEGER"]
+                ["order_limit", "ALTER TABLE products ADD COLUMN order_limit INTEGER"],
+                ["image_key", "ALTER TABLE products ADD COLUMN image_key TEXT NOT NULL DEFAULT ''"],
+                ["image_fit", "ALTER TABLE products ADD COLUMN image_fit TEXT NOT NULL DEFAULT 'cover'"],
+                ["image_position", "ALTER TABLE products ADD COLUMN image_position TEXT NOT NULL DEFAULT 'center'"]
             ];
 
             for (const [columnName, migration] of productMigrations) {
@@ -545,6 +579,27 @@ function startOfWeekKey(dateKey) {
 
 function cleanText(value, maximumLength) {
     return typeof value === "string" ? value.trim().slice(0, maximumLength) : "";
+}
+
+function normalizeImageFit(value) {
+    return value === "contain" ? "contain" : "cover";
+}
+
+function normalizeImagePosition(value) {
+    const allowedPositions = new Set(["center", "top", "bottom", "left", "right"]);
+    return allowedPositions.has(value) ? value : "center";
+}
+
+function mediaUrlForKey(key) {
+    if (!key) {
+        return "";
+    }
+
+    return "/media/" + key.split("/").map(encodeURIComponent).join("/");
+}
+
+function imageUrlForRecord(record) {
+    return record.image_key ? mediaUrlForKey(record.image_key) : (record.static_path || "");
 }
 
 function normalizeCustomerEmail(value) {
@@ -651,7 +706,8 @@ async function getProducts(db, includeInactive = false) {
     const result = await db.prepare(`
         SELECT
             id, name, unit, price_cents, quantity, made_to_order, active,
-            description, category, is_slot, order_limit
+            description, category, is_slot, order_limit,
+            image_key, image_fit, image_position
         FROM products
         ${includeInactive ? "" : "WHERE active = 1"}
         ORDER BY sort_order, name
@@ -669,13 +725,44 @@ async function getProducts(db, includeInactive = false) {
             description: product.description || "",
             category: product.category || "",
             isSlot: product.is_slot === 1,
-            orderLimit: product.order_limit
+            orderLimit: product.order_limit,
+            imageUrl: mediaUrlForKey(product.image_key),
+            imageFit: normalizeImageFit(product.image_fit),
+            imagePosition: normalizeImagePosition(product.image_position)
         };
     });
 }
 
 async function handleInventory(db) {
     return jsonResponse({ products: await getProducts(db, true) });
+}
+
+async function getCarouselSlides(db, includeInactive = false) {
+    const result = await db.prepare(`
+        SELECT
+            id, image_key, static_path, alt_text, sort_order, active,
+            image_fit, image_position, source_product_id
+        FROM carousel_images
+        WHERE deleted = 0 ${includeInactive ? "" : "AND active = 1"}
+        ORDER BY sort_order, created_at, id
+    `).all();
+
+    return result.results.map(function (slide) {
+        return {
+            id: slide.id,
+            imageUrl: imageUrlForRecord(slide),
+            altText: slide.alt_text,
+            sortOrder: slide.sort_order,
+            active: slide.active === 1,
+            imageFit: normalizeImageFit(slide.image_fit),
+            imagePosition: normalizeImagePosition(slide.image_position),
+            sourceProductId: slide.source_product_id || ""
+        };
+    });
+}
+
+async function handleSiteContent(db) {
+    return jsonResponse({ carousel: await getCarouselSlides(db) });
 }
 
 async function sendBrevoOrderReceipt(env, order) {
@@ -1380,7 +1467,8 @@ async function handleAdminInventory(db) {
     const result = await db.prepare(`
         SELECT
             id, name, unit, price_cents, quantity, made_to_order, sort_order, active,
-            description, category, is_slot, order_limit
+            description, category, is_slot, order_limit,
+            image_key, image_fit, image_position
         FROM products
         ORDER BY sort_order, name
     `).all();
@@ -1398,7 +1486,10 @@ async function handleAdminInventory(db) {
                 description: product.description || "",
                 category: product.category || "",
                 isSlot: product.is_slot === 1,
-                orderLimit: product.order_limit
+                orderLimit: product.order_limit,
+                imageUrl: mediaUrlForKey(product.image_key),
+                imageFit: normalizeImageFit(product.image_fit),
+                imagePosition: normalizeImagePosition(product.image_position)
             };
         })
     });
@@ -1722,6 +1813,8 @@ async function handleAdminInventoryUpdate(request, db) {
         const orderLimit = submitted.orderLimit === null || submitted.orderLimit === ""
             ? null
             : Number(submitted.orderLimit);
+        const imageFit = normalizeImageFit(submitted.imageFit);
+        const imagePosition = normalizeImagePosition(submitted.imagePosition);
 
         const existingProduct = existingProducts.get(id);
 
@@ -1769,7 +1862,8 @@ async function handleAdminInventoryUpdate(request, db) {
             db.prepare(`
                 UPDATE products
                 SET name = ?, unit = ?, price_cents = ?, quantity = ?,
-                    made_to_order = ?, active = ?, description = ?, order_limit = ?
+                    made_to_order = ?, active = ?, description = ?, order_limit = ?,
+                    image_fit = ?, image_position = ?
                 WHERE id = ?
             `).bind(
                 name,
@@ -1780,6 +1874,8 @@ async function handleAdminInventoryUpdate(request, db) {
                 active ? 1 : 0,
                 description,
                 orderLimit,
+                imageFit,
+                imagePosition,
                 id
             )
         );
@@ -1788,6 +1884,379 @@ async function handleAdminInventoryUpdate(request, db) {
     await db.batch(updates);
     await ensureEmptyProductSlots(db);
     return jsonResponse({ success: true });
+}
+
+function imageStorageUnavailable() {
+    return jsonResponse({
+        error: "Image storage is not configured yet. Add the MEDIA_BUCKET R2 binding in Cloudflare."
+    }, 503);
+}
+
+function imageExtension(contentType) {
+    const extensions = {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp"
+    };
+    return extensions[contentType] || "";
+}
+
+async function storeUploadedImage(request, bucket, folder) {
+    const formData = await request.formData();
+    const image = formData.get("image");
+    const contentType = image && cleanText(image.type, 50).toLowerCase();
+    const extension = imageExtension(contentType);
+
+    if (!image || typeof image.arrayBuffer !== "function" || !extension) {
+        throw new Error("Choose a JPG, PNG, or WebP image.");
+    }
+
+    if (image.size < 1 || image.size > 6 * 1024 * 1024) {
+        throw new Error("The uploaded image must be smaller than 6 MB.");
+    }
+
+    const key = folder + "/" + crypto.randomUUID() + "." + extension;
+    await bucket.put(key, await image.arrayBuffer(), {
+        httpMetadata: {
+            contentType,
+            cacheControl: "public, max-age=31536000, immutable"
+        }
+    });
+
+    return { key, formData };
+}
+
+async function deleteMediaIfUnused(db, bucket, key) {
+    if (!bucket || !key) {
+        return;
+    }
+
+    const usage = await db.prepare(`
+        SELECT
+            (SELECT COUNT(*) FROM products WHERE image_key = ?) +
+            (SELECT COUNT(*) FROM carousel_images WHERE image_key = ? AND deleted = 0)
+            AS reference_count
+    `).bind(key, key).first();
+
+    if (!usage || Number(usage.reference_count) === 0) {
+        await bucket.delete(key);
+    }
+}
+
+async function handleMedia(request, bucket, encodedKey) {
+    if (!bucket) {
+        return new Response("Image storage is not configured.", { status: 503 });
+    }
+
+    let key;
+
+    try {
+        key = decodeURIComponent(encodedKey);
+    } catch (_error) {
+        return new Response("Invalid image path.", { status: 400 });
+    }
+
+    if (!key || key.includes("..")) {
+        return new Response("Invalid image path.", { status: 400 });
+    }
+
+    const object = await bucket.get(key);
+
+    if (!object) {
+        return new Response("Image not found.", { status: 404 });
+    }
+
+    const headers = new Headers();
+    object.writeHttpMetadata(headers);
+    headers.set("ETag", object.httpEtag);
+    headers.set("Cache-Control", "public, max-age=31536000, immutable");
+    headers.set("X-Content-Type-Options", "nosniff");
+    return new Response(request.method === "HEAD" ? null : object.body, { headers });
+}
+
+async function handleAdminProductImageUpload(request, db, bucket, productId) {
+    if (!bucket) {
+        return imageStorageUnavailable();
+    }
+
+    const product = await db.prepare(`
+        SELECT id, name, image_key
+        FROM products
+        WHERE id = ?
+    `).bind(productId).first();
+
+    if (!product) {
+        return jsonResponse({ error: "That product was not found." }, 404);
+    }
+
+    let stored;
+
+    try {
+        stored = await storeUploadedImage(
+            request,
+            bucket,
+            "products/" + productId.replace(/[^a-z0-9-]/gi, "-")
+        );
+    } catch (error) {
+        return jsonResponse({ error: error.message || "The product image could not be uploaded." }, 400);
+    }
+
+    const imageFit = normalizeImageFit(cleanText(stored.formData.get("imageFit"), 20));
+    const imagePosition = normalizeImagePosition(cleanText(stored.formData.get("imagePosition"), 20));
+
+    try {
+        await db.batch([
+            db.prepare(`
+                UPDATE products
+                SET image_key = ?, image_fit = ?, image_position = ?
+                WHERE id = ?
+            `).bind(stored.key, imageFit, imagePosition, productId),
+            db.prepare(`
+                UPDATE carousel_images
+                SET image_key = ?
+                WHERE source_product_id = ? AND deleted = 0
+            `).bind(stored.key, productId)
+        ]);
+    } catch (error) {
+        await bucket.delete(stored.key);
+        throw error;
+    }
+
+    await deleteMediaIfUnused(db, bucket, product.image_key);
+    return jsonResponse({
+        success: true,
+        imageUrl: mediaUrlForKey(stored.key),
+        message: "Image saved for " + product.name + "."
+    });
+}
+
+async function handleAdminProductImageDelete(db, bucket, productId) {
+    const product = await db.prepare(`
+        SELECT id, name, image_key
+        FROM products
+        WHERE id = ?
+    `).bind(productId).first();
+
+    if (!product) {
+        return jsonResponse({ error: "That product was not found." }, 404);
+    }
+
+    await db.prepare("UPDATE products SET image_key = '' WHERE id = ?")
+        .bind(productId)
+        .run();
+    await deleteMediaIfUnused(db, bucket, product.image_key);
+    return jsonResponse({ success: true, message: "The managed image was removed from " + product.name + "." });
+}
+
+async function handleAdminCarousel(db) {
+    const productImages = await db.prepare(`
+        SELECT id, name, image_key
+        FROM products
+        WHERE image_key <> '' AND category <> 'retired'
+        ORDER BY name
+    `).all();
+
+    return jsonResponse({
+        carousel: await getCarouselSlides(db, true),
+        productImages: productImages.results.map(function (product) {
+            return {
+                id: product.id,
+                name: product.name,
+                imageUrl: mediaUrlForKey(product.image_key)
+            };
+        })
+    });
+}
+
+async function handleAdminCarouselUpload(request, db, bucket) {
+    if (!bucket) {
+        return imageStorageUnavailable();
+    }
+
+    let stored;
+
+    try {
+        stored = await storeUploadedImage(request, bucket, "carousel");
+    } catch (error) {
+        return jsonResponse({ error: error.message || "The carousel image could not be uploaded." }, 400);
+    }
+
+    const altText = cleanText(stored.formData.get("altText"), 160);
+
+    if (altText.length < 2) {
+        await bucket.delete(stored.key);
+        return jsonResponse({ error: "Add a short image description for accessibility." }, 400);
+    }
+
+    const imageFit = normalizeImageFit(cleanText(stored.formData.get("imageFit"), 20));
+    const imagePosition = normalizeImagePosition(cleanText(stored.formData.get("imagePosition"), 20));
+    const maximum = await db.prepare(`
+        SELECT COALESCE(MAX(sort_order), 0) AS maximum
+        FROM carousel_images
+        WHERE deleted = 0
+    `).first();
+    const id = "carousel-" + crypto.randomUUID();
+
+    try {
+        await db.prepare(`
+            INSERT INTO carousel_images (
+                id, image_key, alt_text, sort_order, active, image_fit, image_position
+            ) VALUES (?, ?, ?, ?, 1, ?, ?)
+        `).bind(
+            id,
+            stored.key,
+            altText,
+            Number(maximum && maximum.maximum || 0) + 10,
+            imageFit,
+            imagePosition
+        ).run();
+    } catch (error) {
+        await bucket.delete(stored.key);
+        throw error;
+    }
+
+    return jsonResponse({ success: true, message: "Carousel image uploaded." }, 201);
+}
+
+async function handleAdminCarouselProductImage(request, db) {
+    let body;
+
+    try {
+        body = await request.json();
+    } catch (_error) {
+        return jsonResponse({ error: "Choose a product image to add." }, 400);
+    }
+
+    const productId = cleanText(body.productId, 100);
+    const product = await db.prepare(`
+        SELECT id, name, image_key
+        FROM products
+        WHERE id = ? AND image_key <> ''
+    `).bind(productId).first();
+
+    if (!product) {
+        return jsonResponse({ error: "That product does not have a managed image." }, 404);
+    }
+
+    const maximum = await db.prepare(`
+        SELECT COALESCE(MAX(sort_order), 0) AS maximum
+        FROM carousel_images
+        WHERE deleted = 0
+    `).first();
+
+    await db.prepare(`
+        INSERT INTO carousel_images (
+            id, image_key, alt_text, sort_order, active,
+            image_fit, image_position, source_product_id
+        ) VALUES (?, ?, ?, ?, 1, 'cover', 'center', ?)
+    `).bind(
+        "carousel-" + crypto.randomUUID(),
+        product.image_key,
+        product.name,
+        Number(maximum && maximum.maximum || 0) + 10,
+        product.id
+    ).run();
+
+    return jsonResponse({ success: true, message: product.name + " was added to the carousel." }, 201);
+}
+
+async function handleAdminCarouselUpdate(request, db) {
+    let body;
+
+    try {
+        body = await request.json();
+    } catch (_error) {
+        return jsonResponse({ error: "The carousel changes were not valid." }, 400);
+    }
+
+    if (!Array.isArray(body.carousel) || body.carousel.length === 0) {
+        return jsonResponse({ error: "Keep at least one carousel image." }, 400);
+    }
+
+    const existing = await db.prepare(`
+        SELECT id
+        FROM carousel_images
+        WHERE deleted = 0
+    `).all();
+    const existingIds = new Set(existing.results.map(function (slide) { return slide.id; }));
+    const seenIds = new Set();
+    const updates = [];
+    let activeCount = 0;
+
+    for (let index = 0; index < body.carousel.length; index += 1) {
+        const slide = body.carousel[index];
+        const id = cleanText(slide.id, 100);
+        const altText = cleanText(slide.altText, 160);
+
+        if (!existingIds.has(id) || seenIds.has(id)) {
+            return jsonResponse({
+                error: "One of the carousel images was not recognized. Refresh and try again."
+            }, 400);
+        }
+
+        if (altText.length < 2) {
+            return jsonResponse({ error: "Every carousel image needs a short description." }, 400);
+        }
+
+        const active = slide.active === true;
+        activeCount += active ? 1 : 0;
+        seenIds.add(id);
+        updates.push(db.prepare(`
+            UPDATE carousel_images
+            SET alt_text = ?, sort_order = ?, active = ?, image_fit = ?, image_position = ?
+            WHERE id = ? AND deleted = 0
+        `).bind(
+            altText,
+            (index + 1) * 10,
+            active ? 1 : 0,
+            normalizeImageFit(slide.imageFit),
+            normalizeImagePosition(slide.imagePosition),
+            id
+        ));
+    }
+
+    if (seenIds.size !== existingIds.size) {
+        return jsonResponse({ error: "The carousel changed elsewhere. Refresh and try again." }, 409);
+    }
+
+    if (activeCount === 0) {
+        return jsonResponse({ error: "Keep at least one carousel image visible." }, 400);
+    }
+
+    await db.batch(updates);
+    return jsonResponse({ success: true, message: "Home page carousel saved." });
+}
+
+async function handleAdminCarouselDelete(db, bucket, carouselId) {
+    const slide = await db.prepare(`
+        SELECT id, image_key, active
+        FROM carousel_images
+        WHERE id = ? AND deleted = 0
+    `).bind(carouselId).first();
+
+    if (!slide) {
+        return jsonResponse({ error: "That carousel image was not found." }, 404);
+    }
+
+    if (slide.active === 1) {
+        const activeCount = await db.prepare(`
+            SELECT COUNT(*) AS count
+            FROM carousel_images
+            WHERE deleted = 0 AND active = 1
+        `).first();
+
+        if (Number(activeCount && activeCount.count) <= 1) {
+            return jsonResponse({ error: "Keep at least one carousel image visible." }, 400);
+        }
+    }
+
+    await db.prepare(`
+        UPDATE carousel_images
+        SET deleted = 1, active = 0
+        WHERE id = ?
+    `).bind(carouselId).run();
+    await deleteMediaIfUnused(db, bucket, slide.image_key);
+    return jsonResponse({ success: true, message: "Carousel image removed." });
 }
 
 async function handleAdminOrderAction(request, db, env, orderId) {
@@ -2206,6 +2675,13 @@ export default {
     async fetch(request, env) {
         const url = new URL(request.url);
 
+        if (
+            url.pathname.startsWith("/media/") &&
+            (request.method === "GET" || request.method === "HEAD")
+        ) {
+            return handleMedia(request, env.MEDIA_BUCKET, url.pathname.slice("/media/".length));
+        }
+
         if (!url.pathname.startsWith("/api/")) {
             return env.ASSETS.fetch(request);
         }
@@ -2233,6 +2709,10 @@ export default {
 
             if (url.pathname === "/api/inventory" && request.method === "GET") {
                 return handleInventory(env.DB);
+            }
+
+            if (url.pathname === "/api/site-content" && request.method === "GET") {
+                return handleSiteContent(env.DB);
             }
 
             if (url.pathname === "/api/orders" && request.method === "POST") {
@@ -2266,6 +2746,51 @@ export default {
 
                 if (url.pathname === "/api/admin/inventory" && request.method === "PUT") {
                     return handleAdminInventoryUpdate(request, env.DB);
+                }
+
+                const productImageMatch = url.pathname.match(/^\/api\/admin\/products\/([^/]+)\/image$/);
+
+                if (productImageMatch && request.method === "POST") {
+                    return handleAdminProductImageUpload(
+                        request,
+                        env.DB,
+                        env.MEDIA_BUCKET,
+                        decodeURIComponent(productImageMatch[1])
+                    );
+                }
+
+                if (productImageMatch && request.method === "DELETE") {
+                    return handleAdminProductImageDelete(
+                        env.DB,
+                        env.MEDIA_BUCKET,
+                        decodeURIComponent(productImageMatch[1])
+                    );
+                }
+
+                if (url.pathname === "/api/admin/carousel" && request.method === "GET") {
+                    return handleAdminCarousel(env.DB);
+                }
+
+                if (url.pathname === "/api/admin/carousel" && request.method === "PUT") {
+                    return handleAdminCarouselUpdate(request, env.DB);
+                }
+
+                if (url.pathname === "/api/admin/carousel/images" && request.method === "POST") {
+                    return handleAdminCarouselUpload(request, env.DB, env.MEDIA_BUCKET);
+                }
+
+                if (url.pathname === "/api/admin/carousel/product-image" && request.method === "POST") {
+                    return handleAdminCarouselProductImage(request, env.DB);
+                }
+
+                const carouselMatch = url.pathname.match(/^\/api\/admin\/carousel\/([^/]+)$/);
+
+                if (carouselMatch && request.method === "DELETE") {
+                    return handleAdminCarouselDelete(
+                        env.DB,
+                        env.MEDIA_BUCKET,
+                        decodeURIComponent(carouselMatch[1])
+                    );
                 }
 
                 if (url.pathname === "/api/admin/sales" && request.method === "GET") {

@@ -40,6 +40,7 @@
                         <div class="admin-tabs" role="tablist" aria-label="Garden management">
                             <button type="button" class="admin-tab active" id="ordersTab" role="tab" aria-selected="true" aria-controls="ordersPanel">Customer Orders</button>
                             <button type="button" class="admin-tab" id="inventoryTab" role="tab" aria-selected="false" aria-controls="inventoryPanel">Inventory</button>
+                            <button type="button" class="admin-tab" id="homeTab" role="tab" aria-selected="false" aria-controls="homePanel">Home Page</button>
                             <button type="button" class="admin-tab" id="salesTab" role="tab" aria-selected="false" aria-controls="salesPanel">Sales</button>
                             <button type="button" class="admin-tab" id="blockedTab" role="tab" aria-selected="false" aria-controls="blockedPanel">Blocked Customers</button>
                         </div>
@@ -147,7 +148,7 @@
                         <div class="admin-toolbar">
                             <div>
                                 <h2>Inventory Hub</h2>
-                                <p>Edit prices, quantities, order limits, descriptions, and availability. Descriptions saved here appear on the product cards. Begin the text with <strong>Ingredients:</strong> to place it inside an Ingredients section. Completed new products move into their category automatically, and a fresh blank slot replaces each one.</p>
+                                <p>Edit images, prices, quantities, order limits, descriptions, and availability. Descriptions saved here appear on the product cards. Begin the text with <strong>Ingredients:</strong> to place it inside an Ingredients section. Completed new products move into their category automatically, and a fresh blank slot replaces each one.</p>
                             </div>
                             <div class="admin-toolbar-actions">
                                 <button type="button" class="button secondary" id="refreshInventory">Discard Changes</button>
@@ -175,6 +176,7 @@
                                 <thead>
                                     <tr>
                                         <th scope="col">Product</th>
+                                        <th scope="col">Image</th>
                                         <th scope="col">Description</th>
                                         <th scope="col">Price</th>
                                         <th scope="col">Quantity</th>
@@ -187,6 +189,70 @@
                                 <tbody id="inventoryRows"></tbody>
                             </table>
                         </div>
+                    </section>
+
+                    <section id="homePanel" role="tabpanel" aria-labelledby="homeTab" hidden>
+                        <div class="admin-toolbar">
+                            <div>
+                                <h2>Home Page Carousel</h2>
+                                <p>Add or remove rotating garden photos, change their order, hide individual slides, and choose how each image is framed.</p>
+                            </div>
+                            <div class="admin-toolbar-actions">
+                                <button type="button" class="button secondary" id="refreshCarousel">Discard Changes</button>
+                                <button type="button" class="button" id="saveCarousel">Save Carousel</button>
+                            </div>
+                        </div>
+
+                        <p class="admin-inventory-help">Images are resized before upload to keep the site fast. <strong>Fill frame</strong> may crop an image; <strong>Show whole image</strong> keeps the entire photo visible. Use the focal point to keep the important part of the picture in view.</p>
+                        <p id="carouselMessage" class="form-message" aria-live="polite"></p>
+
+                        <div class="home-admin-tools">
+                            <form id="carouselUploadForm" class="home-admin-card">
+                                <h3>Upload a New Carousel Photo</h3>
+                                <div class="form-group">
+                                    <label for="carouselImageFile">Photo</label>
+                                    <input type="file" id="carouselImageFile" name="image" accept="image/jpeg,image/png,image/webp" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="carouselAltText">Short image description</label>
+                                    <input type="text" id="carouselAltText" name="altText" maxlength="160" placeholder="Example: Red sunflowers in bloom" required>
+                                </div>
+                                <div class="image-display-options">
+                                    <div class="form-group">
+                                        <label for="carouselImageFit">Display</label>
+                                        <select id="carouselImageFit" name="imageFit">
+                                            <option value="cover">Fill frame</option>
+                                            <option value="contain">Show whole image</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="carouselImagePosition">Focal point</label>
+                                        <select id="carouselImagePosition" name="imagePosition">
+                                            <option value="center">Centre</option>
+                                            <option value="top">Top</option>
+                                            <option value="bottom">Bottom</option>
+                                            <option value="left">Left</option>
+                                            <option value="right">Right</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button type="submit" class="button">Upload Photo</button>
+                            </form>
+
+                            <form id="carouselProductForm" class="home-admin-card">
+                                <h3>Reuse a Product Image</h3>
+                                <p>Add an image already uploaded through Inventory without uploading it twice.</p>
+                                <div class="form-group">
+                                    <label for="carouselProductImage">Product image</label>
+                                    <select id="carouselProductImage" name="productId" required>
+                                        <option value="">Choose a product image</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="button secondary">Add to Carousel</button>
+                            </form>
+                        </div>
+
+                        <div id="carouselItems" class="admin-carousel-list" aria-live="polite"></div>
                     </section>
 
                     <section id="salesPanel" role="tabpanel" aria-labelledby="salesTab" hidden>

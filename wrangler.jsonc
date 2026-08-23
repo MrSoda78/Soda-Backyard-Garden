@@ -14,5 +14,11 @@
     {
       "binding": "DB"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "soda-backyard-garden-images"
+    }
   ]
 }

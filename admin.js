@@ -14,10 +14,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const logoutButton = document.getElementById("adminLogout");
     const ordersTab = document.getElementById("ordersTab");
     const inventoryTab = document.getElementById("inventoryTab");
+    const homeTab = document.getElementById("homeTab");
     const salesTab = document.getElementById("salesTab");
     const blockedTab = document.getElementById("blockedTab");
     const ordersPanel = document.getElementById("ordersPanel");
     const inventoryPanel = document.getElementById("inventoryPanel");
+    const homePanel = document.getElementById("homePanel");
     const salesPanel = document.getElementById("salesPanel");
     const blockedPanel = document.getElementById("blockedPanel");
     const inventoryRows = document.getElementById("inventoryRows");
@@ -44,9 +46,17 @@ document.addEventListener("DOMContentLoaded", function () {
     const inventorySearchMessage = document.getElementById("adminInventorySearchMessage");
     const salesSearch = document.getElementById("adminSalesSearch");
     const salesSearchMessage = document.getElementById("adminSalesSearchMessage");
+    const carouselMessage = document.getElementById("carouselMessage");
+    const carouselItems = document.getElementById("carouselItems");
+    const carouselUploadForm = document.getElementById("carouselUploadForm");
+    const carouselProductForm = document.getElementById("carouselProductForm");
+    const carouselProductImage = document.getElementById("carouselProductImage");
+    const refreshCarouselButton = document.getElementById("refreshCarousel");
+    const saveCarouselButton = document.getElementById("saveCarousel");
     let offlineQuantityInputs = [];
     let offlineProductsLoaded = false;
     let orderAdjustmentProducts = [];
+    let carouselLoaded = false;
     const collapsedInventorySections = new Set();
     let inventorySectionsInitialized = false;
 
@@ -315,6 +325,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const panels = {
             orders: { tab: ordersTab, panel: ordersPanel },
             inventory: { tab: inventoryTab, panel: inventoryPanel },
+            home: { tab: homeTab, panel: homePanel },
             sales: { tab: salesTab, panel: salesPanel },
             blocked: { tab: blockedTab, panel: blockedPanel }
         };
@@ -329,6 +340,10 @@ document.addEventListener("DOMContentLoaded", function () {
         if (panelName === "inventory") {
             loadInventory().catch(function (error) {
                 setMessage(inventoryMessage, error.message, "error");
+            });
+        } else if (panelName === "home") {
+            loadCarousel().catch(function (error) {
+                setMessage(carouselMessage, error.message, "error");
             });
         } else if (panelName === "sales") {
             loadSales().catch(function (error) {
@@ -345,6 +360,76 @@ document.addEventListener("DOMContentLoaded", function () {
         return input;
     }
 
+    function createImageSelect(className, value, options, label) {
+        const select = document.createElement("select");
+        select.className = className;
+        select.setAttribute("aria-label", label);
+
+        options.forEach(function (option) {
+            const element = document.createElement("option");
+            element.value = option.value;
+            element.textContent = option.label;
+            element.selected = option.value === value;
+            select.appendChild(element);
+        });
+
+        return select;
+    }
+
+    const imageFitOptions = [
+        { value: "cover", label: "Fill frame" },
+        { value: "contain", label: "Show whole image" }
+    ];
+    const imagePositionOptions = [
+        { value: "center", label: "Centre" },
+        { value: "top", label: "Top" },
+        { value: "bottom", label: "Bottom" },
+        { value: "left", label: "Left" },
+        { value: "right", label: "Right" }
+    ];
+
+    function loadImageElement(file) {
+        return new Promise(function (resolve, reject) {
+            const image = new Image();
+            const objectUrl = URL.createObjectURL(file);
+            image.onload = function () {
+                URL.revokeObjectURL(objectUrl);
+                resolve(image);
+            };
+            image.onerror = function () {
+                URL.revokeObjectURL(objectUrl);
+                reject(new Error("That image could not be read."));
+            };
+            image.src = objectUrl;
+        });
+    }
+
+    async function prepareImageForUpload(file) {
+        if (!file || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+            throw new Error("Choose a JPG, PNG, or WebP image.");
+        }
+
+        const image = await loadImageElement(file);
+        const maximumDimension = 1600;
+        const scale = Math.min(1, maximumDimension / Math.max(image.naturalWidth, image.naturalHeight));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+        const blob = await new Promise(function (resolve) {
+            canvas.toBlob(resolve, "image/webp", 0.84);
+        });
+
+        if (!blob) {
+            throw new Error("That image could not be prepared for upload.");
+        }
+
+        const baseName = file.name.replace(/\.[^.]+$/, "").slice(0, 80) || "garden-image";
+        return new File([blob], baseName + ".webp", { type: "image/webp" });
+    }
+
     function isEmptyProductSlot(product) {
         return product.isSlot && product.name.trim().startsWith("New Product Slot");
     }
@@ -353,7 +438,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const sectionRow = document.createElement("tr");
         const sectionCell = document.createElement("th");
         const toggle = document.createElement("button");
-        sectionCell.colSpan = 8;
+        sectionCell.colSpan = 9;
         sectionCell.scope = "rowgroup";
         sectionCell.className = "inventory-section-heading";
         sectionCell.classList.toggle("inventory-current-heading", isCurrentSection);
@@ -522,6 +607,58 @@ document.addEventListener("DOMContentLoaded", function () {
             nameInput.setAttribute("aria-label", "Product name");
             nameCell.appendChild(nameInput);
 
+            const imageCell = document.createElement("td");
+            const imageEditor = document.createElement("div");
+            imageEditor.className = "inventory-image-editor";
+            const imagePreview = document.createElement("div");
+            imagePreview.className = "inventory-image-preview";
+            imagePreview.dataset.productImagePreview = product.id;
+
+            if (product.imageUrl) {
+                const previewImage = document.createElement("img");
+                previewImage.src = product.imageUrl;
+                previewImage.alt = "Current managed image for " + product.name;
+                previewImage.style.objectFit = product.imageFit;
+                previewImage.style.objectPosition = product.imagePosition;
+                imagePreview.appendChild(previewImage);
+            } else {
+                imagePreview.textContent = "Uses existing page image";
+            }
+
+            const imageFile = document.createElement("input");
+            imageFile.type = "file";
+            imageFile.accept = "image/jpeg,image/png,image/webp";
+            imageFile.className = "inventory-image-file";
+            imageFile.setAttribute("aria-label", "Choose an image for " + product.name);
+            const imageFit = createImageSelect(
+                "inventory-image-fit",
+                product.imageFit,
+                imageFitOptions,
+                product.name + " image display"
+            );
+            const imagePosition = createImageSelect(
+                "inventory-image-position",
+                product.imagePosition,
+                imagePositionOptions,
+                product.name + " image focal point"
+            );
+            const imageActions = document.createElement("div");
+            imageActions.className = "inventory-image-actions";
+            const uploadImageButton = document.createElement("button");
+            uploadImageButton.type = "button";
+            uploadImageButton.className = "button inventory-image-upload";
+            uploadImageButton.dataset.inventoryImageAction = "upload";
+            uploadImageButton.textContent = product.imageUrl ? "Replace" : "Upload";
+            const removeImageButton = document.createElement("button");
+            removeImageButton.type = "button";
+            removeImageButton.className = "button secondary inventory-image-remove";
+            removeImageButton.dataset.inventoryImageAction = "remove";
+            removeImageButton.textContent = "Remove";
+            removeImageButton.hidden = !product.imageUrl;
+            imageActions.append(uploadImageButton, removeImageButton);
+            imageEditor.append(imagePreview, imageFile, imageFit, imagePosition, imageActions);
+            imageCell.appendChild(imageEditor);
+
             const descriptionCell = document.createElement("td");
             const descriptionInput = document.createElement("textarea");
             descriptionInput.value = product.description || "";
@@ -593,6 +730,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             row.append(
                 nameCell,
+                imageCell,
                 descriptionCell,
                 priceCell,
                 quantityCell,
@@ -644,9 +782,104 @@ document.addEventListener("DOMContentLoaded", function () {
                 quantity: quantityValue === "" ? null : Number(quantityValue),
                 orderLimit: orderLimitValue === "" ? null : Number(orderLimitValue),
                 madeToOrder: row.querySelector(".inventory-made-to-order").checked,
-                active: row.querySelector(".inventory-active").checked
+                active: row.querySelector(".inventory-active").checked,
+                imageFit: row.querySelector(".inventory-image-fit").value,
+                imagePosition: row.querySelector(".inventory-image-position").value
             };
         });
+    }
+
+    function updateInventoryImagePreview(row, imageUrl) {
+        const preview = row.querySelector(".inventory-image-preview");
+        const removeButton = row.querySelector(".inventory-image-remove");
+        const uploadButton = row.querySelector(".inventory-image-upload");
+        preview.replaceChildren();
+
+        if (imageUrl) {
+            const image = document.createElement("img");
+            image.src = imageUrl;
+            image.alt = "Current managed image for " + row.querySelector(".inventory-name").value;
+            image.style.objectFit = row.querySelector(".inventory-image-fit").value;
+            image.style.objectPosition = row.querySelector(".inventory-image-position").value;
+            preview.appendChild(image);
+            removeButton.hidden = false;
+            uploadButton.textContent = "Replace";
+        } else {
+            preview.textContent = "Uses existing page image";
+            removeButton.hidden = true;
+            uploadButton.textContent = "Upload";
+        }
+    }
+
+    async function uploadInventoryImage(row, button) {
+        const fileInput = row.querySelector(".inventory-image-file");
+        const file = fileInput.files[0];
+
+        if (!file) {
+            setMessage(inventoryMessage, "Choose an image file first.", "error");
+            fileInput.focus();
+            return;
+        }
+
+        button.disabled = true;
+        setMessage(inventoryMessage, "Preparing and uploading the product image...", "success");
+
+        try {
+            const preparedImage = await prepareImageForUpload(file);
+            const formData = new FormData();
+            formData.append("image", preparedImage, preparedImage.name);
+            formData.append("imageFit", row.querySelector(".inventory-image-fit").value);
+            formData.append("imagePosition", row.querySelector(".inventory-image-position").value);
+            const response = await fetch(
+                "/api/admin/products/" + encodeURIComponent(row.dataset.productId) + "/image",
+                { method: "POST", headers: { "Accept": "application/json" }, body: formData }
+            );
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The product image could not be uploaded.");
+            }
+
+            fileInput.value = "";
+            updateInventoryImagePreview(row, result.imageUrl);
+            carouselLoaded = false;
+            setMessage(inventoryMessage, result.message, "success");
+        } catch (error) {
+            setMessage(inventoryMessage, error.message, "error");
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    async function removeInventoryImage(row, button) {
+        const productName = row.querySelector(".inventory-name").value;
+
+        if (!window.confirm("Remove the managed image from " + productName + "? The original page image or placeholder will be used instead.")) {
+            return;
+        }
+
+        button.disabled = true;
+        setMessage(inventoryMessage, "Removing the product image...", "success");
+
+        try {
+            const response = await fetch(
+                "/api/admin/products/" + encodeURIComponent(row.dataset.productId) + "/image",
+                { method: "DELETE", headers: { "Accept": "application/json" } }
+            );
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The product image could not be removed.");
+            }
+
+            updateInventoryImagePreview(row, "");
+            carouselLoaded = false;
+            setMessage(inventoryMessage, result.message, "success");
+        } catch (error) {
+            setMessage(inventoryMessage, error.message, "error");
+        } finally {
+            button.disabled = false;
+        }
     }
 
     function canBeMadeAvailable(row) {
@@ -697,6 +930,182 @@ document.addEventListener("DOMContentLoaded", function () {
                 "Deselected all products. Click Save Changes to apply.",
                 "success"
             );
+        }
+    }
+
+    function renderCarousel(carousel, productImages) {
+        carouselItems.replaceChildren();
+        carouselProductImage.replaceChildren();
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = productImages.length > 0
+            ? "Choose a product image"
+            : "Upload a product image in Inventory first";
+        carouselProductImage.appendChild(placeholder);
+        carouselProductImage.disabled = productImages.length === 0;
+
+        productImages.forEach(function (product) {
+            const option = document.createElement("option");
+            option.value = product.id;
+            option.textContent = product.name;
+            carouselProductImage.appendChild(option);
+        });
+
+        if (carousel.length === 0) {
+            const empty = createTextElement("p", "admin-empty", "No carousel images are available. Upload one above.");
+            carouselItems.appendChild(empty);
+            return;
+        }
+
+        carousel.forEach(function (slide, index) {
+            const card = document.createElement("article");
+            card.className = "admin-carousel-card";
+            card.dataset.carouselId = slide.id;
+
+            const order = createTextElement("span", "admin-carousel-order", "Slide " + (index + 1));
+            const preview = document.createElement("img");
+            preview.className = "admin-carousel-preview";
+            preview.src = slide.imageUrl;
+            preview.alt = slide.altText;
+            preview.style.objectFit = slide.imageFit;
+            preview.style.objectPosition = slide.imagePosition;
+
+            const fields = document.createElement("div");
+            fields.className = "admin-carousel-fields";
+            const altGroup = document.createElement("div");
+            altGroup.className = "form-group";
+            const altLabel = document.createElement("label");
+            altLabel.textContent = "Image description";
+            const altInput = createInventoryInput("text", slide.altText, "carousel-alt-text");
+            altInput.maxLength = 160;
+            altInput.required = true;
+            altInput.setAttribute("aria-label", "Description for slide " + (index + 1));
+            altGroup.append(altLabel, altInput);
+
+            const displayOptions = document.createElement("div");
+            displayOptions.className = "image-display-options";
+            const fitGroup = document.createElement("div");
+            fitGroup.className = "form-group";
+            const fitLabel = document.createElement("label");
+            fitLabel.textContent = "Display";
+            const fitSelect = createImageSelect(
+                "carousel-image-fit",
+                slide.imageFit,
+                imageFitOptions,
+                "Display for slide " + (index + 1)
+            );
+            fitGroup.append(fitLabel, fitSelect);
+            const positionGroup = document.createElement("div");
+            positionGroup.className = "form-group";
+            const positionLabel = document.createElement("label");
+            positionLabel.textContent = "Focal point";
+            const positionSelect = createImageSelect(
+                "carousel-image-position",
+                slide.imagePosition,
+                imagePositionOptions,
+                "Focal point for slide " + (index + 1)
+            );
+            positionGroup.append(positionLabel, positionSelect);
+            displayOptions.append(fitGroup, positionGroup);
+
+            const visibleLabel = document.createElement("label");
+            visibleLabel.className = "carousel-visible-control";
+            const visibleInput = document.createElement("input");
+            visibleInput.type = "checkbox";
+            visibleInput.className = "carousel-active";
+            visibleInput.checked = slide.active;
+            visibleLabel.append(visibleInput, " Show on home page");
+            fields.append(altGroup, displayOptions, visibleLabel);
+
+            const actions = document.createElement("div");
+            actions.className = "admin-carousel-actions";
+            [
+                { label: "Move Up", action: "up", disabled: index === 0 },
+                { label: "Move Down", action: "down", disabled: index === carousel.length - 1 },
+                { label: "Remove", action: "remove", danger: true, disabled: false }
+            ].forEach(function (definition) {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "button " + (definition.danger ? "danger" : "secondary");
+                button.dataset.carouselAction = definition.action;
+                button.textContent = definition.label;
+                button.disabled = definition.disabled;
+                actions.appendChild(button);
+            });
+
+            card.append(order, preview, fields, actions);
+            carouselItems.appendChild(card);
+        });
+    }
+
+    async function loadCarousel() {
+        setMessage(carouselMessage, "Loading home page images...", "success");
+        const response = await fetch("/api/admin/carousel", {
+            headers: { "Accept": "application/json" },
+            cache: "no-store"
+        });
+
+        if (response.status === 401) {
+            showLogin();
+            return;
+        }
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || "Home page images could not be loaded.");
+        }
+
+        renderCarousel(result.carousel, result.productImages);
+        carouselLoaded = true;
+        setMessage(carouselMessage, "", "");
+    }
+
+    function collectCarousel() {
+        return Array.from(carouselItems.querySelectorAll("[data-carousel-id]")).map(function (card) {
+            return {
+                id: card.dataset.carouselId,
+                altText: card.querySelector(".carousel-alt-text").value,
+                imageFit: card.querySelector(".carousel-image-fit").value,
+                imagePosition: card.querySelector(".carousel-image-position").value,
+                active: card.querySelector(".carousel-active").checked
+            };
+        });
+    }
+
+    function refreshCarouselOrderControls() {
+        const cards = Array.from(carouselItems.querySelectorAll("[data-carousel-id]"));
+        cards.forEach(function (card, index) {
+            card.querySelector(".admin-carousel-order").textContent = "Slide " + (index + 1);
+            card.querySelector('[data-carousel-action="up"]').disabled = index === 0;
+            card.querySelector('[data-carousel-action="down"]').disabled = index === cards.length - 1;
+        });
+    }
+
+    async function removeCarouselImage(card, button) {
+        if (!window.confirm("Remove this image from the home page carousel?")) {
+            return;
+        }
+
+        button.disabled = true;
+        setMessage(carouselMessage, "Removing carousel image...", "success");
+
+        try {
+            const response = await fetch(
+                "/api/admin/carousel/" + encodeURIComponent(card.dataset.carouselId),
+                { method: "DELETE", headers: { "Accept": "application/json" } }
+            );
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The carousel image could not be removed.");
+            }
+
+            await loadCarousel();
+            setMessage(carouselMessage, result.message, "success");
+        } catch (error) {
+            button.disabled = false;
+            setMessage(carouselMessage, error.message, "error");
         }
     }
 
@@ -1570,6 +1979,10 @@ document.addEventListener("DOMContentLoaded", function () {
         switchPanel("inventory");
     });
 
+    homeTab.addEventListener("click", function () {
+        switchPanel("home");
+    });
+
     salesTab.addEventListener("click", function () {
         switchPanel("sales");
     });
@@ -1581,6 +1994,20 @@ document.addEventListener("DOMContentLoaded", function () {
     exportSalesButton.addEventListener("click", exportSalesWorkbook);
 
     inventoryRows.addEventListener("change", function (event) {
+        if (
+            event.target.classList.contains("inventory-image-fit") ||
+            event.target.classList.contains("inventory-image-position")
+        ) {
+            const row = event.target.closest("tr");
+            const image = row.querySelector(".inventory-image-preview img");
+
+            if (image) {
+                image.style.objectFit = row.querySelector(".inventory-image-fit").value;
+                image.style.objectPosition = row.querySelector(".inventory-image-position").value;
+            }
+            return;
+        }
+
         if (!event.target.classList.contains("inventory-made-to-order")) {
             return;
         }
@@ -1599,6 +2026,22 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
+    inventoryRows.addEventListener("click", function (event) {
+        const button = event.target.closest("[data-inventory-image-action]");
+
+        if (!button) {
+            return;
+        }
+
+        const row = button.closest("tr[data-product-id]");
+
+        if (button.dataset.inventoryImageAction === "upload") {
+            uploadInventoryImage(row, button);
+        } else if (button.dataset.inventoryImageAction === "remove") {
+            removeInventoryImage(row, button);
+        }
+    });
+
     selectAllInventoryButton.addEventListener("click", function () {
         setAllInventoryAvailability(true);
     });
@@ -1611,6 +2054,142 @@ document.addEventListener("DOMContentLoaded", function () {
         loadSales().catch(function (error) {
             setMessage(salesMessage, error.message, "error");
         });
+    });
+
+    refreshCarouselButton.addEventListener("click", function () {
+        loadCarousel().catch(function (error) {
+            setMessage(carouselMessage, error.message, "error");
+        });
+    });
+
+    saveCarouselButton.addEventListener("click", async function () {
+        saveCarouselButton.disabled = true;
+        setMessage(carouselMessage, "Saving home page carousel...", "success");
+
+        try {
+            const response = await fetch("/api/admin/carousel", {
+                method: "PUT",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ carousel: collectCarousel() })
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The home page carousel could not be saved.");
+            }
+
+            await loadCarousel();
+            setMessage(carouselMessage, result.message, "success");
+        } catch (error) {
+            setMessage(carouselMessage, error.message, "error");
+        } finally {
+            saveCarouselButton.disabled = false;
+        }
+    });
+
+    carouselItems.addEventListener("change", function (event) {
+        if (
+            !event.target.classList.contains("carousel-image-fit") &&
+            !event.target.classList.contains("carousel-image-position")
+        ) {
+            return;
+        }
+
+        const card = event.target.closest("[data-carousel-id]");
+        const preview = card.querySelector(".admin-carousel-preview");
+        preview.style.objectFit = card.querySelector(".carousel-image-fit").value;
+        preview.style.objectPosition = card.querySelector(".carousel-image-position").value;
+    });
+
+    carouselItems.addEventListener("click", function (event) {
+        const button = event.target.closest("[data-carousel-action]");
+
+        if (!button) {
+            return;
+        }
+
+        const card = button.closest("[data-carousel-id]");
+        const action = button.dataset.carouselAction;
+
+        if (action === "remove") {
+            removeCarouselImage(card, button);
+            return;
+        }
+
+        if (action === "up" && card.previousElementSibling) {
+            carouselItems.insertBefore(card, card.previousElementSibling);
+        } else if (action === "down" && card.nextElementSibling) {
+            carouselItems.insertBefore(card.nextElementSibling, card);
+        }
+
+        refreshCarouselOrderControls();
+        setMessage(carouselMessage, "Order changed. Click Save Carousel to publish it.", "success");
+    });
+
+    carouselUploadForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        const submitButton = carouselUploadForm.querySelector('button[type="submit"]');
+        const file = carouselUploadForm.image.files[0];
+        submitButton.disabled = true;
+        setMessage(carouselMessage, "Preparing and uploading the carousel image...", "success");
+
+        try {
+            const preparedImage = await prepareImageForUpload(file);
+            const formData = new FormData(carouselUploadForm);
+            formData.set("image", preparedImage, preparedImage.name);
+            const response = await fetch("/api/admin/carousel/images", {
+                method: "POST",
+                headers: { "Accept": "application/json" },
+                body: formData
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The carousel image could not be uploaded.");
+            }
+
+            carouselUploadForm.reset();
+            await loadCarousel();
+            setMessage(carouselMessage, result.message, "success");
+        } catch (error) {
+            setMessage(carouselMessage, error.message, "error");
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+
+    carouselProductForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        const submitButton = carouselProductForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        setMessage(carouselMessage, "Adding product image to the carousel...", "success");
+
+        try {
+            const response = await fetch("/api/admin/carousel/product-image", {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ productId: carouselProductImage.value })
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The product image could not be added.");
+            }
+
+            carouselProductForm.reset();
+            await loadCarousel();
+            setMessage(carouselMessage, result.message, "success");
+        } catch (error) {
+            setMessage(carouselMessage, error.message, "error");
+        } finally {
+            submitButton.disabled = false;
+        }
     });
 
     donationForm.addEventListener("submit", async function (event) {
