@@ -1850,10 +1850,10 @@ async function handleAdminInventoryUpdate(request, db) {
         if (
             active &&
             existingProduct.is_slot === 1 &&
-            (name.startsWith("New Product Slot") || description.length < 3)
+            name.startsWith("New Product Slot")
         ) {
             return jsonResponse({
-                error: "Complete the product name and description for " + name + " before making it available."
+                error: "Complete the product name for " + name + " before making it available."
             }, 400);
         }
 

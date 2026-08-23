@@ -894,8 +894,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         const name = row.querySelector(".inventory-name").value.trim();
-        const description = row.querySelector(".inventory-description").value.trim();
-        return !name.startsWith("New Product Slot") && description.length >= 3;
+        return !name.startsWith("New Product Slot");
     }
 
     function setAllInventoryAvailability(available) {
