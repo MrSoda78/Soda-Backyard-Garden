@@ -96,6 +96,11 @@ const SCHEMA_STATEMENTS = [
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CHECK (customer_name <> '' OR email <> '' OR phone <> '' OR household <> '')
     )`,
+    `CREATE TABLE IF NOT EXISTS deleted_products (
+        product_id TEXT PRIMARY KEY,
+        deleted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id)
+    )`,
     `CREATE TRIGGER IF NOT EXISTS deduct_inventory_before_order_item
     BEFORE INSERT ON order_items
     WHEN (SELECT made_to_order FROM products WHERE id = NEW.product_id) = 0
@@ -334,7 +339,10 @@ const SCHEMA_STATEMENTS = [
             'Freshly harvested okra.', 'produce', 1),
         ('sweet-banana-peppers', 'Sweet Banana Peppers', 'each', 0, 0, 0, 246, 0,
             'Fresh sweet banana peppers.', 'produce', 1)
-    ON CONFLICT(id) DO NOTHING`
+    ON CONFLICT(id) DO NOTHING`,
+    `UPDATE products
+    SET active = 0, category = 'retired'
+    WHERE id IN (SELECT product_id FROM deleted_products)`
 ];
 
 const PRODUCT_SLOT_INSERT = `INSERT INTO products (
@@ -2129,17 +2137,24 @@ async function handleAdminProductDelete(db, bucket, productId) {
         return jsonResponse({ error: "That product was not found." }, 404);
     }
 
-    if (product.is_slot !== 1 || product.name.startsWith("New Product Slot")) {
+    if (product.is_slot === 1 && product.name.startsWith("New Product Slot")) {
         return jsonResponse({
-            error: "Only products created from a New Product Slot can be deleted here."
+            error: "Blank New Product Slots cannot be deleted because they are used to add products."
         }, 400);
     }
 
-    await db.prepare(`
-        UPDATE products
-        SET active = 0, category = 'retired', image_key = ''
-        WHERE id = ?
-    `).bind(productId).run();
+    await db.batch([
+        db.prepare(`
+            INSERT INTO deleted_products (product_id)
+            VALUES (?)
+            ON CONFLICT(product_id) DO NOTHING
+        `).bind(productId),
+        db.prepare(`
+            UPDATE products
+            SET active = 0, category = 'retired', image_key = ''
+            WHERE id = ?
+        `).bind(productId)
+    ]);
     await deleteMediaIfUnused(db, bucket, product.image_key);
     await ensureEmptyProductSlots(db);
 

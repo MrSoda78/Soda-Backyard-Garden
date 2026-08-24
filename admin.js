@@ -864,7 +864,7 @@ document.addEventListener("DOMContentLoaded", function () {
             removeImageButton.hidden = !product.imageUrl;
             imageActions.append(uploadImageButton, removeImageButton);
 
-            if (product.isSlot && !emptySlot) {
+            if (!emptySlot) {
                 const deleteProductButton = document.createElement("button");
                 deleteProductButton.type = "button";
                 deleteProductButton.className = "button danger inventory-product-delete";
