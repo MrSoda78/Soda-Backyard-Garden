@@ -3451,3 +3451,193 @@ footer a:hover {
         flex-wrap: wrap;
     }
 }
+
+/* ==========================================================
+   ADMIN INVENTORY — DESKTOP CARDS
+========================================================== */
+
+@media (min-width: 701px) {
+    .admin-inventory-wrap {
+        max-height: none;
+        overflow: visible;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .admin-inventory-table {
+        display: block;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .admin-inventory-table thead {
+        display: none;
+    }
+
+    .admin-inventory-table tbody {
+        display: grid;
+        width: 100%;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+        gap: 14px;
+    }
+
+    .admin-inventory-table tbody tr[data-inventory-heading] {
+        display: block;
+        width: 100%;
+        grid-column: 1 / -1;
+        margin-top: 6px;
+        overflow: hidden;
+        border-radius: 11px;
+    }
+
+    .admin-inventory-table tbody tr[data-inventory-heading] > th {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .admin-inventory-table tbody tr[data-product-id] {
+        display: grid;
+        width: 100%;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+        overflow: hidden;
+        border: 1px solid #dce8dc;
+        border-radius: 13px;
+        background: var(--white);
+        box-shadow: 0 4px 15px rgba(20, 55, 30, 0.08);
+    }
+
+    .admin-inventory-table tbody tr.inventory-mobile-expanded {
+        grid-column: 1 / -1;
+    }
+
+    .admin-inventory-table tbody tr[data-product-id] > td {
+        display: none;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 16px;
+        border-bottom: 1px solid #e4ece4;
+    }
+
+    .admin-inventory-table tbody tr[data-product-id] > td:first-child,
+    .admin-inventory-table tbody tr.inventory-mobile-expanded > td {
+        display: block;
+    }
+
+    .admin-inventory-table tbody tr[data-product-id] > td:first-child {
+        position: static;
+        left: auto;
+        z-index: auto;
+        grid-column: 1 / -1;
+        background: var(--white);
+        box-shadow: none;
+    }
+
+    .admin-inventory-table tbody tr.inventory-slot-row > td:first-child {
+        background: #fbfefb;
+    }
+
+    .admin-inventory-table tbody tr.inventory-mobile-expanded > td:not(:first-child)::before {
+        content: attr(data-field-label);
+        display: block;
+        margin-bottom: 8px;
+        color: var(--green-dark);
+        font-size: 0.82rem;
+        font-weight: bold;
+    }
+
+    .admin-inventory-table tbody tr.inventory-mobile-expanded > td:nth-last-child(-n + 2) {
+        border-bottom: 0;
+    }
+
+    .inventory-mobile-product-toggle {
+        display: grid;
+        width: 100%;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 3px 12px;
+        padding: 0;
+        border: 0;
+        color: var(--text-main);
+        background: transparent;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .inventory-mobile-product-name {
+        overflow-wrap: anywhere;
+        color: var(--green-dark);
+        font-weight: bold;
+    }
+
+    .inventory-mobile-product-summary {
+        grid-column: 1;
+        color: var(--text-soft);
+        font-size: 0.84rem;
+    }
+
+    .inventory-mobile-product-icon {
+        display: grid;
+        width: 30px;
+        height: 30px;
+        grid-column: 2;
+        grid-row: 1 / 3;
+        place-items: center;
+        border-radius: 50%;
+        color: var(--green-dark);
+        background: var(--green-light);
+        font-size: 1.25rem;
+        font-weight: bold;
+    }
+
+    .inventory-mobile-product-icon::before {
+        content: "+";
+    }
+
+    .inventory-mobile-expanded .inventory-mobile-product-icon::before {
+        content: "−";
+    }
+
+    .admin-inventory-table tr:not(.inventory-mobile-expanded) .inventory-name {
+        display: none;
+    }
+
+    .admin-inventory-table tr.inventory-mobile-expanded .inventory-name {
+        margin-top: 13px;
+    }
+
+    .admin-inventory-table input[type="text"],
+    .admin-inventory-table input[type="number"],
+    .admin-inventory-table textarea,
+    .admin-inventory-table .inventory-name,
+    .admin-inventory-table .inventory-description,
+    .admin-inventory-table .inventory-order-limit {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    .inventory-image-editor {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .inventory-image-preview {
+        height: clamp(190px, 24vw, 280px);
+    }
+
+    .inventory-image-actions {
+        flex-wrap: wrap;
+    }
+}
+
+@media (min-width: 701px) and (max-width: 950px) {
+    .admin-inventory-table tbody {
+        grid-template-columns: 1fr;
+    }
+}
