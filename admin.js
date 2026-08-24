@@ -417,6 +417,7 @@ document.addEventListener("DOMContentLoaded", function () {
         "yellow-zucchini": "images/Yellow Zuccinni.jpg",
         "green-zucchini": "images/Green Zuccinni.jpg",
         "lebanese-zucchini": "images/Lebanese Zuccinni.jpg",
+        "small-courgette": "images/Green Zuccinni.jpg",
         "lemon-cucumber-pack": "images/Lemon Cucumber.jpg",
         "dragon-tongue-beans": "images/Dragon Tongue Beans.jpg",
         "purple-beans": "images/Purple Beans.jpg",
@@ -862,6 +863,16 @@ document.addEventListener("DOMContentLoaded", function () {
             removeImageButton.textContent = "Remove";
             removeImageButton.hidden = !product.imageUrl;
             imageActions.append(uploadImageButton, removeImageButton);
+
+            if (product.isSlot && !emptySlot) {
+                const deleteProductButton = document.createElement("button");
+                deleteProductButton.type = "button";
+                deleteProductButton.className = "button danger inventory-product-delete";
+                deleteProductButton.dataset.inventoryProductAction = "delete";
+                deleteProductButton.textContent = "Delete Product";
+                imageActions.appendChild(deleteProductButton);
+            }
+
             imageEditor.append(imagePreview, imageFile, imageFit, imagePosition, imageActions);
             imageCell.appendChild(imageEditor);
 
@@ -1088,6 +1099,41 @@ document.addEventListener("DOMContentLoaded", function () {
         } catch (error) {
             setMessage(inventoryMessage, error.message, "error");
         } finally {
+            button.disabled = false;
+        }
+    }
+
+    async function deleteInventoryProduct(row, button) {
+        const enteredName = row.querySelector(".inventory-name").value.trim();
+        const productName = enteredName || "this product";
+
+        if (!window.confirm(
+            "Delete " + productName + " from Inventory? Existing order history will be kept. " +
+            "Any other unsaved Inventory changes will be discarded."
+        )) {
+            return;
+        }
+
+        button.disabled = true;
+        setMessage(inventoryMessage, "Deleting the product...", "success");
+
+        try {
+            const response = await fetch(
+                "/api/admin/products/" + encodeURIComponent(row.dataset.productId),
+                { method: "DELETE", headers: { "Accept": "application/json" } }
+            );
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The product could not be deleted.");
+            }
+
+            carouselLoaded = false;
+            supportImagesLoaded = false;
+            await Promise.all([loadInventory(), loadOfflineOrderProducts()]);
+            setMessage(inventoryMessage, result.message, "success");
+        } catch (error) {
+            setMessage(inventoryMessage, error.message, "error");
             button.disabled = false;
         }
     }
@@ -2471,7 +2517,9 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     inventoryRows.addEventListener("click", function (event) {
-        const button = event.target.closest("[data-inventory-image-action]");
+        const button = event.target.closest(
+            "[data-inventory-image-action], [data-inventory-product-action]"
+        );
 
         if (!button) {
             return;
@@ -2479,7 +2527,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const row = button.closest("tr[data-product-id]");
 
-        if (button.dataset.inventoryImageAction === "upload") {
+        if (button.dataset.inventoryProductAction === "delete") {
+            deleteInventoryProduct(row, button);
+        } else if (button.dataset.inventoryImageAction === "upload") {
             uploadInventoryImage(row, button);
         } else if (button.dataset.inventoryImageAction === "remove") {
             removeInventoryImage(row, button);

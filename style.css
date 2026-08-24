@@ -2677,6 +2677,10 @@ footer a:hover {
     font-size: 0.78rem;
 }
 
+.inventory-image-actions .inventory-product-delete {
+    flex-basis: 100%;
+}
+
 .admin-inventory-table .inventory-description {
     min-width: 260px;
     resize: vertical;

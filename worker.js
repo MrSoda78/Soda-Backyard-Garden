@@ -316,6 +316,11 @@ const SCHEMA_STATEMENTS = [
         'red-fingerling-potatoes', 'white-fingerling-potatoes', 'fresh-onions'
     )`,
     `UPDATE products
+    SET active = 0, quantity = 0, category = 'retired'
+    WHERE is_slot = 1
+      AND id <> 'russet-potatoes'
+      AND LOWER(TRIM(name)) IN ('russet potato', 'russet potatoes')`,
+    `UPDATE products
     SET quantity = NULL, made_to_order = 1
     WHERE id IN ('brown-eggs', 'white-eggs-flat')
       AND active = 1
@@ -2113,6 +2118,37 @@ async function handleAdminProductImageDelete(db, bucket, productId) {
     return jsonResponse({ success: true, message: "The managed image was removed from " + product.name + "." });
 }
 
+async function handleAdminProductDelete(db, bucket, productId) {
+    const product = await db.prepare(`
+        SELECT id, name, image_key, is_slot
+        FROM products
+        WHERE id = ?
+    `).bind(productId).first();
+
+    if (!product) {
+        return jsonResponse({ error: "That product was not found." }, 404);
+    }
+
+    if (product.is_slot !== 1 || product.name.startsWith("New Product Slot")) {
+        return jsonResponse({
+            error: "Only products created from a New Product Slot can be deleted here."
+        }, 400);
+    }
+
+    await db.prepare(`
+        UPDATE products
+        SET active = 0, category = 'retired', image_key = ''
+        WHERE id = ?
+    `).bind(productId).run();
+    await deleteMediaIfUnused(db, bucket, product.image_key);
+    await ensureEmptyProductSlots(db);
+
+    return jsonResponse({
+        success: true,
+        message: product.name + " was deleted from Inventory. Existing order history was kept."
+    });
+}
+
 async function handleAdminCarousel(db) {
     const productImages = await db.prepare(`
         SELECT id, name, image_key
@@ -3022,6 +3058,16 @@ export default {
 
                 if (url.pathname === "/api/admin/inventory" && request.method === "PUT") {
                     return handleAdminInventoryUpdate(request, env.DB);
+                }
+
+                const productMatch = url.pathname.match(/^\/api\/admin\/products\/([^/]+)$/);
+
+                if (productMatch && request.method === "DELETE") {
+                    return handleAdminProductDelete(
+                        env.DB,
+                        env.MEDIA_BUCKET,
+                        decodeURIComponent(productMatch[1])
+                    );
                 }
 
                 const productImageMatch = url.pathname.match(/^\/api\/admin\/products\/([^/]+)\/image$/);
