@@ -574,6 +574,26 @@ document.addEventListener("DOMContentLoaded", function () {
         return descriptionElement;
     }
 
+    function createDynamicProductImage(product, imageSlot, imageUrl) {
+        const image = document.createElement("img");
+        image.className = "dynamic-product-image";
+        image.src = imageUrl;
+        image.alt = product.name + (imageSlot === 2 ? " — second view" : "");
+        image.style.objectFit = imageSlot === 2
+            ? (product.imageFit2 || "cover")
+            : (product.imageFit || "cover");
+        image.style.objectPosition = imageSlot === 2
+            ? (product.imagePosition2 || "center")
+            : (product.imagePosition || "center");
+        image.addEventListener("error", function () {
+            const placeholder = document.createElement("div");
+            placeholder.className = "product-image-placeholder dynamic-product-image";
+            placeholder.textContent = "Image coming soon";
+            image.replaceWith(placeholder);
+        }, { once: true });
+        return image;
+    }
+
     function renderDynamicProductCards(products) {
         document.querySelectorAll("[data-dynamic-products]").forEach(function (grid) {
             const category = grid.dataset.dynamicProducts;
@@ -595,22 +615,26 @@ document.addEventListener("DOMContentLoaded", function () {
                 card.className = "product-card";
                 card.dataset.dynamicProductCard = product.id;
 
-                const image = document.createElement("img");
-                image.className = "dynamic-product-image";
                 const imageFileName = product.name === "Sweet Corn"
                     ? "Sweet Corn 2.jpg"
                     : product.name + ".jpg";
-                image.src = product.imageUrl || ("images/" + encodeURIComponent(imageFileName));
-                image.alt = product.name;
-                image.style.objectFit = product.imageFit || "cover";
-                image.style.objectPosition = product.imagePosition || "center";
-                image.addEventListener("error", function () {
-                    const placeholder = document.createElement("div");
-                    placeholder.className = "product-image-placeholder dynamic-product-image";
-                    placeholder.textContent = "Image coming soon";
-                    image.replaceWith(placeholder);
-                }, { once: true });
-                card.appendChild(image);
+                const image = createDynamicProductImage(
+                    product,
+                    1,
+                    product.imageUrl || ("images/" + encodeURIComponent(imageFileName))
+                );
+
+                if (product.imageUrl2) {
+                    const imageStrip = document.createElement("div");
+                    imageStrip.className = "product-photo-strip";
+                    imageStrip.append(
+                        image,
+                        createDynamicProductImage(product, 2, product.imageUrl2)
+                    );
+                    card.appendChild(imageStrip);
+                } else {
+                    card.appendChild(image);
+                }
 
                 const content = document.createElement("div");
                 content.className = "product-card-content";
@@ -841,20 +865,58 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function renderManagedProductImages(productMap) {
         document.querySelectorAll("[data-product-image]").forEach(function (image) {
-            const product = image.dataset.productImage.split(",").map(function (productId) {
+            const productIds = image.dataset.productImage.split(",").map(function (productId) {
+                return productId.trim();
+            });
+            const product = productIds.map(function (productId) {
                 return productMap.get(productId.trim());
             }).find(function (candidate) {
-                return candidate && candidate.imageUrl;
+                return candidate && (candidate.imageUrl || candidate.imageUrl2);
             });
 
             if (!product) {
                 return;
             }
 
-            image.src = product.imageUrl;
-            image.alt = product.name;
-            image.style.objectFit = product.imageFit || "cover";
-            image.style.objectPosition = product.imagePosition || "center";
+            if (product.imageUrl) {
+                image.src = product.imageUrl;
+                image.alt = product.name;
+                image.style.objectFit = product.imageFit || "cover";
+                image.style.objectPosition = product.imagePosition || "center";
+            }
+
+            if (!product.imageUrl2 || productIds.length !== 1) {
+                return;
+            }
+
+            let imageStrip = image.parentElement;
+
+            if (!imageStrip.classList.contains("product-photo-strip")) {
+                imageStrip = document.createElement("div");
+                imageStrip.className = "product-photo-strip";
+                image.replaceWith(imageStrip);
+                imageStrip.appendChild(image);
+            }
+
+            let secondImage = imageStrip.querySelector(
+                '[data-managed-product-second-image="' + product.id + '"]'
+            );
+
+            if (!secondImage) {
+                secondImage = Array.from(imageStrip.querySelectorAll("img")).find(function (candidate) {
+                    return candidate !== image && !candidate.dataset.productImage;
+                }) || document.createElement("img");
+                secondImage.dataset.managedProductSecondImage = product.id;
+
+                if (!secondImage.parentElement) {
+                    imageStrip.appendChild(secondImage);
+                }
+            }
+
+            secondImage.src = product.imageUrl2;
+            secondImage.alt = product.name + " — second view";
+            secondImage.style.objectFit = product.imageFit2 || "cover";
+            secondImage.style.objectPosition = product.imagePosition2 || "center";
         });
     }
 

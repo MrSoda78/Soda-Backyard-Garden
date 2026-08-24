@@ -450,6 +450,9 @@ document.addEventListener("DOMContentLoaded", function () {
         "pain-rub-balm-2oz": "images/2 oz Jar.jpg",
         "pain-rub-balm-4oz": "images/4 oz Jar.jpg"
     };
+    const existingProductSecondImageUrls = {
+        "callaloo": "images/Callalo - Vacuum.jpg"
+    };
     const existingContainedProductImages = new Set([
         "hardo-bread",
         "pain-rub-oil-2oz",
@@ -490,6 +493,86 @@ document.addEventListener("DOMContentLoaded", function () {
             preview.textContent = "No current image";
         }, { once: true });
         preview.appendChild(image);
+    }
+
+    function createInventoryImageSlot(
+        product,
+        imageSlot,
+        managedImageUrl,
+        fallbackImageUrl,
+        imageFit,
+        imagePosition
+    ) {
+        const currentImageUrl = managedImageUrl || fallbackImageUrl;
+        const slotEditor = document.createElement("section");
+        slotEditor.className = "inventory-image-slot";
+        slotEditor.dataset.inventoryImageSlot = imageSlot.toString();
+
+        const slotLabel = document.createElement("strong");
+        slotLabel.className = "inventory-image-slot-label";
+        slotLabel.textContent = "Image " + imageSlot;
+
+        const imagePreview = document.createElement("div");
+        imagePreview.className = "inventory-image-preview";
+        imagePreview.dataset.productImagePreview = product.id + "-" + imageSlot;
+        displayInventoryImage(
+            imagePreview,
+            currentImageUrl,
+            "Current image " + imageSlot + " for " + product.name,
+            imageFit,
+            imagePosition
+        );
+
+        const imageFile = document.createElement("input");
+        imageFile.type = "file";
+        imageFile.accept = "image/jpeg,image/png,image/webp";
+        imageFile.className = "inventory-image-file";
+        imageFile.dataset.imageSlot = imageSlot.toString();
+        imageFile.setAttribute(
+            "aria-label",
+            "Choose image " + imageSlot + " for " + product.name
+        );
+        const imageFitSelect = createImageSelect(
+            "inventory-image-fit",
+            imageFit,
+            imageFitOptions,
+            product.name + " image " + imageSlot + " display"
+        );
+        imageFitSelect.dataset.imageSlot = imageSlot.toString();
+        const imagePositionSelect = createImageSelect(
+            "inventory-image-position",
+            imagePosition,
+            imagePositionOptions,
+            product.name + " image " + imageSlot + " focal point"
+        );
+        imagePositionSelect.dataset.imageSlot = imageSlot.toString();
+
+        const imageActions = document.createElement("div");
+        imageActions.className = "inventory-image-actions";
+        const uploadImageButton = document.createElement("button");
+        uploadImageButton.type = "button";
+        uploadImageButton.className = "button inventory-image-upload";
+        uploadImageButton.dataset.inventoryImageAction = "upload";
+        uploadImageButton.dataset.imageSlot = imageSlot.toString();
+        uploadImageButton.textContent = currentImageUrl ? "Replace" : "Upload";
+        const removeImageButton = document.createElement("button");
+        removeImageButton.type = "button";
+        removeImageButton.className = "button secondary inventory-image-remove";
+        removeImageButton.dataset.inventoryImageAction = "remove";
+        removeImageButton.dataset.imageSlot = imageSlot.toString();
+        removeImageButton.textContent = "Remove";
+        removeImageButton.hidden = !managedImageUrl;
+        imageActions.append(uploadImageButton, removeImageButton);
+
+        slotEditor.append(
+            slotLabel,
+            imagePreview,
+            imageFile,
+            imageFitSelect,
+            imagePositionSelect,
+            imageActions
+        );
+        return slotEditor;
     }
 
     function loadImageElement(file) {
@@ -765,14 +848,16 @@ document.addEventListener("DOMContentLoaded", function () {
             const product = entry.product;
             const emptySlot = isEmptyProductSlot(product);
             const fallbackImageUrl = existingProductImageUrl(product);
-            const currentImageUrl = product.imageUrl || fallbackImageUrl;
+            const fallbackImageUrl2 = existingProductSecondImageUrls[product.id] || "";
             const currentImageFit = product.imageUrl
                 ? product.imageFit
                 : (existingContainedProductImages.has(product.id) ? "contain" : product.imageFit);
+            const currentImageFit2 = product.imageUrl2 ? product.imageFit2 : "cover";
 
             const row = document.createElement("tr");
             row.dataset.productId = product.id;
             row.dataset.fallbackImageUrl = fallbackImageUrl;
+            row.dataset.fallbackImageUrl2 = fallbackImageUrl2;
             row.dataset.inventorySection = entry.sectionKey;
             row.dataset.inventorySearch = [
                 product.name,
@@ -818,62 +903,39 @@ document.addEventListener("DOMContentLoaded", function () {
             nameCell.append(mobileToggle, nameInput);
 
             const imageCell = document.createElement("td");
-            imageCell.dataset.fieldLabel = "Current image";
+            imageCell.dataset.fieldLabel = "Product images";
             const imageEditor = document.createElement("div");
             imageEditor.className = "inventory-image-editor";
-            const imagePreview = document.createElement("div");
-            imagePreview.className = "inventory-image-preview";
-            imagePreview.dataset.productImagePreview = product.id;
-            displayInventoryImage(
-                imagePreview,
-                currentImageUrl,
-                "Current image for " + product.name,
+            const imageSlot1 = createInventoryImageSlot(
+                product,
+                1,
+                product.imageUrl,
+                fallbackImageUrl,
                 currentImageFit,
                 product.imagePosition
             );
-
-            const imageFile = document.createElement("input");
-            imageFile.type = "file";
-            imageFile.accept = "image/jpeg,image/png,image/webp";
-            imageFile.className = "inventory-image-file";
-            imageFile.setAttribute("aria-label", "Choose an image for " + product.name);
-            const imageFit = createImageSelect(
-                "inventory-image-fit",
-                currentImageFit,
-                imageFitOptions,
-                product.name + " image display"
+            const imageSlot2 = createInventoryImageSlot(
+                product,
+                2,
+                product.imageUrl2,
+                fallbackImageUrl2,
+                currentImageFit2,
+                product.imagePosition2
             );
-            const imagePosition = createImageSelect(
-                "inventory-image-position",
-                product.imagePosition,
-                imagePositionOptions,
-                product.name + " image focal point"
-            );
-            const imageActions = document.createElement("div");
-            imageActions.className = "inventory-image-actions";
-            const uploadImageButton = document.createElement("button");
-            uploadImageButton.type = "button";
-            uploadImageButton.className = "button inventory-image-upload";
-            uploadImageButton.dataset.inventoryImageAction = "upload";
-            uploadImageButton.textContent = currentImageUrl ? "Replace" : "Upload";
-            const removeImageButton = document.createElement("button");
-            removeImageButton.type = "button";
-            removeImageButton.className = "button secondary inventory-image-remove";
-            removeImageButton.dataset.inventoryImageAction = "remove";
-            removeImageButton.textContent = "Remove";
-            removeImageButton.hidden = !product.imageUrl;
-            imageActions.append(uploadImageButton, removeImageButton);
+            imageEditor.append(imageSlot1, imageSlot2);
 
             if (!emptySlot) {
+                const productActions = document.createElement("div");
+                productActions.className = "inventory-product-actions";
                 const deleteProductButton = document.createElement("button");
                 deleteProductButton.type = "button";
                 deleteProductButton.className = "button danger inventory-product-delete";
                 deleteProductButton.dataset.inventoryProductAction = "delete";
                 deleteProductButton.textContent = "Delete Product";
-                imageActions.appendChild(deleteProductButton);
+                productActions.appendChild(deleteProductButton);
+                imageEditor.appendChild(productActions);
             }
 
-            imageEditor.append(imagePreview, imageFile, imageFit, imagePosition, imageActions);
             imageCell.appendChild(imageEditor);
 
             const descriptionCell = document.createElement("td");
@@ -1008,30 +1070,40 @@ document.addEventListener("DOMContentLoaded", function () {
                 orderLimit: orderLimitValue === "" ? null : Number(orderLimitValue),
                 madeToOrder: row.querySelector(".inventory-made-to-order").checked,
                 active: row.querySelector(".inventory-active").checked,
-                imageFit: row.querySelector(".inventory-image-fit").value,
-                imagePosition: row.querySelector(".inventory-image-position").value
+                imageFit: row.querySelector('.inventory-image-fit[data-image-slot="1"]').value,
+                imagePosition: row.querySelector('.inventory-image-position[data-image-slot="1"]').value,
+                imageFit2: row.querySelector('.inventory-image-fit[data-image-slot="2"]').value,
+                imagePosition2: row.querySelector('.inventory-image-position[data-image-slot="2"]').value
             };
         });
     }
 
-    function updateInventoryImagePreview(row, imageUrl) {
-        const preview = row.querySelector(".inventory-image-preview");
-        const removeButton = row.querySelector(".inventory-image-remove");
-        const uploadButton = row.querySelector(".inventory-image-upload");
-        const currentImageUrl = imageUrl || row.dataset.fallbackImageUrl;
+    function updateInventoryImagePreview(row, imageUrl, imageSlot) {
+        const slotEditor = row.querySelector(
+            '[data-inventory-image-slot="' + imageSlot + '"]'
+        );
+        const preview = slotEditor.querySelector(".inventory-image-preview");
+        const removeButton = slotEditor.querySelector(".inventory-image-remove");
+        const uploadButton = slotEditor.querySelector(".inventory-image-upload");
+        const fallbackImageUrl = imageSlot === 2
+            ? row.dataset.fallbackImageUrl2
+            : row.dataset.fallbackImageUrl;
+        const currentImageUrl = imageUrl || fallbackImageUrl;
         displayInventoryImage(
             preview,
             currentImageUrl,
-            "Current image for " + row.querySelector(".inventory-name").value,
-            row.querySelector(".inventory-image-fit").value,
-            row.querySelector(".inventory-image-position").value
+            "Current image " + imageSlot + " for " + row.querySelector(".inventory-name").value,
+            slotEditor.querySelector(".inventory-image-fit").value,
+            slotEditor.querySelector(".inventory-image-position").value
         );
         removeButton.hidden = !imageUrl;
         uploadButton.textContent = currentImageUrl ? "Replace" : "Upload";
     }
 
     async function uploadInventoryImage(row, button) {
-        const fileInput = row.querySelector(".inventory-image-file");
+        const imageSlot = Number(button.dataset.imageSlot) || 1;
+        const slotEditor = button.closest(".inventory-image-slot");
+        const fileInput = slotEditor.querySelector(".inventory-image-file");
         const file = fileInput.files[0];
 
         if (!file) {
@@ -1047,10 +1119,11 @@ document.addEventListener("DOMContentLoaded", function () {
             const preparedImage = await prepareImageForUpload(file);
             const formData = new FormData();
             formData.append("image", preparedImage, preparedImage.name);
-            formData.append("imageFit", row.querySelector(".inventory-image-fit").value);
-            formData.append("imagePosition", row.querySelector(".inventory-image-position").value);
+            formData.append("imageFit", slotEditor.querySelector(".inventory-image-fit").value);
+            formData.append("imagePosition", slotEditor.querySelector(".inventory-image-position").value);
             const response = await fetch(
-                "/api/admin/products/" + encodeURIComponent(row.dataset.productId) + "/image",
+                "/api/admin/products/" + encodeURIComponent(row.dataset.productId) +
+                    "/image" + (imageSlot === 2 ? "/2" : ""),
                 { method: "POST", headers: { "Accept": "application/json" }, body: formData }
             );
             const result = await response.json();
@@ -1060,7 +1133,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             fileInput.value = "";
-            updateInventoryImagePreview(row, result.imageUrl);
+            updateInventoryImagePreview(row, result.imageUrl, imageSlot);
             carouselLoaded = false;
             supportImagesLoaded = false;
             setMessage(inventoryMessage, result.message, "success");
@@ -1072,9 +1145,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     async function removeInventoryImage(row, button) {
+        const imageSlot = Number(button.dataset.imageSlot) || 1;
         const productName = row.querySelector(".inventory-name").value;
 
-        if (!window.confirm("Remove the managed image from " + productName + "? The original page image or placeholder will be used instead.")) {
+        if (!window.confirm("Remove managed image " + imageSlot + " from " + productName + "? The original page image or placeholder will be used instead.")) {
             return;
         }
 
@@ -1083,7 +1157,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         try {
             const response = await fetch(
-                "/api/admin/products/" + encodeURIComponent(row.dataset.productId) + "/image",
+                "/api/admin/products/" + encodeURIComponent(row.dataset.productId) +
+                    "/image" + (imageSlot === 2 ? "/2" : ""),
                 { method: "DELETE", headers: { "Accept": "application/json" } }
             );
             const result = await response.json();
@@ -1092,7 +1167,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 throw new Error(result.error || "The product image could not be removed.");
             }
 
-            updateInventoryImagePreview(row, "");
+            updateInventoryImagePreview(row, "", imageSlot);
             carouselLoaded = false;
             supportImagesLoaded = false;
             setMessage(inventoryMessage, result.message, "success");
@@ -2474,12 +2549,12 @@ document.addEventListener("DOMContentLoaded", function () {
             event.target.classList.contains("inventory-image-fit") ||
             event.target.classList.contains("inventory-image-position")
         ) {
-            const row = event.target.closest("tr");
-            const image = row.querySelector(".inventory-image-preview img");
+            const slotEditor = event.target.closest(".inventory-image-slot");
+            const image = slotEditor.querySelector(".inventory-image-preview img");
 
             if (image) {
-                image.style.objectFit = row.querySelector(".inventory-image-fit").value;
-                image.style.objectPosition = row.querySelector(".inventory-image-position").value;
+                image.style.objectFit = slotEditor.querySelector(".inventory-image-fit").value;
+                image.style.objectPosition = slotEditor.querySelector(".inventory-image-position").value;
             }
             return;
         }

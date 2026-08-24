@@ -2631,9 +2631,24 @@ footer a:hover {
 
 .inventory-image-editor {
     display: grid;
-    width: 260px;
-    min-width: 260px;
+    width: 100%;
+    min-width: 0;
     gap: 8px;
+}
+
+.inventory-image-slot {
+    display: grid;
+    min-width: 0;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--green-border);
+    border-radius: 10px;
+    background: #fbfefb;
+}
+
+.inventory-image-slot-label {
+    color: var(--green-dark);
+    font-size: 0.84rem;
 }
 
 .inventory-image-preview {
@@ -2677,8 +2692,13 @@ footer a:hover {
     font-size: 0.78rem;
 }
 
-.inventory-image-actions .inventory-product-delete {
-    flex-basis: 100%;
+.inventory-product-actions {
+    display: flex;
+    grid-column: 1 / -1;
+}
+
+.inventory-product-actions .inventory-product-delete {
+    width: 100%;
 }
 
 .admin-inventory-table .inventory-description {
@@ -3632,6 +3652,7 @@ footer a:hover {
     }
 
     .inventory-image-editor {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         width: 100%;
         min-width: 0;
     }
