@@ -1770,10 +1770,14 @@ document.addEventListener("DOMContentLoaded", function () {
                 order.deliveryDay,
                 order.status,
                 order.source,
+                order.completedAt,
                 order.notes,
                 order.items.map(function (item) { return item.name; }).join(" ")
             ].filter(Boolean).join(" ").toLocaleLowerCase();
             const submitted = new Date(order.createdAt.replace(" ", "T") + "Z");
+            const completed = order.completedAt
+                ? new Date(order.completedAt.replace(" ", "T") + "Z")
+                : null;
             const summary = document.createElement("summary");
             summary.className = "admin-order-summary";
             const headingCopy = document.createElement("div");
@@ -1784,7 +1788,11 @@ document.addEventListener("DOMContentLoaded", function () {
             summaryMeta.appendChild(createTextElement(
                 "span",
                 "admin-order-summary-date",
-                submitted.toLocaleDateString()
+                order.status === "completed"
+                    ? (completed
+                        ? "Completed " + completed.toLocaleDateString()
+                        : "Completion date unavailable")
+                    : submitted.toLocaleDateString()
             ));
             summaryMeta.appendChild(createTextElement(
                 "strong",
@@ -1807,6 +1815,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 other: "Other offline order"
             };
             details.appendChild(createTextElement("p", "", "Submitted: " + submitted.toLocaleString()));
+            if (order.status === "completed") {
+                details.appendChild(createTextElement(
+                    "p",
+                    "admin-order-completed-date",
+                    completed
+                        ? "Completed: " + completed.toLocaleString()
+                        : "Completed: Date unavailable (completed before date tracking began)"
+                ));
+            }
             details.appendChild(createTextElement(
                 "p",
                 "",

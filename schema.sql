@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS orders (
     status TEXT NOT NULL DEFAULT 'pending',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     paid_at TEXT,
+    completed_at TEXT,
     source TEXT NOT NULL DEFAULT 'online'
 );
 

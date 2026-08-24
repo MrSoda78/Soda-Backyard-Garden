@@ -2308,6 +2308,11 @@ footer a:hover {
     font-weight: bold;
 }
 
+.admin-order-completed-date {
+    color: var(--green-dark);
+    font-weight: bold;
+}
+
 .admin-order-details {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));

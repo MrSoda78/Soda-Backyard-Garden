@@ -59,6 +59,7 @@ const SCHEMA_STATEMENTS = [
         status TEXT NOT NULL DEFAULT 'pending',
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         paid_at TEXT,
+        completed_at TEXT,
         source TEXT NOT NULL DEFAULT 'online'
     )`,
     `CREATE TABLE IF NOT EXISTS order_items (
@@ -488,6 +489,14 @@ function ensureDatabase(db) {
 
             if (!hasPaidAt) {
                 await db.prepare("ALTER TABLE orders ADD COLUMN paid_at TEXT").run();
+            }
+
+            const hasCompletedAt = orderColumns.results.some(function (column) {
+                return column.name === "completed_at";
+            });
+
+            if (!hasCompletedAt) {
+                await db.prepare("ALTER TABLE orders ADD COLUMN completed_at TEXT").run();
             }
 
             const hasSource = orderColumns.results.some(function (column) {
@@ -1422,6 +1431,7 @@ async function handleAdminOrders(db) {
             orders.status,
             orders.source,
             orders.created_at,
+            orders.completed_at,
             order_items.id AS order_item_id,
             order_items.product_id,
             order_items.product_name,
@@ -1471,6 +1481,7 @@ async function handleAdminOrders(db) {
                 status: row.status,
                 source: row.source || "online",
                 createdAt: row.created_at,
+                completedAt: row.completed_at || "",
                 items: []
             });
         }
@@ -2624,7 +2635,7 @@ async function handleAdminOrderAction(request, db, env, orderId) {
     } else if (action === "complete") {
         result = await db.prepare(`
             UPDATE orders
-            SET status = 'completed'
+            SET status = 'completed', completed_at = CURRENT_TIMESTAMP
             WHERE id = ? AND status = 'confirmed'
         `).bind(orderId).run();
     } else if (action === "cancel") {
