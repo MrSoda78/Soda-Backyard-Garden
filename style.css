@@ -639,9 +639,8 @@ textarea:focus-visible {
 
 .basket-variant-row {
     display: grid;
-    grid-template-columns: minmax(100px, 1fr) auto;
-    align-items: center;
-    gap: 10px;
+    grid-template-columns: 1fr;
+    gap: 7px;
     padding: 9px 0;
     border-bottom: 1px solid #e6eee7;
 }
@@ -660,11 +659,12 @@ textarea:focus-visible {
 
 .basket-product-action {
     display: flex;
-    justify-content: flex-end;
+    justify-content: stretch;
 }
 
 .basket-add-button {
     display: inline-flex;
+    width: 100%;
     min-height: 42px;
     align-items: center;
     justify-content: center;
@@ -706,8 +706,10 @@ textarea:focus-visible {
 
 .basket-quantity-control {
     display: inline-flex;
+    width: 100%;
     min-height: 42px;
     align-items: center;
+    justify-content: space-between;
     gap: 7px;
     padding: 4px;
     border: 1px solid var(--green-border);
@@ -802,17 +804,15 @@ textarea:focus-visible {
     font-size: 0.78rem;
 }
 
-.basket-review-count {
-    display: grid;
-    min-width: 29px;
-    height: 29px;
-    place-items: center;
-    padding: 0 6px;
-    border-radius: 999px;
+.basket-review-action {
+    flex: 0 0 auto;
+    padding: 8px 10px;
+    border-radius: 9px;
     color: var(--green-dark);
     background: var(--white);
-    font-size: 0.83rem;
+    font-size: 0.8rem;
     font-weight: bold;
+    white-space: nowrap;
 }
 
 body.has-basket-review {
@@ -820,24 +820,6 @@ body.has-basket-review {
 }
 
 @media (max-width: 600px) {
-    .basket-variant-row {
-        grid-template-columns: 1fr;
-        gap: 7px;
-    }
-
-    .basket-product-action {
-        justify-content: stretch;
-    }
-
-    .basket-add-button,
-    .basket-quantity-control {
-        width: 100%;
-    }
-
-    .basket-quantity-control {
-        justify-content: space-between;
-    }
-
     .basket-review-button {
         right: 12px;
         bottom: 12px;

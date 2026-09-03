@@ -604,11 +604,10 @@ document.addEventListener("DOMContentLoaded", function () {
             " · $" + (totalCents / 100).toFixed(2);
         text.append(title, summary);
 
-        const badge = document.createElement("span");
-        badge.className = "basket-review-count";
-        badge.textContent = itemCount.toString();
-        badge.setAttribute("aria-hidden", "true");
-        reviewButton.append(text, badge);
+        const orderAction = document.createElement("span");
+        orderAction.className = "basket-review-action";
+        orderAction.textContent = "Go to Order →";
+        reviewButton.append(text, orderAction);
         reviewButton.hidden = itemCount === 0;
         document.body.classList.toggle("has-basket-review", itemCount > 0);
     }
