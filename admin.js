@@ -79,6 +79,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let themeLoaded = false;
     let publishedThemeMode = "automatic";
     let publishedEffectiveTheme = "summer";
+    const themeStorageKey = "sbg-theme-mode-v1";
     let activeOrderStatusFilter = "pending";
     const collapsedInventorySections = new Set();
     const expandedMobileInventoryProducts = new Set();
@@ -145,6 +146,14 @@ document.addEventListener("DOMContentLoaded", function () {
         document.documentElement.dataset.siteTheme = resolvedTheme;
     }
 
+    function rememberPublishedTheme(mode) {
+        try {
+            window.localStorage.setItem(themeStorageKey, mode);
+        } catch (_error) {
+            // The theme remains published even if browser storage is unavailable.
+        }
+    }
+
     function selectThemeOption(mode) {
         themeOptions.forEach(function (option) {
             option.checked = option.value === mode;
@@ -194,6 +203,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         publishedThemeMode = result.theme.mode;
         publishedEffectiveTheme = result.theme.effectiveTheme;
+        rememberPublishedTheme(publishedThemeMode);
         selectThemeOption(publishedThemeMode);
         updatePublishedThemeStatus();
         showThemeSelection(publishedThemeMode);
@@ -2710,6 +2720,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             publishedThemeMode = result.theme.mode;
             publishedEffectiveTheme = result.theme.effectiveTheme;
+            rememberPublishedTheme(publishedThemeMode);
             applyAdminTheme(publishedThemeMode, publishedEffectiveTheme);
             selectThemeOption(publishedThemeMode);
             updatePublishedThemeStatus();

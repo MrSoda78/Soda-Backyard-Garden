@@ -919,6 +919,10 @@ async function handleSiteContent(db) {
     return jsonResponse({ carousel, supportImages, theme });
 }
 
+async function handlePublicTheme(db) {
+    return jsonResponse({ theme: await getSiteTheme(db) });
+}
+
 async function handleAdminTheme(db) {
     return jsonResponse({ theme: await getSiteTheme(db) });
 }
@@ -3185,6 +3189,10 @@ export default {
 
             if (url.pathname === "/api/site-content" && request.method === "GET") {
                 return handleSiteContent(env.DB);
+            }
+
+            if (url.pathname === "/api/theme" && request.method === "GET") {
+                return handlePublicTheme(env.DB);
             }
 
             if (url.pathname === "/api/orders" && request.method === "POST") {

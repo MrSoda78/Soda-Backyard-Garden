@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let currentProductMap = new Map();
     let siteContentPromise;
     const basketStorageKey = "sbg-basket-v1";
+    const themeStorageKey = "sbg-theme-mode-v1";
 
     function readBasket() {
         try {
@@ -60,7 +61,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return "winter";
     }
 
-    function applySiteTheme(mode, effectiveTheme) {
+    function applySiteTheme(mode, effectiveTheme, rememberMode) {
         const allowedThemes = new Set(["spring", "summer", "autumn", "winter"]);
         const normalizedMode = mode === "automatic" || allowedThemes.has(mode)
             ? mode
@@ -71,6 +72,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
         document.documentElement.dataset.themeMode = normalizedMode;
         document.documentElement.dataset.siteTheme = resolvedTheme;
+
+        if (rememberMode) {
+            try {
+                window.localStorage.setItem(themeStorageKey, normalizedMode);
+            } catch (_error) {
+                // The published theme still applies if browser storage is unavailable.
+            }
+        }
     }
 
     function fetchSiteContent() {
@@ -92,11 +101,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
     async function loadPublishedTheme() {
         try {
-            const result = await fetchSiteContent();
+            const response = await fetch("/api/theme", {
+                headers: { "Accept": "application/json" },
+                cache: "no-store"
+            });
+
+            if (!response.ok) {
+                throw new Error("Website theme could not be loaded.");
+            }
+
+            const result = await response.json();
             const theme = result.theme || {};
-            applySiteTheme(theme.mode, theme.effectiveTheme);
+            applySiteTheme(theme.mode, theme.effectiveTheme, true);
         } catch (_error) {
-            applySiteTheme("automatic");
+            if (!document.documentElement.dataset.siteTheme) {
+                applySiteTheme("automatic");
+            }
         }
     }
 

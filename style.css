@@ -109,7 +109,6 @@ body {
     line-height: 1.6;
     background: var(--green-light);
     color: var(--text-dark);
-    transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 .container {
