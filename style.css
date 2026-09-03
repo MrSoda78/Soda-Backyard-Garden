@@ -622,6 +622,230 @@ textarea:focus-visible {
     display: none;
 }
 
+.product-basket-controls {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--green-border);
+}
+
+.basket-options-heading {
+    margin-bottom: 9px;
+    color: var(--green-dark);
+    font-size: 0.86rem;
+    font-weight: bold;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.basket-variant-row {
+    display: grid;
+    grid-template-columns: minmax(100px, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid #e6eee7;
+}
+
+.basket-variant-row:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.basket-variant-name {
+    color: var(--text-main);
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.basket-product-action {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.basket-add-button {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 15px;
+    border: 1px solid var(--green-main);
+    border-radius: 9px;
+    color: var(--white);
+    background: var(--green-main);
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.basket-add-button:hover,
+.basket-add-button:focus-visible {
+    border-color: var(--green-dark);
+    background: var(--green-dark);
+    transform: translateY(-1px);
+}
+
+.basket-add-button:disabled {
+    border-color: #cbd8cd;
+    color: var(--text-soft);
+    background: #eef3ef;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.product-card .basket-add-button img,
+.basket-review-button img {
+    width: 21px;
+    height: 21px;
+    flex: 0 0 21px;
+    object-fit: contain;
+}
+
+.basket-quantity-control {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    gap: 7px;
+    padding: 4px;
+    border: 1px solid var(--green-border);
+    border-radius: 10px;
+    background: var(--green-light);
+}
+
+.basket-quantity-control > button:not(.basket-remove-button) {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    color: var(--white);
+    background: var(--green-main);
+    font: inherit;
+    font-size: 1.15rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.basket-quantity-control > button:not(.basket-remove-button):hover,
+.basket-quantity-control > button:not(.basket-remove-button):focus-visible {
+    background: var(--green-dark);
+}
+
+.basket-quantity-control > button:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+}
+
+.basket-quantity {
+    min-width: 1.5rem;
+    color: var(--green-dark);
+    text-align: center;
+}
+
+.basket-remove-button {
+    padding: 6px 7px;
+    border: 0;
+    color: #8b2e2e;
+    background: transparent;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: bold;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.basket-review-button {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 80;
+    display: flex;
+    min-width: 245px;
+    align-items: center;
+    gap: 11px;
+    padding: 12px 14px;
+    border: 2px solid rgba(255, 255, 255, 0.75);
+    border-radius: 15px;
+    color: var(--white);
+    background: linear-gradient(135deg, var(--green-main), var(--green-dark));
+    box-shadow: 0 10px 28px rgba(24, 76, 38, 0.32);
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.basket-review-button:hover,
+.basket-review-button:focus-visible {
+    color: var(--white);
+    transform: translateY(-2px);
+    box-shadow: 0 13px 32px rgba(24, 76, 38, 0.4);
+}
+
+.basket-review-button[hidden] {
+    display: none;
+}
+
+.basket-review-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    line-height: 1.25;
+}
+
+.basket-review-text small {
+    margin-top: 2px;
+    color: #e9f8e9;
+    font-size: 0.78rem;
+}
+
+.basket-review-count {
+    display: grid;
+    min-width: 29px;
+    height: 29px;
+    place-items: center;
+    padding: 0 6px;
+    border-radius: 999px;
+    color: var(--green-dark);
+    background: var(--white);
+    font-size: 0.83rem;
+    font-weight: bold;
+}
+
+body.has-basket-review {
+    padding-bottom: 92px;
+}
+
+@media (max-width: 600px) {
+    .basket-variant-row {
+        grid-template-columns: 1fr;
+        gap: 7px;
+    }
+
+    .basket-product-action {
+        justify-content: stretch;
+    }
+
+    .basket-add-button,
+    .basket-quantity-control {
+        width: 100%;
+    }
+
+    .basket-quantity-control {
+        justify-content: space-between;
+    }
+
+    .basket-review-button {
+        right: 12px;
+        bottom: 12px;
+        left: 12px;
+        min-width: 0;
+    }
+}
+
 .product-card h3 {
     color: var(--green-dark);
     margin-bottom: 8px;

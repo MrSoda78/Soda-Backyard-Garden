@@ -8,6 +8,35 @@ document.addEventListener("DOMContentLoaded", function () {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let applyProductPageSearch = function () {};
     let applyOrderProductSearch = function () {};
+    let syncOrderFormFromBasket = function () {};
+    let currentProductMap = new Map();
+    const basketStorageKey = "sbg-basket-v1";
+
+    function readBasket() {
+        try {
+            const storedBasket = JSON.parse(window.localStorage.getItem(basketStorageKey) || "{}");
+
+            if (!storedBasket || typeof storedBasket !== "object" || Array.isArray(storedBasket)) {
+                return {};
+            }
+
+            return Object.fromEntries(Object.entries(storedBasket).filter(function (entry) {
+                return typeof entry[0] === "string" && Number.isInteger(entry[1]) && entry[1] > 0;
+            }));
+        } catch (_error) {
+            return {};
+        }
+    }
+
+    let basket = readBasket();
+
+    function saveBasket() {
+        try {
+            window.localStorage.setItem(basketStorageKey, JSON.stringify(basket));
+        } catch (_error) {
+            // The basket still works for this visit if browser storage is unavailable.
+        }
+    }
 
     function createSearchControl(id, labelText, placeholder) {
         const container = document.createElement("div");
@@ -62,7 +91,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     return image.alt;
                 }).join(" ");
                 const searchableText = (card.textContent + " " + imageText).toLocaleLowerCase();
-                const matches = !query || searchableText.includes(query);
+                const isRetired = card.dataset.productRetired === "true";
+                const matches = !isRetired && (!query || searchableText.includes(query));
                 card.hidden = !matches;
                 visibleCount += matches ? 1 : 0;
             });
@@ -296,6 +326,333 @@ document.addEventListener("DOMContentLoaded", function () {
             ? " · Maximum " + product.orderLimit + " per order"
             : "";
     }
+
+    function maximumBasketQuantity(product) {
+        if (!product || !product.active || product.priceCents <= 0) {
+            return 0;
+        }
+
+        const stockMaximum = product.madeToOrder
+            ? 50
+            : Math.max(0, Number.parseInt(product.quantity, 10) || 0);
+        const orderMaximum = Number.isInteger(product.orderLimit)
+            ? product.orderLimit
+            : 50;
+
+        return Math.max(0, Math.min(stockMaximum, orderMaximum, 50));
+    }
+
+    function basketQuantity(productId) {
+        return Math.max(0, Number.parseInt(basket[productId], 10) || 0);
+    }
+
+    function setBasketQuantity(productId, requestedQuantity) {
+        const maximum = maximumBasketQuantity(currentProductMap.get(productId));
+        const quantity = Math.max(0, Math.min(
+            Number.parseInt(requestedQuantity, 10) || 0,
+            maximum
+        ));
+
+        if (quantity > 0) {
+            basket[productId] = quantity;
+        } else {
+            delete basket[productId];
+        }
+
+        saveBasket();
+    }
+
+    function clearBasket() {
+        basket = {};
+        saveBasket();
+    }
+
+    function reconcileBasket(productMap) {
+        let changed = false;
+
+        Object.keys(basket).forEach(function (productId) {
+            const maximum = maximumBasketQuantity(productMap.get(productId));
+            const quantity = Math.min(basketQuantity(productId), maximum);
+
+            if (quantity <= 0) {
+                delete basket[productId];
+                changed = true;
+            } else if (quantity !== basket[productId]) {
+                basket[productId] = quantity;
+                changed = true;
+            }
+        });
+
+        if (changed) {
+            saveBasket();
+        }
+    }
+
+    function productIdsForCard(card) {
+        const productIds = [];
+        const addProductId = function (productId) {
+            const cleanProductId = productId.trim();
+
+            if (cleanProductId && !productIds.includes(cleanProductId)) {
+                productIds.push(cleanProductId);
+            }
+        };
+
+        if (card.dataset.dynamicProductCard) {
+            addProductId(card.dataset.dynamicProductCard);
+        }
+
+        [
+            "data-price-display",
+            "data-stock",
+            "data-product-status",
+            "data-stock-status",
+            "data-product-group-status",
+            "data-description-display",
+            "data-product-image"
+        ].forEach(function (attribute) {
+            card.querySelectorAll("[" + attribute + "]").forEach(function (element) {
+                element.getAttribute(attribute).split(",").forEach(addProductId);
+            });
+        });
+
+        return productIds;
+    }
+
+    function basketIcon() {
+        const icon = document.createElement("img");
+        icon.src = "favicons/order.png";
+        icon.alt = "";
+        icon.setAttribute("aria-hidden", "true");
+        return icon;
+    }
+
+    function createBasketProductAction(product) {
+        const action = document.createElement("div");
+        action.className = "basket-product-action";
+        action.dataset.basketProductId = product.id;
+
+        const maximum = maximumBasketQuantity(product);
+        const quantity = Math.min(basketQuantity(product.id), maximum);
+
+        if (maximum === 0) {
+            const unavailable = document.createElement("button");
+            unavailable.type = "button";
+            unavailable.className = "basket-add-button";
+            unavailable.disabled = true;
+            unavailable.textContent = product.priceCents <= 0
+                ? "Coming soon"
+                : (product.active ? "Sold out" : "Unavailable");
+            action.appendChild(unavailable);
+            return action;
+        }
+
+        if (quantity === 0) {
+            const addButton = document.createElement("button");
+            addButton.type = "button";
+            addButton.className = "basket-add-button";
+            addButton.dataset.basketAction = "add";
+            addButton.dataset.productId = product.id;
+            addButton.setAttribute("aria-label", "Add " + product.name + " to basket");
+            addButton.append(basketIcon(), document.createTextNode("Add to Basket"));
+            action.appendChild(addButton);
+            return action;
+        }
+
+        const stepper = document.createElement("div");
+        stepper.className = "basket-quantity-control";
+
+        const decreaseButton = document.createElement("button");
+        decreaseButton.type = "button";
+        decreaseButton.dataset.basketAction = "decrease";
+        decreaseButton.dataset.productId = product.id;
+        decreaseButton.textContent = "−";
+        decreaseButton.setAttribute("aria-label", "Decrease " + product.name);
+
+        const quantityDisplay = document.createElement("strong");
+        quantityDisplay.className = "basket-quantity";
+        quantityDisplay.textContent = quantity.toString();
+        quantityDisplay.setAttribute("aria-label", quantity + " " + product.name + " in basket");
+
+        const increaseButton = document.createElement("button");
+        increaseButton.type = "button";
+        increaseButton.dataset.basketAction = "increase";
+        increaseButton.dataset.productId = product.id;
+        increaseButton.textContent = "+";
+        increaseButton.disabled = quantity >= maximum;
+        increaseButton.setAttribute("aria-label", "Increase " + product.name);
+
+        const removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.className = "basket-remove-button";
+        removeButton.dataset.basketAction = "remove";
+        removeButton.dataset.productId = product.id;
+        removeButton.textContent = "Remove";
+        removeButton.setAttribute("aria-label", "Remove " + product.name + " from basket");
+
+        stepper.append(decreaseButton, quantityDisplay, increaseButton, removeButton);
+        action.appendChild(stepper);
+        return action;
+    }
+
+    function renderProductBasketControls(productMap) {
+        document.querySelectorAll("[data-product-basket-controls]").forEach(function (controls) {
+            controls.remove();
+        });
+
+        document.querySelectorAll("main .product-card").forEach(function (card) {
+            const productIds = productIdsForCard(card);
+            const products = productIds.map(function (productId) {
+                return productMap.get(productId);
+            }).filter(Boolean);
+            const currentProducts = products.filter(function (product) {
+                return product.category !== "retired";
+            });
+
+            if (productIds.length > 0 && currentProducts.length === 0) {
+                card.dataset.productRetired = "true";
+                card.hidden = true;
+                return;
+            }
+
+            delete card.dataset.productRetired;
+
+            if (currentProducts.length === 0) {
+                return;
+            }
+
+            const content = card.querySelector(":scope > .product-card-content");
+
+            if (!content) {
+                return;
+            }
+
+            const controls = document.createElement("div");
+            controls.className = "product-basket-controls";
+            controls.dataset.productBasketControls = "true";
+
+            if (currentProducts.length === 1) {
+                controls.appendChild(createBasketProductAction(currentProducts[0]));
+            } else {
+                const heading = document.createElement("p");
+                heading.className = "basket-options-heading";
+                heading.textContent = "Choose an option";
+                controls.appendChild(heading);
+
+                currentProducts.forEach(function (product) {
+                    const row = document.createElement("div");
+                    row.className = "basket-variant-row";
+
+                    const name = document.createElement("span");
+                    name.className = "basket-variant-name";
+                    name.textContent = product.name;
+
+                    row.append(name, createBasketProductAction(product));
+                    controls.appendChild(row);
+                });
+            }
+
+            content.appendChild(controls);
+        });
+
+        applyProductPageSearch();
+    }
+
+    function updateReviewBasket(productMap) {
+        const hasProductCards = Boolean(document.querySelector("main .product-card"));
+        let reviewButton = document.getElementById("reviewBasketButton");
+
+        if (!hasProductCards) {
+            if (reviewButton) {
+                reviewButton.remove();
+            }
+            return;
+        }
+
+        const basketItems = Object.keys(basket).map(function (productId) {
+            const product = productMap.get(productId);
+            const quantity = basketQuantity(productId);
+            return { product, quantity };
+        }).filter(function (item) {
+            return item.product && item.quantity > 0;
+        });
+        const itemCount = basketItems.reduce(function (sum, item) {
+            return sum + item.quantity;
+        }, 0);
+        const totalCents = basketItems.reduce(function (sum, item) {
+            return sum + (item.product.priceCents * item.quantity);
+        }, 0);
+
+        if (!reviewButton) {
+            reviewButton = document.createElement("a");
+            reviewButton.id = "reviewBasketButton";
+            reviewButton.className = "basket-review-button";
+            reviewButton.href = "order.html#orderForm";
+            reviewButton.setAttribute("aria-live", "polite");
+            document.body.appendChild(reviewButton);
+        }
+
+        reviewButton.replaceChildren();
+        reviewButton.appendChild(basketIcon());
+
+        const text = document.createElement("span");
+        text.className = "basket-review-text";
+        const title = document.createElement("strong");
+        title.textContent = "Review Basket";
+        const summary = document.createElement("small");
+        summary.textContent = itemCount + " " + (itemCount === 1 ? "item" : "items") +
+            " · $" + (totalCents / 100).toFixed(2);
+        text.append(title, summary);
+
+        const badge = document.createElement("span");
+        badge.className = "basket-review-count";
+        badge.textContent = itemCount.toString();
+        badge.setAttribute("aria-hidden", "true");
+        reviewButton.append(text, badge);
+        reviewButton.hidden = itemCount === 0;
+        document.body.classList.toggle("has-basket-review", itemCount > 0);
+    }
+
+    function renderBasketDisplays(productMap) {
+        renderProductBasketControls(productMap);
+        updateReviewBasket(productMap);
+    }
+
+    document.addEventListener("click", function (event) {
+        const button = event.target.closest("[data-basket-action]");
+
+        if (!button || button.disabled) {
+            return;
+        }
+
+        const productId = button.dataset.productId;
+        const action = button.dataset.basketAction;
+        const quantity = basketQuantity(productId);
+
+        if (action === "add" || action === "increase") {
+            setBasketQuantity(productId, quantity + 1);
+        } else if (action === "decrease") {
+            setBasketQuantity(productId, quantity - 1);
+        } else if (action === "remove") {
+            setBasketQuantity(productId, 0);
+        } else {
+            return;
+        }
+
+        renderBasketDisplays(currentProductMap);
+        syncOrderFormFromBasket(currentProductMap);
+    });
+
+    window.addEventListener("storage", function (event) {
+        if (event.key !== basketStorageKey) {
+            return;
+        }
+
+        basket = readBasket();
+        reconcileBasket(currentProductMap);
+        renderBasketDisplays(currentProductMap);
+        syncOrderFormFromBasket(currentProductMap);
+    });
 
     let productDetailsSequence = 0;
 
@@ -1066,8 +1423,12 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
 
-            updateOrderProductGroupSummaries(productMap);
-            applyOrderProductSearch();
+        currentProductMap = productMap;
+        reconcileBasket(productMap);
+        renderBasketDisplays(productMap);
+        syncOrderFormFromBasket(productMap);
+        updateOrderProductGroupSummaries(productMap);
+        applyOrderProductSearch();
     }
 
     async function loadInventory() {
@@ -1280,6 +1641,19 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
 
+        syncOrderFormFromBasket = function (productMap) {
+            quantityInputs.forEach(function (input) {
+                const product = productMap.get(input.dataset.productId);
+                const maximum = maximumBasketQuantity(product);
+                input.value = Math.min(basketQuantity(input.dataset.productId), maximum).toString();
+            });
+
+            orderForm.querySelectorAll(".order-product-group").forEach(function (group) {
+                updateOrderProductGroupSelection(group);
+            });
+            updateOrderTotal();
+        };
+
         async function sendEmailNotification(orderNumber, items, total) {
             const emailEndpoint = orderForm.dataset.emailEndpoint;
 
@@ -1342,15 +1716,19 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             if (event.target.matches("input[data-product-id]")) {
+                setBasketQuantity(event.target.dataset.productId, event.target.value);
+                renderBasketDisplays(currentProductMap);
                 updateOrderTotal();
                 updateOrderProductGroupSelection(event.target.closest(".order-product-group"));
             }
         });
 
         function clearOrderSelections() {
+            clearBasket();
             quantityInputs.forEach(function (input) {
                 input.value = "0";
             });
+            renderBasketDisplays(currentProductMap);
             orderForm.querySelectorAll(".order-product-group").forEach(function (group) {
                 updateOrderProductGroupSelection(group);
             });
@@ -1471,6 +1849,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
 
                 const customerName = orderForm.elements.namedItem("customerName").value.trim();
+                clearBasket();
                 orderForm.reset();
                 updateOrderTotal();
                 await loadInventory();
