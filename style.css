@@ -65,19 +65,19 @@
 }
 
 :root[data-site-theme="autumn"] {
-    --green-bright: #91ab45;
-    --green-main: #687f32;
-    --green-dark: #3f5124;
-    --green-deep: #303d1d;
-    --green-soft: #f1e3bf;
-    --green-light: #fbf6e9;
-    --green-border: #d7c58f;
-    --season-accent: #e28a3b;
-    --season-page-tint: #fff4df;
-    --header-start: #3f5124;
-    --header-end: #797330;
-    --text-dark: #322f24;
-    --text-soft: #625c4b;
+    --green-bright: #b84b29;
+    --green-main: #9e3829;
+    --green-dark: #6f251f;
+    --green-deep: #431b18;
+    --green-soft: #f3d27b;
+    --green-light: #fff7df;
+    --green-border: #d9a23a;
+    --season-accent: #e87822;
+    --season-page-tint: #fff0c7;
+    --header-start: #6f251f;
+    --header-end: #b84b29;
+    --text-dark: #3c241d;
+    --text-soft: #6a4437;
 }
 
 :root[data-site-theme="winter"] {
@@ -2270,6 +2270,18 @@ footer a:hover {
     line-height: 1.4;
 }
 
+.theme-colour-list {
+    display: block;
+    grid-column: 1 / -1;
+    color: var(--text-soft);
+    font-size: 0.84rem;
+    line-height: 1.4;
+}
+
+.theme-colour-list b {
+    color: var(--green-dark);
+}
+
 .theme-swatches {
     display: flex;
     grid-column: 1 / -1;
@@ -2292,15 +2304,16 @@ footer a:hover {
 .theme-swatches-summer i:nth-child(1) { background: #2f9e44; }
 .theme-swatches-summer i:nth-child(2) { background: #f4cf4f; }
 .theme-swatches-summer i:nth-child(3) { background: #eefcf0; }
-.theme-swatches-autumn i:nth-child(1) { background: #687f32; }
-.theme-swatches-autumn i:nth-child(2) { background: #e28a3b; }
-.theme-swatches-autumn i:nth-child(3) { background: #f1e3bf; }
+.theme-swatches-autumn i:nth-child(1) { background: #8f2f26; }
+.theme-swatches-autumn i:nth-child(2) { background: #d9a23a; }
+.theme-swatches-autumn i:nth-child(3) { background: #e87822; }
+.theme-swatches-autumn i:nth-child(4) { background: #b84b29; }
 .theme-swatches-winter i:nth-child(1) { background: #477a69; }
 .theme-swatches-winter i:nth-child(2) { background: #a9cee5; }
 .theme-swatches-winter i:nth-child(3) { background: #edf6fa; }
-.theme-swatches-automatic i:nth-child(1) { background: #ed80aa; }
+.theme-swatches-automatic i:nth-child(1) { background: #3f8f57; }
 .theme-swatches-automatic i:nth-child(2) { background: #f4cf4f; }
-.theme-swatches-automatic i:nth-child(3) { background: #e28a3b; }
+.theme-swatches-automatic i:nth-child(3) { background: #b84b29; }
 .theme-swatches-automatic i:nth-child(4) { background: #a9cee5; }
 
 .theme-preview-note {
