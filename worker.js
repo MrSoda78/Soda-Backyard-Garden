@@ -104,6 +104,10 @@ const SCHEMA_STATEMENTS = [
         deleted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (product_id) REFERENCES products(id)
     )`,
+    `CREATE TABLE IF NOT EXISTS site_migrations (
+        id TEXT PRIMARY KEY,
+        applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
     `CREATE TRIGGER IF NOT EXISTS deduct_inventory_before_order_item
     BEFORE INSERT ON order_items
     WHEN (SELECT made_to_order FROM products WHERE id = NEW.product_id) = 0
@@ -564,10 +568,32 @@ function ensureDatabase(db) {
             await ensureEmptyProductSlots(db);
             await db.prepare(`
                 UPDATE products
-                SET order_limit = COALESCE(order_limit, 1),
+                SET order_limit = COALESCE(order_limit, 2),
                     category = 'baked'
                 WHERE id = 'hardo-bread'
             `).run();
+
+            const hardoBreadLimitMigrationId = "2026-09-02-hardo-bread-limit-2";
+            const hardoBreadLimitMigration = await db.prepare(`
+                SELECT id
+                FROM site_migrations
+                WHERE id = ?
+            `).bind(hardoBreadLimitMigrationId).first();
+
+            if (!hardoBreadLimitMigration) {
+                await db.batch([
+                    db.prepare(`
+                        UPDATE products
+                        SET order_limit = 2
+                        WHERE id = 'hardo-bread' AND order_limit = 1
+                    `),
+                    db.prepare(`
+                        INSERT INTO site_migrations (id)
+                        VALUES (?)
+                        ON CONFLICT(id) DO NOTHING
+                    `).bind(hardoBreadLimitMigrationId)
+                ]);
+            }
 
             const donationColumns = await db.prepare("PRAGMA table_info(donations)").all();
             const donationColumnNames = new Set(donationColumns.results.map(function (column) {

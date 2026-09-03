@@ -67,6 +67,11 @@ CREATE TABLE IF NOT EXISTS blocked_customers (
     CHECK (customer_name <> '' OR email <> '' OR phone <> '' OR household <> '')
 );
 
+CREATE TABLE IF NOT EXISTS site_migrations (
+    id TEXT PRIMARY KEY,
+    applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS support_images (
     id TEXT PRIMARY KEY,
     image_key TEXT NOT NULL DEFAULT '',
@@ -208,7 +213,7 @@ SET price_cents = 500, active = 1
 WHERE id = 'hardo-bread' AND price_cents = 0;
 
 UPDATE products
-SET order_limit = 1
+SET order_limit = 2
 WHERE id = 'hardo-bread' AND order_limit IS NULL;
 
 UPDATE products
