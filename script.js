@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let applyOrderProductSearch = function () {};
     let syncOrderFormFromBasket = function () {};
     let currentProductMap = new Map();
+    let siteContentPromise;
     const basketStorageKey = "sbg-basket-v1";
 
     function readBasket() {
@@ -37,6 +38,69 @@ document.addEventListener("DOMContentLoaded", function () {
             // The basket still works for this visit if browser storage is unavailable.
         }
     }
+
+    function automaticThemeForDate(date = new Date()) {
+        const month = Number.parseInt(new Intl.DateTimeFormat("en-CA", {
+            timeZone: "America/Toronto",
+            month: "2-digit"
+        }).format(date), 10);
+
+        if (month >= 3 && month <= 5) {
+            return "spring";
+        }
+
+        if (month >= 6 && month <= 8) {
+            return "summer";
+        }
+
+        if (month >= 9 && month <= 11) {
+            return "autumn";
+        }
+
+        return "winter";
+    }
+
+    function applySiteTheme(mode, effectiveTheme) {
+        const allowedThemes = new Set(["spring", "summer", "autumn", "winter"]);
+        const normalizedMode = mode === "automatic" || allowedThemes.has(mode)
+            ? mode
+            : "automatic";
+        const resolvedTheme = allowedThemes.has(effectiveTheme)
+            ? effectiveTheme
+            : (normalizedMode === "automatic" ? automaticThemeForDate() : normalizedMode);
+
+        document.documentElement.dataset.themeMode = normalizedMode;
+        document.documentElement.dataset.siteTheme = resolvedTheme;
+    }
+
+    function fetchSiteContent() {
+        if (!siteContentPromise) {
+            siteContentPromise = fetch("/api/site-content", {
+                headers: { "Accept": "application/json" },
+                cache: "no-store"
+            }).then(function (response) {
+                if (!response.ok) {
+                    throw new Error("Website settings could not be loaded.");
+                }
+
+                return response.json();
+            });
+        }
+
+        return siteContentPromise;
+    }
+
+    async function loadPublishedTheme() {
+        try {
+            const result = await fetchSiteContent();
+            const theme = result.theme || {};
+            applySiteTheme(theme.mode, theme.effectiveTheme);
+        } catch (_error) {
+            applySiteTheme("automatic");
+        }
+    }
+
+    loadPublishedTheme();
 
     function createSearchControl(id, labelText, placeholder) {
         const container = document.createElement("div");
@@ -194,16 +258,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         try {
-            const response = await fetch("/api/site-content", {
-                headers: { "Accept": "application/json" },
-                cache: "no-store"
-            });
-
-            if (!response.ok) {
-                throw new Error("Home page images could not be loaded.");
-            }
-
-            const result = await response.json();
+            const result = await fetchSiteContent();
 
             if (Array.isArray(result.carousel) && result.carousel.length > 0) {
                 slidesContainer.replaceChildren();
@@ -232,16 +287,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         try {
-            const response = await fetch("/api/site-content", {
-                headers: { "Accept": "application/json" },
-                cache: "no-store"
-            });
-
-            if (!response.ok) {
-                throw new Error("Support page images could not be loaded.");
-            }
-
-            const result = await response.json();
+            const result = await fetchSiteContent();
 
             if (Array.isArray(result.supportImages) && result.supportImages.length > 0) {
                 supportImagesContainer.replaceChildren();

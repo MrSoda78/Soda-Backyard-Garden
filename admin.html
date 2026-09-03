@@ -6,7 +6,7 @@
     <link rel="icon" type="image/png" href="favicons/admin.png">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <title>SBG | Admin</title>
-    <link rel="stylesheet" href="style.css?v=20260902-basket-desktop">
+    <link rel="stylesheet" href="style.css?v=20260902-seasonal-themes">
 </head>
 <body class="admin-page">
     <header>
@@ -42,6 +42,7 @@
                             <button type="button" class="admin-tab" id="inventoryTab" role="tab" aria-selected="false" aria-controls="inventoryPanel">Inventory</button>
                             <button type="button" class="admin-tab" id="homeTab" role="tab" aria-selected="false" aria-controls="homePanel">Home Page</button>
                             <button type="button" class="admin-tab" id="supportTab" role="tab" aria-selected="false" aria-controls="supportPanel">Support Page</button>
+                            <button type="button" class="admin-tab" id="themeTab" role="tab" aria-selected="false" aria-controls="themePanel">Website Theme</button>
                             <button type="button" class="admin-tab" id="salesTab" role="tab" aria-selected="false" aria-controls="salesPanel">Sales</button>
                             <button type="button" class="admin-tab" id="blockedTab" role="tab" aria-selected="false" aria-controls="blockedPanel">Blocked Customers</button>
                         </div>
@@ -337,6 +338,73 @@
                         <div id="supportImageItems" class="admin-carousel-list" aria-live="polite"></div>
                     </section>
 
+                    <section id="themePanel" role="tabpanel" aria-labelledby="themeTab" hidden>
+                        <div class="admin-toolbar">
+                            <div>
+                                <h2>Website Theme</h2>
+                                <p>Preview a seasonal colour scheme here before publishing it across the garden website.</p>
+                            </div>
+                        </div>
+
+                        <div class="admin-theme-card">
+                            <p id="themePublishedStatus" class="theme-published-status">Loading the published theme...</p>
+                            <fieldset class="theme-options">
+                                <legend>Choose a theme to preview</legend>
+                                <div class="theme-options-grid">
+                                    <label class="theme-option-card">
+                                        <input type="radio" name="websiteTheme" value="automatic">
+                                        <span class="theme-option-copy">
+                                            <strong>Automatic</strong>
+                                            <small>Changes with the Toronto calendar.</small>
+                                        </span>
+                                        <span class="theme-swatches theme-swatches-automatic" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                                    </label>
+                                    <label class="theme-option-card">
+                                        <input type="radio" name="websiteTheme" value="spring">
+                                        <span class="theme-option-copy">
+                                            <strong>Spring</strong>
+                                            <small>Fresh greens with blossom pink.</small>
+                                        </span>
+                                        <span class="theme-swatches theme-swatches-spring" aria-hidden="true"><i></i><i></i><i></i></span>
+                                    </label>
+                                    <label class="theme-option-card">
+                                        <input type="radio" name="websiteTheme" value="summer">
+                                        <span class="theme-option-copy">
+                                            <strong>Summer</strong>
+                                            <small>Garden green with sunflower gold.</small>
+                                        </span>
+                                        <span class="theme-swatches theme-swatches-summer" aria-hidden="true"><i></i><i></i><i></i></span>
+                                    </label>
+                                    <label class="theme-option-card">
+                                        <input type="radio" name="websiteTheme" value="autumn">
+                                        <span class="theme-option-copy">
+                                            <strong>Autumn</strong>
+                                            <small>Olive, harvest amber and warm rust.</small>
+                                        </span>
+                                        <span class="theme-swatches theme-swatches-autumn" aria-hidden="true"><i></i><i></i><i></i></span>
+                                    </label>
+                                    <label class="theme-option-card">
+                                        <input type="radio" name="websiteTheme" value="winter">
+                                        <span class="theme-option-copy">
+                                            <strong>Winter</strong>
+                                            <small>Evergreen, cream and muted blue.</small>
+                                        </span>
+                                        <span class="theme-swatches theme-swatches-winter" aria-hidden="true"><i></i><i></i><i></i></span>
+                                    </label>
+                                </div>
+                            </fieldset>
+
+                            <div class="theme-preview-note" id="themePreviewNote" aria-live="polite">
+                                Choose a theme above to preview it on this Admin page.
+                            </div>
+                            <div class="admin-toolbar-actions theme-actions">
+                                <button type="button" class="button secondary" id="cancelThemePreview" disabled>Cancel Preview</button>
+                                <button type="button" class="button" id="saveTheme" disabled>Save Theme</button>
+                            </div>
+                            <p id="themeMessage" class="form-message" aria-live="polite"></p>
+                        </div>
+                    </section>
+
                     <section id="salesPanel" role="tabpanel" aria-labelledby="salesTab" hidden>
                         <div class="admin-toolbar">
                             <div>
@@ -526,6 +594,6 @@
         </section>
     </main>
 
-    <script src="admin.js?v=20260823-two-product-images"></script>
+    <script src="admin.js?v=20260902-seasonal-themes"></script>
 </body>
 </html>

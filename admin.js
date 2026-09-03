@@ -16,12 +16,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const inventoryTab = document.getElementById("inventoryTab");
     const homeTab = document.getElementById("homeTab");
     const supportTab = document.getElementById("supportTab");
+    const themeTab = document.getElementById("themeTab");
     const salesTab = document.getElementById("salesTab");
     const blockedTab = document.getElementById("blockedTab");
     const ordersPanel = document.getElementById("ordersPanel");
     const inventoryPanel = document.getElementById("inventoryPanel");
     const homePanel = document.getElementById("homePanel");
     const supportPanel = document.getElementById("supportPanel");
+    const themePanel = document.getElementById("themePanel");
     const salesPanel = document.getElementById("salesPanel");
     const blockedPanel = document.getElementById("blockedPanel");
     const inventoryRows = document.getElementById("inventoryRows");
@@ -63,11 +65,20 @@ document.addEventListener("DOMContentLoaded", function () {
     const supportProductImage = document.getElementById("supportProductImage");
     const refreshSupportImagesButton = document.getElementById("refreshSupportImages");
     const saveSupportImagesButton = document.getElementById("saveSupportImages");
+    const themeOptions = Array.from(document.querySelectorAll('input[name="websiteTheme"]'));
+    const themePublishedStatus = document.getElementById("themePublishedStatus");
+    const themePreviewNote = document.getElementById("themePreviewNote");
+    const themeMessage = document.getElementById("themeMessage");
+    const cancelThemePreviewButton = document.getElementById("cancelThemePreview");
+    const saveThemeButton = document.getElementById("saveTheme");
     let offlineQuantityInputs = [];
     let offlineProductsLoaded = false;
     let orderAdjustmentProducts = [];
     let carouselLoaded = false;
     let supportImagesLoaded = false;
+    let themeLoaded = false;
+    let publishedThemeMode = "automatic";
+    let publishedEffectiveTheme = "summer";
     let activeOrderStatusFilter = "pending";
     const collapsedInventorySections = new Set();
     const expandedMobileInventoryProducts = new Set();
@@ -93,6 +104,100 @@ document.addEventListener("DOMContentLoaded", function () {
         donationForm.reset();
         donationForm.receivedAt.value = localDateValue();
         donationForm.receivedAt.max = localDateValue();
+    }
+
+    const themeNames = {
+        automatic: "Automatic",
+        spring: "Spring",
+        summer: "Summer",
+        autumn: "Autumn",
+        winter: "Winter"
+    };
+
+    function automaticThemeForDate(date = new Date()) {
+        const month = Number.parseInt(new Intl.DateTimeFormat("en-CA", {
+            timeZone: "America/Toronto",
+            month: "2-digit"
+        }).format(date), 10);
+
+        if (month >= 3 && month <= 5) {
+            return "spring";
+        }
+
+        if (month >= 6 && month <= 8) {
+            return "summer";
+        }
+
+        if (month >= 9 && month <= 11) {
+            return "autumn";
+        }
+
+        return "winter";
+    }
+
+    function effectiveThemeForMode(mode) {
+        return mode === "automatic" ? automaticThemeForDate() : mode;
+    }
+
+    function applyAdminTheme(mode, effectiveTheme) {
+        const resolvedTheme = effectiveTheme || effectiveThemeForMode(mode);
+        document.documentElement.dataset.themeMode = mode;
+        document.documentElement.dataset.siteTheme = resolvedTheme;
+    }
+
+    function selectThemeOption(mode) {
+        themeOptions.forEach(function (option) {
+            option.checked = option.value === mode;
+        });
+    }
+
+    function updatePublishedThemeStatus() {
+        themePublishedStatus.textContent = publishedThemeMode === "automatic"
+            ? "Published: Automatic — currently showing " + themeNames[publishedEffectiveTheme] + "."
+            : "Published: " + themeNames[publishedThemeMode] + ".";
+    }
+
+    function showThemeSelection(mode) {
+        const effectiveTheme = effectiveThemeForMode(mode);
+        const hasChanges = mode !== publishedThemeMode;
+        applyAdminTheme(mode, effectiveTheme);
+        saveThemeButton.disabled = !hasChanges;
+        cancelThemePreviewButton.disabled = !hasChanges;
+        themePreviewNote.textContent = hasChanges
+            ? "Previewing " + themeNames[mode] +
+                (mode === "automatic" ? " (currently " + themeNames[effectiveTheme] + ")" : "") +
+                ". Only this Admin page can see the preview until you save it."
+            : "This Admin page is showing the published " + themeNames[publishedThemeMode] +
+                (publishedThemeMode === "automatic"
+                    ? " theme (currently " + themeNames[publishedEffectiveTheme] + ")"
+                    : " theme") + ".";
+        setMessage(themeMessage, "", "");
+    }
+
+    async function loadTheme() {
+        setMessage(themeMessage, "Loading the website theme...", "success");
+        const response = await fetch("/api/admin/theme", {
+            headers: { "Accept": "application/json" },
+            cache: "no-store"
+        });
+
+        if (response.status === 401) {
+            showLogin();
+            return;
+        }
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || "The website theme could not be loaded.");
+        }
+
+        publishedThemeMode = result.theme.mode;
+        publishedEffectiveTheme = result.theme.effectiveTheme;
+        selectThemeOption(publishedThemeMode);
+        updatePublishedThemeStatus();
+        showThemeSelection(publishedThemeMode);
+        themeLoaded = true;
     }
 
     function showLogin(message) {
@@ -340,6 +445,7 @@ document.addEventListener("DOMContentLoaded", function () {
             inventory: { tab: inventoryTab, panel: inventoryPanel },
             home: { tab: homeTab, panel: homePanel },
             support: { tab: supportTab, panel: supportPanel },
+            theme: { tab: themeTab, panel: themePanel },
             sales: { tab: salesTab, panel: salesPanel },
             blocked: { tab: blockedTab, panel: blockedPanel }
         };
@@ -362,6 +468,10 @@ document.addEventListener("DOMContentLoaded", function () {
         } else if (panelName === "support") {
             loadSupportImages().catch(function (error) {
                 setMessage(supportImagesMessage, error.message, "error");
+            });
+        } else if (panelName === "theme" && !themeLoaded) {
+            loadTheme().catch(function (error) {
+                setMessage(themeMessage, error.message, "error");
             });
         } else if (panelName === "sales") {
             loadSales().catch(function (error) {
@@ -2147,6 +2257,14 @@ document.addEventListener("DOMContentLoaded", function () {
                 setMessage(offlineOrderMessage, error.message, "error");
             }
         }
+
+        if (!themeLoaded) {
+            try {
+                await loadTheme();
+            } catch (error) {
+                setMessage(themeMessage, error.message, "error");
+            }
+        }
     }
 
     loginForm.addEventListener("submit", async function (event) {
@@ -2534,12 +2652,74 @@ document.addEventListener("DOMContentLoaded", function () {
         switchPanel("support");
     });
 
+    themeTab.addEventListener("click", function () {
+        switchPanel("theme");
+    });
+
     salesTab.addEventListener("click", function () {
         switchPanel("sales");
     });
 
     blockedTab.addEventListener("click", function () {
         switchPanel("blocked");
+    });
+
+    themeOptions.forEach(function (option) {
+        option.addEventListener("change", function () {
+            if (option.checked) {
+                showThemeSelection(option.value);
+            }
+        });
+    });
+
+    cancelThemePreviewButton.addEventListener("click", function () {
+        selectThemeOption(publishedThemeMode);
+        applyAdminTheme(publishedThemeMode, publishedEffectiveTheme);
+        showThemeSelection(publishedThemeMode);
+        setMessage(themeMessage, "Preview cancelled. The published theme has been restored.", "success");
+    });
+
+    saveThemeButton.addEventListener("click", async function () {
+        const selectedOption = themeOptions.find(function (option) {
+            return option.checked;
+        });
+
+        if (!selectedOption) {
+            setMessage(themeMessage, "Choose a website theme before saving.", "error");
+            return;
+        }
+
+        saveThemeButton.disabled = true;
+        cancelThemePreviewButton.disabled = true;
+        setMessage(themeMessage, "Publishing the website theme...", "success");
+
+        try {
+            const response = await fetch("/api/admin/theme", {
+                method: "PUT",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ mode: selectedOption.value })
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The website theme could not be saved.");
+            }
+
+            publishedThemeMode = result.theme.mode;
+            publishedEffectiveTheme = result.theme.effectiveTheme;
+            applyAdminTheme(publishedThemeMode, publishedEffectiveTheme);
+            selectThemeOption(publishedThemeMode);
+            updatePublishedThemeStatus();
+            showThemeSelection(publishedThemeMode);
+            setMessage(themeMessage, result.message, "success");
+        } catch (error) {
+            saveThemeButton.disabled = false;
+            cancelThemePreviewButton.disabled = false;
+            setMessage(themeMessage, error.message, "error");
+        }
     });
 
     exportSalesButton.addEventListener("click", exportSalesWorkbook);
@@ -3093,6 +3273,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     logoutButton.addEventListener("click", async function () {
         await fetch("/api/admin/logout", { method: "POST" });
+        themeLoaded = false;
         showLogin();
     });
 

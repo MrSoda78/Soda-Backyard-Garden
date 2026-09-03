@@ -72,6 +72,16 @@ CREATE TABLE IF NOT EXISTS site_migrations (
     applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS site_settings (
+    setting_key TEXT PRIMARY KEY,
+    setting_value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO site_settings (setting_key, setting_value)
+VALUES ('theme_mode', 'automatic')
+ON CONFLICT(setting_key) DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS support_images (
     id TEXT PRIMARY KEY,
     image_key TEXT NOT NULL DEFAULT '',

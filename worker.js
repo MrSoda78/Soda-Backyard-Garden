@@ -108,6 +108,14 @@ const SCHEMA_STATEMENTS = [
         id TEXT PRIMARY KEY,
         applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
+    `CREATE TABLE IF NOT EXISTS site_settings (
+        setting_key TEXT PRIMARY KEY,
+        setting_value TEXT NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `INSERT INTO site_settings (setting_key, setting_value)
+    VALUES ('theme_mode', 'automatic')
+    ON CONFLICT(setting_key) DO NOTHING`,
     `CREATE TRIGGER IF NOT EXISTS deduct_inventory_before_order_item
     BEFORE INSERT ON order_items
     WHEN (SELECT made_to_order FROM products WHERE id = NEW.product_id) = 0
@@ -454,6 +462,45 @@ function jsonResponse(body, status = 200) {
             "X-Content-Type-Options": "nosniff"
         }
     });
+}
+
+const THEME_MODES = new Set(["automatic", "spring", "summer", "autumn", "winter"]);
+
+function normalizeThemeMode(value) {
+    const mode = String(value || "").trim().toLowerCase();
+    return THEME_MODES.has(mode) ? mode : "automatic";
+}
+
+function automaticThemeForDate(date = new Date()) {
+    const month = Number.parseInt(torontoDateKey(date).slice(5, 7), 10);
+
+    if (month >= 3 && month <= 5) {
+        return "spring";
+    }
+
+    if (month >= 6 && month <= 8) {
+        return "summer";
+    }
+
+    if (month >= 9 && month <= 11) {
+        return "autumn";
+    }
+
+    return "winter";
+}
+
+async function getSiteTheme(db) {
+    const setting = await db.prepare(`
+        SELECT setting_value
+        FROM site_settings
+        WHERE setting_key = 'theme_mode'
+    `).first();
+    const mode = normalizeThemeMode(setting && setting.setting_value);
+
+    return {
+        mode,
+        effectiveTheme: mode === "automatic" ? automaticThemeForDate() : mode
+    };
 }
 
 function ensureDatabase(db) {
@@ -864,11 +911,46 @@ async function getSupportImages(db, includeInactive = false) {
 }
 
 async function handleSiteContent(db) {
-    const [carousel, supportImages] = await Promise.all([
+    const [carousel, supportImages, theme] = await Promise.all([
         getCarouselSlides(db),
-        getSupportImages(db)
+        getSupportImages(db),
+        getSiteTheme(db)
     ]);
-    return jsonResponse({ carousel, supportImages });
+    return jsonResponse({ carousel, supportImages, theme });
+}
+
+async function handleAdminTheme(db) {
+    return jsonResponse({ theme: await getSiteTheme(db) });
+}
+
+async function handleAdminThemeUpdate(request, db) {
+    let body;
+
+    try {
+        body = await request.json();
+    } catch (_error) {
+        return jsonResponse({ error: "Choose a website theme before saving." }, 400);
+    }
+
+    const requestedMode = String(body.mode || "").trim().toLowerCase();
+
+    if (!THEME_MODES.has(requestedMode)) {
+        return jsonResponse({ error: "That website theme was not recognized." }, 400);
+    }
+
+    await db.prepare(`
+        INSERT INTO site_settings (setting_key, setting_value, updated_at)
+        VALUES ('theme_mode', ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(setting_key) DO UPDATE SET
+            setting_value = excluded.setting_value,
+            updated_at = CURRENT_TIMESTAMP
+    `).bind(requestedMode).run();
+
+    return jsonResponse({
+        success: true,
+        message: "Website theme published.",
+        theme: await getSiteTheme(db)
+    });
 }
 
 async function sendBrevoOrderReceipt(env, order) {
@@ -3221,6 +3303,14 @@ export default {
                         env.MEDIA_BUCKET,
                         decodeURIComponent(supportImageMatch[1])
                     );
+                }
+
+                if (url.pathname === "/api/admin/theme" && request.method === "GET") {
+                    return handleAdminTheme(env.DB);
+                }
+
+                if (url.pathname === "/api/admin/theme" && request.method === "PUT") {
+                    return handleAdminThemeUpdate(request, env.DB);
                 }
 
                 if (url.pathname === "/api/admin/sales" && request.method === "GET") {
