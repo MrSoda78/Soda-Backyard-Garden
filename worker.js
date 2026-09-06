@@ -1,5 +1,11 @@
 import { buildSalesWorkbook } from "./sales-workbook.js";
 
+function supportsFrozenOption(product) {
+    return Boolean(product) && (
+        product.id === "callaloo" || /\bbeans?\b/i.test(product.name || "")
+    );
+}
+
 const SCHEMA_STATEMENTS = [
     `CREATE TABLE IF NOT EXISTS products (
         id TEXT PRIMARY KEY,
@@ -1218,9 +1224,24 @@ async function createOrderRecord(body, db, options = {}) {
     const household = cleanText(body.household, 200).replace(/\s+/g, " ");
     const deliveryDay = cleanText(body.deliveryDay, 20);
     const notes = cleanText(body.notes, 1000);
+    const frozenProductIds = new Set();
     const allowedDeliveryDays = new Set([
         "Tuesday", "Wednesday", "Thursday", "Friday", "To be confirmed"
     ]);
+
+    if (body.frozenItems !== undefined && !Array.isArray(body.frozenItems)) {
+        return jsonResponse({ error: "The frozen-item choices were not valid." }, 400);
+    }
+
+    for (const submittedProductId of (body.frozenItems || [])) {
+        const productId = cleanText(submittedProductId, 100);
+
+        if (!productId || frozenProductIds.size >= 50) {
+            return jsonResponse({ error: "The frozen-item choices were not valid." }, 400);
+        }
+
+        frozenProductIds.add(productId);
+    }
 
     if (customerName.length < 2) {
         return jsonResponse({ error: "Please enter your full name." }, 400);
@@ -1273,6 +1294,18 @@ async function createOrderRecord(body, db, options = {}) {
     }));
     const requestedItems = [];
 
+    for (const productId of frozenProductIds) {
+        const product = productMap.get(productId);
+
+        if (
+            !product ||
+            !supportsFrozenOption(product) ||
+            !Object.prototype.hasOwnProperty.call(body.items, productId)
+        ) {
+            return jsonResponse({ error: "Frozen is not available for one of the selected items." }, 400);
+        }
+    }
+
     for (const [productId, value] of Object.entries(body.items)) {
         const quantity = Number(value);
         const product = productMap.get(productId);
@@ -1287,7 +1320,11 @@ async function createOrderRecord(body, db, options = {}) {
             }, 400);
         }
 
-        requestedItems.push({ product, quantity });
+        requestedItems.push({
+            product,
+            quantity,
+            displayName: product.name + (frozenProductIds.has(productId) ? " — Frozen" : "")
+        });
     }
 
     if (requestedItems.length === 0) {
@@ -1332,7 +1369,7 @@ async function createOrderRecord(body, db, options = {}) {
             `).bind(
                 orderId,
                 item.product.id,
-                item.product.name,
+                item.displayName,
                 item.product.priceCents,
                 item.quantity,
                 item.product.priceCents * item.quantity
@@ -1355,7 +1392,7 @@ async function createOrderRecord(body, db, options = {}) {
 
     const responseItems = requestedItems.map(function (item) {
         return {
-            name: item.product.name,
+            name: item.displayName,
             quantity: item.quantity,
             lineTotal: "$" + ((item.product.priceCents * item.quantity) / 100).toFixed(2)
         };

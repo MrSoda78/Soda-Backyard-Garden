@@ -1926,6 +1926,39 @@ footer a:hover {
     text-align: center;
 }
 
+.product-row-controls {
+    display: grid;
+    width: 100px;
+    gap: 7px;
+}
+
+.product-row-controls > input[type="number"] {
+    width: 100%;
+}
+
+.product-row .frozen-option {
+    display: flex;
+    min-height: 32px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 5px 7px;
+    border: 1px solid var(--green-border);
+    border-radius: 7px;
+    color: var(--green-dark);
+    background: var(--green-light);
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.product-row .frozen-option input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    margin: 0;
+    accent-color: var(--green-dark);
+}
+
 /* ==========================================================
    ORDER TOTAL
 ========================================================== */
@@ -3603,6 +3636,12 @@ footer a:hover {
     .product-row {
         grid-template-columns: 1fr;
         gap: 8px;
+    }
+
+    .product-row-controls {
+        width: 100%;
+        grid-template-columns: minmax(90px, 110px) minmax(120px, 1fr);
+        align-items: center;
     }
 
     .order-form {

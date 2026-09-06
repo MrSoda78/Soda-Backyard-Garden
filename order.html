@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="favicons/order.png">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <title>SBG | Order</title>
-    <link rel="stylesheet" href="style.css?v=20260903-theme-ready">
+    <link rel="stylesheet" href="style.css?v=20260905-frozen-options">
 </head>
 <body>
 
@@ -103,7 +103,10 @@
 
                                     <div class="product-row">
                                         <label for="callalooQty">Callaloo, vacuum sealed (<span data-price-display="callaloo">$6.00 per pack</span>) <small data-order-stock="callaloo">Checking availability...</small></label>
-                                        <input type="number" id="callalooQty" name="callalooQty" min="0" max="11" value="0" data-price="6" data-product-id="callaloo">
+                                        <div class="product-row-controls">
+                                            <input type="number" id="callalooQty" name="callalooQty" min="0" max="11" value="0" data-price="6" data-product-id="callaloo">
+                                            <label class="frozen-option"><input type="checkbox" data-frozen-product-id="callaloo"> Frozen</label>
+                                        </div>
                                     </div>
 
                                     <div class="product-row product-row-coming-soon">
@@ -233,22 +236,34 @@
 
                                     <div class="product-row">
                                         <label for="dragonTongueBeansQty">Dragon Tongue (<span data-price-display="dragon-tongue-beans">$6.00 per litre</span>) <small data-order-stock="dragon-tongue-beans">Availability confirmed with order</small></label>
-                                        <input type="number" id="dragonTongueBeansQty" name="dragonTongueBeansQty" min="0" value="0" data-price="6" data-product-id="dragon-tongue-beans">
+                                        <div class="product-row-controls">
+                                            <input type="number" id="dragonTongueBeansQty" name="dragonTongueBeansQty" min="0" value="0" data-price="6" data-product-id="dragon-tongue-beans">
+                                            <label class="frozen-option"><input type="checkbox" data-frozen-product-id="dragon-tongue-beans"> Frozen</label>
+                                        </div>
                                     </div>
 
                                     <div class="product-row">
                                         <label for="purpleBeansQty">Purple (<span data-price-display="purple-beans">$6.00 per litre</span>) <small data-order-stock="purple-beans">Availability confirmed with order</small></label>
-                                        <input type="number" id="purpleBeansQty" name="purpleBeansQty" min="0" value="0" data-price="6" data-product-id="purple-beans">
+                                        <div class="product-row-controls">
+                                            <input type="number" id="purpleBeansQty" name="purpleBeansQty" min="0" value="0" data-price="6" data-product-id="purple-beans">
+                                            <label class="frozen-option"><input type="checkbox" data-frozen-product-id="purple-beans"> Frozen</label>
+                                        </div>
                                     </div>
 
                                     <div class="product-row">
                                         <label for="greenBeansQty">Green (<span data-price-display="green-beans">$6.00 per litre</span>) <small data-order-stock="green-beans">Availability confirmed with order</small></label>
-                                        <input type="number" id="greenBeansQty" name="greenBeansQty" min="0" value="0" data-price="6" data-product-id="green-beans">
+                                        <div class="product-row-controls">
+                                            <input type="number" id="greenBeansQty" name="greenBeansQty" min="0" value="0" data-price="6" data-product-id="green-beans">
+                                            <label class="frozen-option"><input type="checkbox" data-frozen-product-id="green-beans"> Frozen</label>
+                                        </div>
                                     </div>
 
                                     <div class="product-row">
                                         <label for="yellowBeansQty">Yellow (<span data-price-display="yellow-beans">$6.00 per litre</span>) <small data-order-stock="yellow-beans">Availability confirmed with order</small></label>
-                                        <input type="number" id="yellowBeansQty" name="yellowBeansQty" min="0" value="0" data-price="6" data-product-id="yellow-beans">
+                                        <div class="product-row-controls">
+                                            <input type="number" id="yellowBeansQty" name="yellowBeansQty" min="0" value="0" data-price="6" data-product-id="yellow-beans">
+                                            <label class="frozen-option"><input type="checkbox" data-frozen-product-id="yellow-beans"> Frozen</label>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -420,7 +435,7 @@
         </div>
     </footer>
 
-    <script src="script.js?v=20260903-theme-ready"></script>
+    <script src="script.js?v=20260905-frozen-options"></script>
 
 </body>
 </html>

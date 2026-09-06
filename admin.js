@@ -89,6 +89,24 @@ document.addEventListener("DOMContentLoaded", function () {
         return "$" + (cents / 100).toFixed(2);
     }
 
+    function supportsFrozenOption(product) {
+        return Boolean(product) && (
+            product.id === "callaloo" || /\bbeans?\b/i.test(product.name || "")
+        );
+    }
+
+    function createFrozenOption(product) {
+        const label = document.createElement("label");
+        label.className = "frozen-option";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.dataset.frozenProductId = product.id;
+
+        label.append(checkbox, document.createTextNode("Frozen"));
+        return label;
+    }
+
     function setMessage(element, message, type) {
         element.textContent = message || "";
         element.className = "form-message" + (type ? " " + type : "");
@@ -406,7 +424,14 @@ document.addEventListener("DOMContentLoaded", function () {
                 input.max = maximumQuantity.toString();
                 input.disabled = maximumQuantity === 0;
 
-                row.append(label, input);
+                if (supportsFrozenOption(product)) {
+                    const controls = document.createElement("div");
+                    controls.className = "product-row-controls";
+                    controls.append(input, createFrozenOption(product));
+                    row.append(label, controls);
+                } else {
+                    row.append(label, input);
+                }
                 group.appendChild(row);
             });
 
@@ -2333,6 +2358,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 items[input.dataset.productId] = quantity;
             }
         });
+        const frozenItems = Array.from(
+            offlineOrderProducts.querySelectorAll("input[data-frozen-product-id]:checked")
+        ).map(function (checkbox) {
+            return checkbox.dataset.frozenProductId;
+        }).filter(function (productId) {
+            return Boolean(items[productId]);
+        });
 
         if (Object.keys(items).length === 0) {
             setMessage(offlineOrderMessage, "Select at least one product.", "error");
@@ -2358,7 +2390,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     deliveryDay: offlineOrderForm.deliveryDay.value,
                     paymentReceived: offlineOrderForm.paymentReceived.checked,
                     notes: offlineOrderForm.notes.value,
-                    items
+                    items,
+                    frozenItems
                 })
             });
             const result = await response.json();
