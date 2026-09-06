@@ -728,6 +728,43 @@ textarea:focus-visible {
     justify-content: stretch;
 }
 
+.basket-product-action.basket-product-action-with-preparation {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.basket-preparation-select {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+    margin: 0;
+    color: var(--green-dark);
+    font-size: 0.88rem;
+    font-weight: bold;
+}
+
+.basket-preparation-select select {
+    width: 100%;
+    min-height: 36px;
+    padding: 6px 30px 6px 9px;
+    border: 1px solid var(--green-border);
+    border-radius: 8px;
+    color: var(--text-main);
+    background: var(--white);
+    font: inherit;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.basket-preparation-select select:hover,
+.basket-preparation-select select:focus-visible {
+    border-color: var(--green-main);
+    outline: 3px solid rgba(47, 110, 58, 0.18);
+    outline-offset: 1px;
+}
+
 .basket-add-button {
     display: inline-flex;
     width: 100%;

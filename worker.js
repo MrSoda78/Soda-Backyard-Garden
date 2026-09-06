@@ -642,6 +642,28 @@ function ensureDatabase(db) {
                 ]);
             }
 
+            const zucchiniFrozenOptionMigrationId = "2026-09-05-zucchini-frozen-options";
+            const zucchiniFrozenOptionMigration = await db.prepare(`
+                SELECT id
+                FROM site_migrations
+                WHERE id = ?
+            `).bind(zucchiniFrozenOptionMigrationId).first();
+
+            if (!zucchiniFrozenOptionMigration) {
+                await db.batch([
+                    db.prepare(`
+                        UPDATE products
+                        SET frozen_option = 1
+                        WHERE id IN ('yellow-zucchini', 'green-zucchini', 'small-courgette')
+                    `),
+                    db.prepare(`
+                        INSERT INTO site_migrations (id)
+                        VALUES (?)
+                        ON CONFLICT(id) DO NOTHING
+                    `).bind(zucchiniFrozenOptionMigrationId)
+                ]);
+            }
+
             await db.prepare(PRODUCT_SLOT_INSERT).run();
             await ensureEmptyProductSlots(db);
             await db.prepare(`

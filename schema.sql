@@ -215,7 +215,8 @@ UPDATE products
 SET frozen_option = 1
 WHERE id IN (
     'callaloo', 'dragon-tongue-beans', 'purple-beans',
-    'green-beans', 'yellow-beans'
+    'green-beans', 'yellow-beans', 'yellow-zucchini',
+    'green-zucchini', 'small-courgette'
 );
 
 UPDATE products

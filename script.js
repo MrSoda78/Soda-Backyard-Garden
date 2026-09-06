@@ -9,7 +9,6 @@ document.addEventListener("DOMContentLoaded", function () {
     let applyProductPageSearch = function () {};
     let applyOrderProductSearch = function () {};
     let syncOrderFormFromBasket = function () {};
-    let syncPreparationOptions = function () {};
     let currentProductMap = new Map();
     let siteContentPromise;
     const basketStorageKey = "sbg-basket-v1";
@@ -104,6 +103,60 @@ document.addEventListener("DOMContentLoaded", function () {
 
         fieldset.append(legend, options);
         return fieldset;
+    }
+
+    function createBasketPreparationSelect(product) {
+        const label = document.createElement("label");
+        const labelText = document.createElement("span");
+        const select = document.createElement("select");
+
+        label.className = "basket-preparation-select";
+        label.dataset.preparationProductId = product.id;
+        labelText.textContent = "Preparation";
+        select.dataset.preparationProductId = product.id;
+        select.setAttribute("aria-label", "Choose Fresh or Frozen for " + product.name);
+
+        ["Fresh", "Frozen"].forEach(function (optionText) {
+            const option = document.createElement("option");
+            option.value = optionText.toLowerCase();
+            option.textContent = optionText;
+            select.appendChild(option);
+        });
+
+        select.value = frozenSelections.has(product.id) ? "frozen" : "fresh";
+        label.append(labelText, select);
+        return label;
+    }
+
+    function syncPreparationOptions() {
+        document.querySelectorAll(
+            "fieldset[data-preparation-product-id], .basket-preparation-select[data-preparation-product-id]"
+        ).forEach(function (control) {
+            const productId = control.dataset.preparationProductId;
+            const product = currentProductMap.get(productId);
+            const supported = supportsFrozenOption(product) && maximumBasketQuantity(product) > 0;
+            const selectedValue = frozenSelections.has(productId) ? "frozen" : "fresh";
+            control.hidden = !supported;
+            control.closest(".product-row")?.classList.toggle("product-row-with-preparation", supported);
+
+            if (control.matches("fieldset")) {
+                control.querySelectorAll("input[data-preparation-product-id]").forEach(function (radio) {
+                    radio.disabled = !supported;
+                    radio.checked = supported && radio.value === selectedValue;
+                });
+            } else {
+                const select = control.querySelector("select[data-preparation-product-id]");
+
+                if (select) {
+                    select.disabled = !supported;
+                    select.value = selectedValue;
+                }
+            }
+
+            if (product && !supported && frozenSelections.delete(productId)) {
+                saveFrozenSelections();
+            }
+        });
     }
 
     function automaticThemeForDate(date = new Date()) {
@@ -596,6 +649,11 @@ document.addEventListener("DOMContentLoaded", function () {
             return action;
         }
 
+        if (supportsFrozenOption(product)) {
+            action.classList.add("basket-product-action-with-preparation");
+            action.appendChild(createBasketPreparationSelect(product));
+        }
+
         if (quantity === 0) {
             const addButton = document.createElement("button");
             addButton.type = "button";
@@ -764,7 +822,29 @@ document.addEventListener("DOMContentLoaded", function () {
     function renderBasketDisplays(productMap) {
         renderProductBasketControls(productMap);
         updateReviewBasket(productMap);
+        syncPreparationOptions();
     }
+
+    document.addEventListener("change", function (event) {
+        if (!event.target.matches("[data-preparation-product-id]")) {
+            return;
+        }
+
+        if (event.target.matches('input[type="radio"]') && !event.target.checked) {
+            return;
+        }
+
+        const productId = event.target.dataset.preparationProductId;
+
+        if (event.target.value === "frozen") {
+            frozenSelections.add(productId);
+        } else {
+            frozenSelections.delete(productId);
+        }
+
+        saveFrozenSelections();
+        syncPreparationOptions();
+    });
 
     document.addEventListener("click", function (event) {
         const button = event.target.closest("[data-basket-action]");
@@ -1451,16 +1531,6 @@ document.addEventListener("DOMContentLoaded", function () {
         renderProductDescriptions(productMap);
         renderManagedProductImages(productMap);
 
-        document.querySelectorAll("[data-frozen-option-note]").forEach(function (note) {
-            const productIds = note.dataset.frozenOptionNote.split(",").map(function (productId) {
-                return productId.trim();
-            });
-            note.hidden = !productIds.some(function (productId) {
-                const product = productMap.get(productId);
-                return supportsFrozenOption(product) && maximumBasketQuantity(product) > 0;
-            });
-        });
-
         document.querySelectorAll("[data-stock]").forEach(function (element) {
             const product = productMap.get(element.dataset.stock);
 
@@ -1665,29 +1735,6 @@ document.addEventListener("DOMContentLoaded", function () {
         let isSubmitting = false;
         let validationFocusScheduled = false;
 
-        syncPreparationOptions = function () {
-            orderForm.querySelectorAll("[data-preparation-product-id]").forEach(function (element) {
-                if (!element.matches("fieldset")) {
-                    return;
-                }
-
-                const productId = element.dataset.preparationProductId;
-                const product = currentProductMap.get(productId);
-                const supported = supportsFrozenOption(product) && maximumBasketQuantity(product) > 0;
-                const frozenSelected = frozenSelections.has(productId);
-                element.hidden = !supported;
-                element.closest(".product-row")?.classList.toggle("product-row-with-preparation", supported);
-
-                element.querySelectorAll("input[data-preparation-product-id]").forEach(function (radio) {
-                    radio.disabled = !supported;
-                    radio.checked = supported && radio.value === (frozenSelected ? "frozen" : "fresh");
-                });
-
-                if (!supported && frozenSelections.delete(productId)) {
-                    saveFrozenSelections();
-                }
-            });
-        };
         syncPreparationOptions();
 
         function getFieldLabel(field) {
@@ -1922,17 +1969,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
 
-            if (event.target.matches("input[data-preparation-product-id]") && event.target.checked) {
-                const productId = event.target.dataset.preparationProductId;
-
-                if (event.target.value === "frozen") {
-                    frozenSelections.add(productId);
-                } else {
-                    frozenSelections.delete(productId);
-                }
-
-                saveFrozenSelections();
-            }
         });
 
         function clearOrderSelections() {

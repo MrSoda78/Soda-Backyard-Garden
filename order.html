@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="favicons/order.png">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <title>SBG | Order</title>
-    <link rel="stylesheet" href="style.css?v=20260905-preparation-choice">
+    <link rel="stylesheet" href="style.css?v=20260905-product-preparation">
 </head>
 <body>
 
@@ -170,17 +170,44 @@
 
                                     <div class="product-row">
                                         <label for="yellowZucchiniQty">Yellow (<span data-price-display="yellow-zucchini">$1.00 each</span>) <small data-order-stock="yellow-zucchini">Checking availability...</small></label>
-                                        <input type="number" id="yellowZucchiniQty" name="yellowZucchiniQty" min="0" max="8" value="0" data-price="1" data-product-id="yellow-zucchini">
+                                        <div class="product-row-controls">
+                                            <input type="number" id="yellowZucchiniQty" name="yellowZucchiniQty" min="0" max="8" value="0" data-price="1" data-product-id="yellow-zucchini">
+                                            <fieldset class="preparation-choice" data-preparation-product-id="yellow-zucchini" hidden>
+                                                <legend>Preparation</legend>
+                                                <div class="preparation-options">
+                                                    <label class="preparation-option"><input type="radio" name="yellowZucchiniPreparation" value="fresh" data-preparation-product-id="yellow-zucchini" checked> Fresh</label>
+                                                    <label class="preparation-option"><input type="radio" name="yellowZucchiniPreparation" value="frozen" data-preparation-product-id="yellow-zucchini"> Frozen</label>
+                                                </div>
+                                            </fieldset>
+                                        </div>
                                     </div>
 
                                     <div class="product-row">
                                         <label for="greenZucchiniQty">Green (<span data-price-display="green-zucchini">$1.00 each</span>) <small data-order-stock="green-zucchini">Checking availability...</small></label>
-                                        <input type="number" id="greenZucchiniQty" name="greenZucchiniQty" min="0" max="6" value="0" data-price="1" data-product-id="green-zucchini">
+                                        <div class="product-row-controls">
+                                            <input type="number" id="greenZucchiniQty" name="greenZucchiniQty" min="0" max="6" value="0" data-price="1" data-product-id="green-zucchini">
+                                            <fieldset class="preparation-choice" data-preparation-product-id="green-zucchini" hidden>
+                                                <legend>Preparation</legend>
+                                                <div class="preparation-options">
+                                                    <label class="preparation-option"><input type="radio" name="greenZucchiniPreparation" value="fresh" data-preparation-product-id="green-zucchini" checked> Fresh</label>
+                                                    <label class="preparation-option"><input type="radio" name="greenZucchiniPreparation" value="frozen" data-preparation-product-id="green-zucchini"> Frozen</label>
+                                                </div>
+                                            </fieldset>
+                                        </div>
                                     </div>
 
                                     <div class="product-row">
                                         <label for="courgetteQty">Small Courgette (<span data-price-display="small-courgette">$1.00 each</span>) <small data-order-stock="small-courgette">Checking availability...</small></label>
-                                        <input type="number" id="courgetteQty" name="courgetteQty" min="0" max="2" value="0" data-price="1" data-product-id="small-courgette">
+                                        <div class="product-row-controls">
+                                            <input type="number" id="courgetteQty" name="courgetteQty" min="0" max="2" value="0" data-price="1" data-product-id="small-courgette">
+                                            <fieldset class="preparation-choice" data-preparation-product-id="small-courgette" hidden>
+                                                <legend>Preparation</legend>
+                                                <div class="preparation-options">
+                                                    <label class="preparation-option"><input type="radio" name="courgettePreparation" value="fresh" data-preparation-product-id="small-courgette" checked> Fresh</label>
+                                                    <label class="preparation-option"><input type="radio" name="courgettePreparation" value="frozen" data-preparation-product-id="small-courgette"> Frozen</label>
+                                                </div>
+                                            </fieldset>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -465,7 +492,7 @@
         </div>
     </footer>
 
-    <script src="script.js?v=20260905-preparation-choice"></script>
+    <script src="script.js?v=20260905-product-preparation"></script>
 
 </body>
 </html>
