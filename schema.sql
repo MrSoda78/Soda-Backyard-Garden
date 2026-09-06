@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS products (
     description TEXT NOT NULL DEFAULT '',
     category TEXT NOT NULL DEFAULT '',
     is_slot INTEGER NOT NULL DEFAULT 0 CHECK (is_slot IN (0, 1)),
-    order_limit INTEGER CHECK (order_limit IS NULL OR order_limit > 0)
+    order_limit INTEGER CHECK (order_limit IS NULL OR order_limit > 0),
+    frozen_option INTEGER NOT NULL DEFAULT 0 CHECK (frozen_option IN (0, 1))
 );
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -209,6 +210,13 @@ INSERT INTO products (id, name, unit, price_cents, quantity, made_to_order, sort
     ('tri-colour-carrots', 'Tri-Colour Carrots', 'bunch', 0, 0, 0, 238, 0),
     ('sage', 'Sage', 'bunch', 600, 0, 0, 240, 1)
 ON CONFLICT(id) DO NOTHING;
+
+UPDATE products
+SET frozen_option = 1
+WHERE id IN (
+    'callaloo', 'dragon-tongue-beans', 'purple-beans',
+    'green-beans', 'yellow-beans'
+);
 
 UPDATE products
 SET name = 'Turnips'

@@ -90,21 +90,36 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function supportsFrozenOption(product) {
-        return Boolean(product) && (
-            product.id === "callaloo" || /\bbeans?\b/i.test(product.name || "")
-        );
+        return Boolean(product) && product.frozenOption === true;
     }
 
-    function createFrozenOption(product) {
-        const label = document.createElement("label");
-        label.className = "frozen-option";
+    function createPreparationChoice(product, prefix = "offline") {
+        const fieldset = document.createElement("fieldset");
+        const legend = document.createElement("legend");
+        const options = document.createElement("div");
+        const groupName = prefix + "-preparation-" + product.id;
 
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.dataset.frozenProductId = product.id;
+        fieldset.className = "preparation-choice";
+        fieldset.dataset.preparationProductId = product.id;
+        legend.textContent = "Preparation";
+        options.className = "preparation-options";
 
-        label.append(checkbox, document.createTextNode("Frozen"));
-        return label;
+        ["Fresh", "Frozen"].forEach(function (labelText) {
+            const label = document.createElement("label");
+            const radio = document.createElement("input");
+
+            label.className = "preparation-option";
+            radio.type = "radio";
+            radio.name = groupName;
+            radio.value = labelText.toLowerCase();
+            radio.dataset.preparationProductId = product.id;
+            radio.checked = labelText === "Fresh";
+            label.append(radio, document.createTextNode(labelText));
+            options.appendChild(label);
+        });
+
+        fieldset.append(legend, options);
+        return fieldset;
     }
 
     function setMessage(element, message, type) {
@@ -427,7 +442,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (supportsFrozenOption(product)) {
                     const controls = document.createElement("div");
                     controls.className = "product-row-controls";
-                    controls.append(input, createFrozenOption(product));
+                    controls.append(input, createPreparationChoice(product));
+                    row.classList.add("product-row-with-preparation");
                     row.append(label, controls);
                 } else {
                     row.append(label, input);
@@ -770,7 +786,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const sectionRow = document.createElement("tr");
         const sectionCell = document.createElement("th");
         const toggle = document.createElement("button");
-        sectionCell.colSpan = 9;
+        sectionCell.colSpan = 10;
         sectionCell.scope = "rowgroup";
         sectionCell.className = "inventory-section-heading";
         sectionCell.classList.toggle("inventory-current-heading", isCurrentSection);
@@ -1010,7 +1026,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 product.unit,
                 product.category,
                 product.active ? "available" : "unavailable",
-                product.madeToOrder ? "made to order" : "fixed quantity"
+                product.madeToOrder ? "made to order" : "fixed quantity",
+                product.frozenOption ? "fresh frozen option" : "fresh only"
             ].join(" ").toLocaleLowerCase();
             row.classList.toggle("inventory-slot-row", emptySlot);
             row.classList.toggle("inventory-custom-product-row", product.isSlot);
@@ -1150,6 +1167,15 @@ document.addEventListener("DOMContentLoaded", function () {
             madeInput.setAttribute("aria-label", product.name + " is made to order");
             madeCell.appendChild(madeInput);
 
+            const frozenOptionCell = document.createElement("td");
+            frozenOptionCell.dataset.fieldLabel = "Offer Frozen Option";
+            const frozenOptionInput = document.createElement("input");
+            frozenOptionInput.type = "checkbox";
+            frozenOptionInput.checked = product.frozenOption === true;
+            frozenOptionInput.className = "inventory-frozen-option";
+            frozenOptionInput.setAttribute("aria-label", product.name + " offers a Fresh or Frozen choice");
+            frozenOptionCell.appendChild(frozenOptionInput);
+
             const activeCell = document.createElement("td");
             activeCell.dataset.fieldLabel = "Available to order";
             const activeInput = document.createElement("input");
@@ -1168,6 +1194,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 orderLimitCell,
                 unitCell,
                 madeCell,
+                frozenOptionCell,
                 activeCell
             );
             inventoryRows.appendChild(row);
@@ -1214,6 +1241,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 quantity: quantityValue === "" ? null : Number(quantityValue),
                 orderLimit: orderLimitValue === "" ? null : Number(orderLimitValue),
                 madeToOrder: row.querySelector(".inventory-made-to-order").checked,
+                frozenOption: row.querySelector(".inventory-frozen-option").checked,
                 active: row.querySelector(".inventory-active").checked,
                 imageFit: row.querySelector('.inventory-image-fit[data-image-slot="1"]').value,
                 imagePosition: row.querySelector('.inventory-image-position[data-image-slot="1"]').value,
@@ -2359,9 +2387,11 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
         const frozenItems = Array.from(
-            offlineOrderProducts.querySelectorAll("input[data-frozen-product-id]:checked")
-        ).map(function (checkbox) {
-            return checkbox.dataset.frozenProductId;
+            offlineOrderProducts.querySelectorAll(
+                'input[data-preparation-product-id][value="frozen"]:checked'
+            )
+        ).map(function (radio) {
+            return radio.dataset.preparationProductId;
         }).filter(function (productId) {
             return Boolean(items[productId]);
         });

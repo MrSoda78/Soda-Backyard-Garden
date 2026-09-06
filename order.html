@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="favicons/order.png">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <title>SBG | Order</title>
-    <link rel="stylesheet" href="style.css?v=20260905-frozen-options">
+    <link rel="stylesheet" href="style.css?v=20260905-preparation-choice">
 </head>
 <body>
 
@@ -105,7 +105,13 @@
                                         <label for="callalooQty">Callaloo, vacuum sealed (<span data-price-display="callaloo">$6.00 per pack</span>) <small data-order-stock="callaloo">Checking availability...</small></label>
                                         <div class="product-row-controls">
                                             <input type="number" id="callalooQty" name="callalooQty" min="0" max="11" value="0" data-price="6" data-product-id="callaloo">
-                                            <label class="frozen-option"><input type="checkbox" data-frozen-product-id="callaloo"> Frozen</label>
+                                            <fieldset class="preparation-choice" data-preparation-product-id="callaloo" hidden>
+                                                <legend>Preparation</legend>
+                                                <div class="preparation-options">
+                                                    <label class="preparation-option"><input type="radio" name="callalooPreparation" value="fresh" data-preparation-product-id="callaloo" checked> Fresh</label>
+                                                    <label class="preparation-option"><input type="radio" name="callalooPreparation" value="frozen" data-preparation-product-id="callaloo"> Frozen</label>
+                                                </div>
+                                            </fieldset>
                                         </div>
                                     </div>
 
@@ -238,7 +244,13 @@
                                         <label for="dragonTongueBeansQty">Dragon Tongue (<span data-price-display="dragon-tongue-beans">$6.00 per litre</span>) <small data-order-stock="dragon-tongue-beans">Availability confirmed with order</small></label>
                                         <div class="product-row-controls">
                                             <input type="number" id="dragonTongueBeansQty" name="dragonTongueBeansQty" min="0" value="0" data-price="6" data-product-id="dragon-tongue-beans">
-                                            <label class="frozen-option"><input type="checkbox" data-frozen-product-id="dragon-tongue-beans"> Frozen</label>
+                                            <fieldset class="preparation-choice" data-preparation-product-id="dragon-tongue-beans" hidden>
+                                                <legend>Preparation</legend>
+                                                <div class="preparation-options">
+                                                    <label class="preparation-option"><input type="radio" name="dragonTongueBeansPreparation" value="fresh" data-preparation-product-id="dragon-tongue-beans" checked> Fresh</label>
+                                                    <label class="preparation-option"><input type="radio" name="dragonTongueBeansPreparation" value="frozen" data-preparation-product-id="dragon-tongue-beans"> Frozen</label>
+                                                </div>
+                                            </fieldset>
                                         </div>
                                     </div>
 
@@ -246,7 +258,13 @@
                                         <label for="purpleBeansQty">Purple (<span data-price-display="purple-beans">$6.00 per litre</span>) <small data-order-stock="purple-beans">Availability confirmed with order</small></label>
                                         <div class="product-row-controls">
                                             <input type="number" id="purpleBeansQty" name="purpleBeansQty" min="0" value="0" data-price="6" data-product-id="purple-beans">
-                                            <label class="frozen-option"><input type="checkbox" data-frozen-product-id="purple-beans"> Frozen</label>
+                                            <fieldset class="preparation-choice" data-preparation-product-id="purple-beans" hidden>
+                                                <legend>Preparation</legend>
+                                                <div class="preparation-options">
+                                                    <label class="preparation-option"><input type="radio" name="purpleBeansPreparation" value="fresh" data-preparation-product-id="purple-beans" checked> Fresh</label>
+                                                    <label class="preparation-option"><input type="radio" name="purpleBeansPreparation" value="frozen" data-preparation-product-id="purple-beans"> Frozen</label>
+                                                </div>
+                                            </fieldset>
                                         </div>
                                     </div>
 
@@ -254,7 +272,13 @@
                                         <label for="greenBeansQty">Green (<span data-price-display="green-beans">$6.00 per litre</span>) <small data-order-stock="green-beans">Availability confirmed with order</small></label>
                                         <div class="product-row-controls">
                                             <input type="number" id="greenBeansQty" name="greenBeansQty" min="0" value="0" data-price="6" data-product-id="green-beans">
-                                            <label class="frozen-option"><input type="checkbox" data-frozen-product-id="green-beans"> Frozen</label>
+                                            <fieldset class="preparation-choice" data-preparation-product-id="green-beans" hidden>
+                                                <legend>Preparation</legend>
+                                                <div class="preparation-options">
+                                                    <label class="preparation-option"><input type="radio" name="greenBeansPreparation" value="fresh" data-preparation-product-id="green-beans" checked> Fresh</label>
+                                                    <label class="preparation-option"><input type="radio" name="greenBeansPreparation" value="frozen" data-preparation-product-id="green-beans"> Frozen</label>
+                                                </div>
+                                            </fieldset>
                                         </div>
                                     </div>
 
@@ -262,7 +286,13 @@
                                         <label for="yellowBeansQty">Yellow (<span data-price-display="yellow-beans">$6.00 per litre</span>) <small data-order-stock="yellow-beans">Availability confirmed with order</small></label>
                                         <div class="product-row-controls">
                                             <input type="number" id="yellowBeansQty" name="yellowBeansQty" min="0" value="0" data-price="6" data-product-id="yellow-beans">
-                                            <label class="frozen-option"><input type="checkbox" data-frozen-product-id="yellow-beans"> Frozen</label>
+                                            <fieldset class="preparation-choice" data-preparation-product-id="yellow-beans" hidden>
+                                                <legend>Preparation</legend>
+                                                <div class="preparation-options">
+                                                    <label class="preparation-option"><input type="radio" name="yellowBeansPreparation" value="fresh" data-preparation-product-id="yellow-beans" checked> Fresh</label>
+                                                    <label class="preparation-option"><input type="radio" name="yellowBeansPreparation" value="frozen" data-preparation-product-id="yellow-beans"> Frozen</label>
+                                                </div>
+                                            </fieldset>
                                         </div>
                                     </div>
                                 </div>
@@ -435,7 +465,7 @@
         </div>
     </footer>
 
-    <script src="script.js?v=20260905-frozen-options"></script>
+    <script src="script.js?v=20260905-preparation-choice"></script>
 
 </body>
 </html>

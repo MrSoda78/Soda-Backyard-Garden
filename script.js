@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let applyProductPageSearch = function () {};
     let applyOrderProductSearch = function () {};
     let syncOrderFormFromBasket = function () {};
-    let syncFrozenOrderOptions = function () {};
+    let syncPreparationOptions = function () {};
     let currentProductMap = new Map();
     let siteContentPromise;
     const basketStorageKey = "sbg-basket-v1";
@@ -74,22 +74,36 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function supportsFrozenOption(product) {
-        return Boolean(product) && (
-            product.id === "callaloo" || /\bbeans?\b/i.test(product.name || "")
-        );
+        return Boolean(product) && product.frozenOption === true;
     }
 
-    function createFrozenOption(product) {
-        const label = document.createElement("label");
-        label.className = "frozen-option";
+    function createPreparationChoice(product, prefix = "order") {
+        const fieldset = document.createElement("fieldset");
+        const legend = document.createElement("legend");
+        const options = document.createElement("div");
+        const groupName = prefix + "-preparation-" + product.id;
 
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.dataset.frozenProductId = product.id;
-        checkbox.checked = frozenSelections.has(product.id);
+        fieldset.className = "preparation-choice";
+        fieldset.dataset.preparationProductId = product.id;
+        legend.textContent = "Preparation";
+        options.className = "preparation-options";
 
-        label.append(checkbox, document.createTextNode("Frozen"));
-        return label;
+        ["Fresh", "Frozen"].forEach(function (labelText) {
+            const label = document.createElement("label");
+            const radio = document.createElement("input");
+
+            label.className = "preparation-option";
+            radio.type = "radio";
+            radio.name = groupName;
+            radio.value = labelText.toLowerCase();
+            radio.dataset.preparationProductId = product.id;
+            radio.checked = labelText === (frozenSelections.has(product.id) ? "Frozen" : "Fresh");
+            label.append(radio, document.createTextNode(labelText));
+            options.appendChild(label);
+        });
+
+        fieldset.append(legend, options);
+        return fieldset;
     }
 
     function automaticThemeForDate(date = new Date()) {
@@ -478,7 +492,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             if (frozenSelections.delete(productId)) {
                 saveFrozenSelections();
-                syncFrozenOrderOptions();
+                syncPreparationOptions();
             }
         }
 
@@ -490,7 +504,7 @@ document.addEventListener("DOMContentLoaded", function () {
         frozenSelections.clear();
         saveBasket();
         saveFrozenSelections();
-        syncFrozenOrderOptions();
+        syncPreparationOptions();
     }
 
     function reconcileBasket(productMap) {
@@ -519,7 +533,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (changed) {
             saveBasket();
             saveFrozenSelections();
-            syncFrozenOrderOptions();
+            syncPreparationOptions();
         }
     }
 
@@ -780,7 +794,7 @@ document.addEventListener("DOMContentLoaded", function () {
     window.addEventListener("storage", function (event) {
         if (event.key === frozenSelectionStorageKey) {
             frozenSelections = readFrozenSelections();
-            syncFrozenOrderOptions();
+            syncPreparationOptions();
             return;
         }
 
@@ -1256,7 +1270,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (supportsFrozenOption(product)) {
                     const controls = document.createElement("div");
                     controls.className = "product-row-controls";
-                    controls.append(input, createFrozenOption(product));
+                    controls.append(input, createPreparationChoice(product, "dynamic-order"));
+                    row.classList.add("product-row-with-preparation");
                     row.append(label, controls);
                 } else {
                     row.append(label, input);
@@ -1270,7 +1285,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         quantityInputs = Array.from(orderForm.querySelectorAll("input[data-product-id]"));
-        syncFrozenOrderOptions();
+        syncPreparationOptions();
     }
 
     function productDescriptions(productIds, productMap) {
@@ -1436,6 +1451,16 @@ document.addEventListener("DOMContentLoaded", function () {
         renderProductDescriptions(productMap);
         renderManagedProductImages(productMap);
 
+        document.querySelectorAll("[data-frozen-option-note]").forEach(function (note) {
+            const productIds = note.dataset.frozenOptionNote.split(",").map(function (productId) {
+                return productId.trim();
+            });
+            note.hidden = !productIds.some(function (productId) {
+                const product = productMap.get(productId);
+                return supportsFrozenOption(product) && maximumBasketQuantity(product) > 0;
+            });
+        });
+
         document.querySelectorAll("[data-stock]").forEach(function (element) {
             const product = productMap.get(element.dataset.stock);
 
@@ -1572,6 +1597,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         currentProductMap = productMap;
+        syncPreparationOptions();
         reconcileBasket(productMap);
         renderBasketDisplays(productMap);
         syncOrderFormFromBasket(productMap);
@@ -1639,12 +1665,30 @@ document.addEventListener("DOMContentLoaded", function () {
         let isSubmitting = false;
         let validationFocusScheduled = false;
 
-        syncFrozenOrderOptions = function () {
-            orderForm.querySelectorAll("input[data-frozen-product-id]").forEach(function (checkbox) {
-                checkbox.checked = frozenSelections.has(checkbox.dataset.frozenProductId);
+        syncPreparationOptions = function () {
+            orderForm.querySelectorAll("[data-preparation-product-id]").forEach(function (element) {
+                if (!element.matches("fieldset")) {
+                    return;
+                }
+
+                const productId = element.dataset.preparationProductId;
+                const product = currentProductMap.get(productId);
+                const supported = supportsFrozenOption(product) && maximumBasketQuantity(product) > 0;
+                const frozenSelected = frozenSelections.has(productId);
+                element.hidden = !supported;
+                element.closest(".product-row")?.classList.toggle("product-row-with-preparation", supported);
+
+                element.querySelectorAll("input[data-preparation-product-id]").forEach(function (radio) {
+                    radio.disabled = !supported;
+                    radio.checked = supported && radio.value === (frozenSelected ? "frozen" : "fresh");
+                });
+
+                if (!supported && frozenSelections.delete(productId)) {
+                    saveFrozenSelections();
+                }
             });
         };
-        syncFrozenOrderOptions();
+        syncPreparationOptions();
 
         function getFieldLabel(field) {
             const label = orderForm.querySelector('label[for="' + field.id + '"]');
@@ -1878,10 +1922,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
 
-            if (event.target.matches("input[data-frozen-product-id]")) {
-                const productId = event.target.dataset.frozenProductId;
+            if (event.target.matches("input[data-preparation-product-id]") && event.target.checked) {
+                const productId = event.target.dataset.preparationProductId;
 
-                if (event.target.checked) {
+                if (event.target.value === "frozen") {
                     frozenSelections.add(productId);
                 } else {
                     frozenSelections.delete(productId);

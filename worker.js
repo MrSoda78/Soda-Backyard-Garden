@@ -1,9 +1,7 @@
 import { buildSalesWorkbook } from "./sales-workbook.js";
 
 function supportsFrozenOption(product) {
-    return Boolean(product) && (
-        product.id === "callaloo" || /\bbeans?\b/i.test(product.name || "")
-    );
+    return Boolean(product) && product.frozenOption === true;
 }
 
 const SCHEMA_STATEMENTS = [
@@ -25,7 +23,8 @@ const SCHEMA_STATEMENTS = [
         image_position TEXT NOT NULL DEFAULT 'center',
         image_key_2 TEXT NOT NULL DEFAULT '',
         image_fit_2 TEXT NOT NULL DEFAULT 'cover',
-        image_position_2 TEXT NOT NULL DEFAULT 'center'
+        image_position_2 TEXT NOT NULL DEFAULT 'center',
+        frozen_option INTEGER NOT NULL DEFAULT 0 CHECK (frozen_option IN (0, 1))
     )`,
     `CREATE TABLE IF NOT EXISTS carousel_images (
         id TEXT PRIMARY KEY,
@@ -608,13 +607,39 @@ function ensureDatabase(db) {
                 ["image_position", "ALTER TABLE products ADD COLUMN image_position TEXT NOT NULL DEFAULT 'center'"],
                 ["image_key_2", "ALTER TABLE products ADD COLUMN image_key_2 TEXT NOT NULL DEFAULT ''"],
                 ["image_fit_2", "ALTER TABLE products ADD COLUMN image_fit_2 TEXT NOT NULL DEFAULT 'cover'"],
-                ["image_position_2", "ALTER TABLE products ADD COLUMN image_position_2 TEXT NOT NULL DEFAULT 'center'"]
+                ["image_position_2", "ALTER TABLE products ADD COLUMN image_position_2 TEXT NOT NULL DEFAULT 'center'"],
+                ["frozen_option", "ALTER TABLE products ADD COLUMN frozen_option INTEGER NOT NULL DEFAULT 0"]
             ];
 
             for (const [columnName, migration] of productMigrations) {
                 if (!productColumnNames.has(columnName)) {
                     await db.prepare(migration).run();
                 }
+            }
+
+            const frozenOptionMigrationId = "2026-09-05-frozen-product-options";
+            const frozenOptionMigration = await db.prepare(`
+                SELECT id
+                FROM site_migrations
+                WHERE id = ?
+            `).bind(frozenOptionMigrationId).first();
+
+            if (!frozenOptionMigration) {
+                await db.batch([
+                    db.prepare(`
+                        UPDATE products
+                        SET frozen_option = 1
+                        WHERE id IN (
+                            'callaloo', 'dragon-tongue-beans', 'purple-beans',
+                            'green-beans', 'yellow-beans'
+                        )
+                    `),
+                    db.prepare(`
+                        INSERT INTO site_migrations (id)
+                        VALUES (?)
+                        ON CONFLICT(id) DO NOTHING
+                    `).bind(frozenOptionMigrationId)
+                ]);
             }
 
             await db.prepare(PRODUCT_SLOT_INSERT).run();
@@ -833,7 +858,7 @@ async function getProducts(db, includeInactive = false) {
     const result = await db.prepare(`
         SELECT
             id, name, unit, price_cents, quantity, made_to_order, active,
-            description, category, is_slot, order_limit,
+            description, category, is_slot, order_limit, frozen_option,
             image_key, image_fit, image_position,
             image_key_2, image_fit_2, image_position_2
         FROM products
@@ -854,6 +879,7 @@ async function getProducts(db, includeInactive = false) {
             category: product.category || "",
             isSlot: product.is_slot === 1,
             orderLimit: product.order_limit,
+            frozenOption: product.frozen_option === 1,
             imageUrl: mediaUrlForKey(product.image_key),
             imageFit: normalizeImageFit(product.image_fit),
             imagePosition: normalizeImagePosition(product.image_position),
@@ -1323,7 +1349,9 @@ async function createOrderRecord(body, db, options = {}) {
         requestedItems.push({
             product,
             quantity,
-            displayName: product.name + (frozenProductIds.has(productId) ? " — Frozen" : "")
+            displayName: product.name + (supportsFrozenOption(product)
+                ? (frozenProductIds.has(productId) ? " — Frozen" : " — Fresh")
+                : "")
         });
     }
 
@@ -1698,7 +1726,7 @@ async function handleAdminInventory(db) {
     const result = await db.prepare(`
         SELECT
             id, name, unit, price_cents, quantity, made_to_order, sort_order, active,
-            description, category, is_slot, order_limit,
+            description, category, is_slot, order_limit, frozen_option,
             image_key, image_fit, image_position,
             image_key_2, image_fit_2, image_position_2
         FROM products
@@ -1719,6 +1747,7 @@ async function handleAdminInventory(db) {
                 category: product.category || "",
                 isSlot: product.is_slot === 1,
                 orderLimit: product.order_limit,
+                frozenOption: product.frozen_option === 1,
                 imageUrl: mediaUrlForKey(product.image_key),
                 imageFit: normalizeImageFit(product.image_fit),
                 imagePosition: normalizeImagePosition(product.image_position),
@@ -2044,6 +2073,7 @@ async function handleAdminInventoryUpdate(request, db) {
         const priceCents = Number(submitted.priceCents);
         const madeToOrder = submitted.madeToOrder === true;
         const active = submitted.active === true;
+        const frozenOption = submitted.frozenOption === true;
         const quantity = madeToOrder ? null : Number(submitted.quantity);
         const orderLimit = submitted.orderLimit === null || submitted.orderLimit === ""
             ? null
@@ -2100,6 +2130,7 @@ async function handleAdminInventoryUpdate(request, db) {
                 UPDATE products
                 SET name = ?, unit = ?, price_cents = ?, quantity = ?,
                     made_to_order = ?, active = ?, description = ?, order_limit = ?,
+                    frozen_option = ?,
                     image_fit = ?, image_position = ?,
                     image_fit_2 = ?, image_position_2 = ?
                 WHERE id = ?
@@ -2112,6 +2143,7 @@ async function handleAdminInventoryUpdate(request, db) {
                 active ? 1 : 0,
                 description,
                 orderLimit,
+                frozenOption ? 1 : 0,
                 imageFit,
                 imagePosition,
                 imageFit2,
