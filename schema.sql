@@ -330,6 +330,24 @@ WHERE id IN (
 );
 
 UPDATE products
+SET price_cents = CASE
+        WHEN id LIKE '%-40g' THEN 800
+        ELSE 600
+    END,
+    active = CASE
+        WHEN made_to_order = 1 OR quantity > 0 THEN 1
+        ELSE active
+    END
+WHERE id IN (
+    'cold-flu-tea', 'cold-flu-tea-40g',
+    'menopause-tea', 'menopause-tea-40g',
+    'mullein-tea', 'mullein-tea-40g',
+    'red-raspberry-leaf-tea', 'red-raspberry-leaf-tea-40g',
+    'bloating-tea', 'bloating-tea-40g',
+    'sleep-tea', 'sleep-tea-40g'
+);
+
+UPDATE products
 SET category = 'pain-rub'
 WHERE id IN (
     'pain-rub-oil-2oz', 'pain-rub-oil-4oz',
