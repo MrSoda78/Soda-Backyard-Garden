@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const inventoryMessage = document.getElementById("inventoryMessage");
     const refreshInventoryButton = document.getElementById("refreshInventory");
     const saveInventoryButton = document.getElementById("saveInventory");
+    const inventorySaveStatus = document.getElementById("inventorySaveStatus");
     const selectAllInventoryButton = document.getElementById("selectAllInventory");
     const deselectAllInventoryButton = document.getElementById("deselectAllInventory");
     const salesMessage = document.getElementById("salesMessage");
@@ -125,6 +126,20 @@ document.addEventListener("DOMContentLoaded", function () {
     function setMessage(element, message, type) {
         element.textContent = message || "";
         element.className = "form-message" + (type ? " " + type : "");
+    }
+
+    function setInventorySaveStatus(message, type) {
+        inventorySaveStatus.textContent = message || "";
+        inventorySaveStatus.className = "inventory-save-status" + (type ? " " + type : "");
+    }
+
+    function markInventoryUnsaved() {
+        if (saveInventoryButton.disabled) {
+            return;
+        }
+
+        saveInventoryButton.textContent = "Save Changes";
+        setInventorySaveStatus("Unsaved changes", "pending");
     }
 
     function localDateValue() {
@@ -2842,12 +2857,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (row) {
             updateMobileInventorySummary(row);
+            markInventoryUnsaved();
         }
     });
 
     refreshInventoryButton.addEventListener("click", function () {
+        saveInventoryButton.textContent = "Save Changes";
+        setInventorySaveStatus("Discarding changes...", "saving");
         loadInventory().catch(function (error) {
             setMessage(inventoryMessage, error.message, "error");
+            setInventorySaveStatus("Could not reload", "error");
+        }).then(function () {
+            if (!inventoryMessage.classList.contains("error")) {
+                setInventorySaveStatus("Changes discarded", "success");
+            }
         });
     });
 
@@ -3325,6 +3348,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     saveInventoryButton.addEventListener("click", async function () {
         saveInventoryButton.disabled = true;
+        saveInventoryButton.textContent = "Saving...";
+        saveInventoryButton.setAttribute("aria-busy", "true");
+        setInventorySaveStatus("Saving changes...", "saving");
         setMessage(inventoryMessage, "Saving changes...", "success");
 
         try {
@@ -3343,11 +3369,16 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             await Promise.all([loadInventory(), loadOfflineOrderProducts()]);
+            saveInventoryButton.textContent = "Saved \u2713";
+            setInventorySaveStatus("Inventory saved", "success");
             setMessage(inventoryMessage, "Inventory saved. The website is now using these updates.", "success");
         } catch (error) {
+            saveInventoryButton.textContent = "Try Again";
+            setInventorySaveStatus("Save failed", "error");
             setMessage(inventoryMessage, error.message, "error");
         } finally {
             saveInventoryButton.disabled = false;
+            saveInventoryButton.removeAttribute("aria-busy");
         }
     });
 

@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="favicons/admin.png">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <title>SBG | Admin</title>
-    <link rel="stylesheet" href="style.css?v=20260905-product-preparation">
+    <link rel="stylesheet" href="style.css?v=20260906-inventory-save-feedback">
 </head>
 <body class="admin-page">
     <header>
@@ -173,6 +173,7 @@
                             <div class="admin-toolbar-actions">
                                 <button type="button" class="button secondary" id="refreshInventory">Discard Changes</button>
                                 <button type="button" class="button" id="saveInventory">Save Changes</button>
+                                <span id="inventorySaveStatus" class="inventory-save-status" role="status" aria-live="polite"></span>
                             </div>
                         </div>
                         <p class="admin-inventory-help"><strong>Maximum per order:</strong> enter the most one household can request in a single order, or leave it blank for no limit. For a new product slot, enter the product details and save. It will move into that category's Current Products list and a new blank slot will appear. Check <strong>Available to order</strong> when it is ready for customers. Choose <strong>Made to order</strong> when the product does not use a fixed quantity.</p>
@@ -601,6 +602,6 @@
         </section>
     </main>
 
-    <script src="admin.js?v=20260906-tea-sizes"></script>
+    <script src="admin.js?v=20260906-inventory-save-feedback"></script>
 </body>
 </html>

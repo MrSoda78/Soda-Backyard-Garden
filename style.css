@@ -2635,6 +2635,27 @@ footer a:hover {
     margin-bottom: 28px;
 }
 
+.inventory-save-status {
+    min-width: 120px;
+    color: var(--text-soft);
+    font-size: 0.9rem;
+    font-weight: bold;
+    text-align: center;
+}
+
+.inventory-save-status.saving,
+.inventory-save-status.pending {
+    color: #8a5a16;
+}
+
+.inventory-save-status.success {
+    color: var(--green-dark);
+}
+
+.inventory-save-status.error {
+    color: #a12626;
+}
+
 .admin-orders {
     display: grid;
     max-height: min(74vh, 860px);
@@ -3830,6 +3851,11 @@ footer a:hover {
     #inventoryPanel:not([hidden]) > .admin-toolbar .admin-toolbar-actions .button {
         width: 100%;
         padding: 11px 8px;
+    }
+
+    #inventoryPanel:not([hidden]) > .admin-toolbar .inventory-save-status {
+        grid-column: 1 / -1;
+        min-width: 0;
     }
 
     .order-status-filters {
