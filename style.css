@@ -2636,6 +2636,7 @@ footer a:hover {
 }
 
 .inventory-save-status {
+    max-width: 360px;
     min-width: 120px;
     color: var(--text-soft);
     font-size: 0.9rem;

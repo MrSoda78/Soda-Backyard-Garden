@@ -85,6 +85,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const collapsedInventorySections = new Set();
     const expandedMobileInventoryProducts = new Set();
     let inventorySectionsInitialized = false;
+    let inventoryBaseline = new Map();
 
     function formatMoney(cents) {
         return "$" + (cents / 100).toFixed(2);
@@ -139,7 +140,31 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         saveInventoryButton.textContent = "Save Changes";
-        setInventorySaveStatus("Unsaved changes", "pending");
+        const changedCount = getChangedInventoryProducts().length;
+        setInventorySaveStatus(
+            changedCount === 0
+                ? ""
+                : changedCount + " product" + (changedCount === 1 ? "" : "s") + " changed",
+            changedCount === 0 ? "" : "pending"
+        );
+    }
+
+    function getChangedInventoryProducts() {
+        return collectInventory().filter(function (product) {
+            return inventoryBaseline.get(product.id) !== JSON.stringify(product);
+        });
+    }
+
+    function inventorySaveSummary(products) {
+        const names = products.map(function (product) {
+            return product.name.trim() || "Unnamed product";
+        });
+        const shownNames = names.slice(0, 3).join(", ");
+        const remaining = names.length - 3;
+
+        return "Saved changes to " + names.length + " product" +
+            (names.length === 1 ? "" : "s") + ": " + shownNames +
+            (remaining > 0 ? ", and " + remaining + " more" : "") + ".";
     }
 
     function localDateValue() {
@@ -1244,6 +1269,9 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         renderInventory(result.products);
+        inventoryBaseline = new Map(collectInventory().map(function (product) {
+            return [product.id, JSON.stringify(product)];
+        }));
         setMessage(inventoryMessage, "", "");
     }
 
@@ -1457,6 +1485,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 "success"
             );
         }
+
+        markInventoryUnsaved();
     }
 
     function renderCarousel(carousel, productImages) {
@@ -3347,6 +3377,15 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     saveInventoryButton.addEventListener("click", async function () {
+        const changedProducts = getChangedInventoryProducts();
+
+        if (changedProducts.length === 0) {
+            saveInventoryButton.textContent = "Up to date \u2713";
+            setInventorySaveStatus("No changes to save", "success");
+            setMessage(inventoryMessage, "Inventory is already up to date.", "success");
+            return;
+        }
+
         saveInventoryButton.disabled = true;
         saveInventoryButton.textContent = "Saving...";
         saveInventoryButton.setAttribute("aria-busy", "true");
@@ -3369,9 +3408,10 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             await Promise.all([loadInventory(), loadOfflineOrderProducts()]);
+            const summary = inventorySaveSummary(changedProducts);
             saveInventoryButton.textContent = "Saved \u2713";
-            setInventorySaveStatus("Inventory saved", "success");
-            setMessage(inventoryMessage, "Inventory saved. The website is now using these updates.", "success");
+            setInventorySaveStatus(summary, "success");
+            setMessage(inventoryMessage, summary + " The website is now using these updates.", "success");
         } catch (error) {
             saveInventoryButton.textContent = "Try Again";
             setInventorySaveStatus("Save failed", "error");
