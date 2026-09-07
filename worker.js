@@ -664,6 +664,53 @@ function ensureDatabase(db) {
                 ]);
             }
 
+            const teaPackageSizesMigrationId = "2026-09-06-tea-package-sizes";
+            const teaPackageSizesMigration = await db.prepare(`
+                SELECT id
+                FROM site_migrations
+                WHERE id = ?
+            `).bind(teaPackageSizesMigrationId).first();
+
+            if (!teaPackageSizesMigration) {
+                await db.batch([
+                    db.prepare(`
+                        INSERT INTO products (
+                            id, name, unit, price_cents, quantity, made_to_order,
+                            sort_order, active, description, category, is_slot,
+                            order_limit, frozen_option
+                        )
+                        SELECT
+                            id || '-40g', name || ' — 40 g', '40 g package', 0,
+                            CASE WHEN made_to_order = 1 THEN NULL ELSE 0 END,
+                            made_to_order, sort_order + 1, 0, description, 'tea', 0,
+                            order_limit, 0
+                        FROM products
+                        WHERE id IN (
+                            'cold-flu-tea', 'menopause-tea', 'mullein-tea',
+                            'red-raspberry-leaf-tea', 'bloating-tea', 'sleep-tea'
+                        )
+                        ON CONFLICT(id) DO NOTHING
+                    `),
+                    db.prepare(`
+                        UPDATE products
+                        SET name = CASE
+                                WHEN name LIKE '% — 20 g' THEN name
+                                ELSE name || ' — 20 g'
+                            END,
+                            unit = '20 g package'
+                        WHERE id IN (
+                            'cold-flu-tea', 'menopause-tea', 'mullein-tea',
+                            'red-raspberry-leaf-tea', 'bloating-tea', 'sleep-tea'
+                        )
+                    `),
+                    db.prepare(`
+                        INSERT INTO site_migrations (id)
+                        VALUES (?)
+                        ON CONFLICT(id) DO NOTHING
+                    `).bind(teaPackageSizesMigrationId)
+                ]);
+            }
+
             await db.prepare(PRODUCT_SLOT_INSERT).run();
             await ensureEmptyProductSlots(db);
             await db.prepare(`
