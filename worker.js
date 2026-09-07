@@ -711,6 +711,32 @@ function ensureDatabase(db) {
                 ]);
             }
 
+            const teaPackagePriceResetMigrationId = "2026-09-06-clear-original-tea-prices";
+            const teaPackagePriceResetMigration = await db.prepare(`
+                SELECT id
+                FROM site_migrations
+                WHERE id = ?
+            `).bind(teaPackagePriceResetMigrationId).first();
+
+            if (!teaPackagePriceResetMigration) {
+                await db.batch([
+                    db.prepare(`
+                        UPDATE products
+                        SET price_cents = 0,
+                            active = 0
+                        WHERE id IN (
+                            'cold-flu-tea', 'menopause-tea', 'mullein-tea',
+                            'red-raspberry-leaf-tea', 'bloating-tea', 'sleep-tea'
+                        )
+                    `),
+                    db.prepare(`
+                        INSERT INTO site_migrations (id)
+                        VALUES (?)
+                        ON CONFLICT(id) DO NOTHING
+                    `).bind(teaPackagePriceResetMigrationId)
+                ]);
+            }
+
             await db.prepare(PRODUCT_SLOT_INSERT).run();
             await ensureEmptyProductSlots(db);
             await db.prepare(`

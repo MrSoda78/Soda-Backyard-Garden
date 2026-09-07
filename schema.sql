@@ -322,6 +322,14 @@ WHERE id IN (
 );
 
 UPDATE products
+SET price_cents = 0,
+    active = 0
+WHERE id IN (
+    'cold-flu-tea', 'menopause-tea', 'mullein-tea',
+    'red-raspberry-leaf-tea', 'bloating-tea', 'sleep-tea'
+);
+
+UPDATE products
 SET category = 'pain-rub'
 WHERE id IN (
     'pain-rub-oil-2oz', 'pain-rub-oil-4oz',
