@@ -28,6 +28,7 @@
     --white: #ffffff;
 
     --text-dark: #1f2e22;
+    --text-main: var(--text-dark);
     --text-soft: #4b5f50;
 
     --shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
@@ -4265,6 +4266,75 @@ footer a:hover {
    ADMIN INVENTORY — LIVE-PAGE CARD EDITOR
 ========================================================== */
 
+#inventoryPanel {
+    --inventory-ink: #17351f;
+    --inventory-muted: #405247;
+    --inventory-accent: #28683a;
+    --inventory-accent-dark: #174b28;
+    --inventory-border: #91a99a;
+    --inventory-border-soft: #cfdcd2;
+    --inventory-surface: #ffffff;
+    --inventory-surface-soft: #edf5ef;
+    --inventory-slot-surface: #f6faf7;
+}
+
+#inventoryPanel .admin-inventory-help,
+#inventoryPanel .inventory-bulk-actions {
+    border: 1px solid var(--inventory-border-soft);
+    border-left: 5px solid var(--inventory-accent);
+    border-radius: 10px;
+    color: var(--inventory-ink);
+    background: var(--inventory-surface-soft);
+}
+
+#inventoryPanel .inventory-bulk-actions {
+    padding: 12px 14px;
+}
+
+#inventoryPanel .inventory-bulk-actions span,
+#inventoryPanel .search-result-message,
+#inventoryPanel .inventory-save-status {
+    color: var(--inventory-muted);
+}
+
+#inventoryPanel .admin-search-bar {
+    border: 2px solid var(--inventory-border);
+    background: var(--inventory-surface);
+}
+
+#inventoryPanel .admin-search-bar label {
+    color: var(--inventory-ink);
+}
+
+#inventoryPanel .admin-search-bar input {
+    border: 2px solid var(--inventory-border);
+    color: var(--inventory-ink);
+    background: var(--inventory-surface);
+}
+
+#inventoryPanel .admin-toolbar-actions .button:not(.secondary) {
+    color: white;
+    background: var(--inventory-accent);
+}
+
+#inventoryPanel .admin-toolbar-actions .button:not(.secondary):hover,
+#inventoryPanel .admin-toolbar-actions .button:not(.secondary):focus-visible {
+    background: var(--inventory-accent-dark);
+}
+
+#inventoryPanel .button.secondary:not(.inventory-card-add-option) {
+    border-color: var(--inventory-accent);
+    color: var(--inventory-accent-dark);
+    background: var(--inventory-surface);
+}
+
+#inventoryPanel .button.secondary:not(.inventory-card-add-option):hover,
+#inventoryPanel .button.secondary:not(.inventory-card-add-option):focus-visible {
+    border-color: var(--inventory-accent-dark);
+    color: white;
+    background: var(--inventory-accent-dark);
+}
+
 .admin-inventory-wrap {
     max-height: none;
     overflow: visible;
@@ -4296,12 +4366,12 @@ footer a:hover {
     padding: 0 !important;
     border-radius: 12px;
     color: white;
-    background: var(--green-dark);
+    background: var(--inventory-accent-dark);
     box-shadow: 0 4px 14px rgba(20, 55, 30, 0.12);
 }
 
 .inventory-category-section .inventory-current-heading {
-    background: #49624d;
+    background: #274f31;
 }
 
 .inventory-card-grid {
@@ -4314,9 +4384,9 @@ footer a:hover {
 .inventory-admin-card {
     min-width: 0;
     overflow: hidden;
-    border: 1px solid var(--green-border);
+    border: 2px solid var(--inventory-border);
     border-radius: 16px;
-    background: var(--white);
+    background: var(--inventory-surface);
     box-shadow: 0 5px 18px rgba(20, 55, 30, 0.09);
 }
 
@@ -4326,7 +4396,7 @@ footer a:hover {
 
 .inventory-empty-card {
     border-style: dashed;
-    background: #fbfefb;
+    background: var(--inventory-slot-surface);
 }
 
 .inventory-admin-card-header {
@@ -4341,8 +4411,8 @@ footer a:hover {
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
     overflow: hidden;
-    color: var(--text-soft);
-    background: var(--green-light);
+    color: var(--inventory-muted);
+    background: var(--inventory-surface-soft);
     font-size: 0.85rem;
     place-items: center;
     text-align: center;
@@ -4372,7 +4442,7 @@ footer a:hover {
 .inventory-card-name-field {
     display: grid;
     gap: 7px;
-    color: var(--green-dark);
+    color: var(--inventory-ink);
     font-weight: bold;
 }
 
@@ -4381,17 +4451,17 @@ footer a:hover {
     min-width: 0;
     box-sizing: border-box;
     padding: 10px 11px;
-    border: 1px solid #aac9ae;
+    border: 2px solid var(--inventory-border);
     border-radius: 8px;
-    color: var(--text-main);
-    background: var(--white);
+    color: var(--inventory-ink);
+    background: var(--inventory-surface-soft);
     font: inherit;
     font-size: 1.08rem;
     font-weight: bold;
 }
 
 .inventory-card-option-count {
-    color: var(--text-soft);
+    color: var(--inventory-muted);
     font-size: 0.86rem;
 }
 
@@ -4401,21 +4471,31 @@ footer a:hover {
     gap: 8px;
 }
 
-.inventory-card-add-option {
+.button.secondary.inventory-card-add-option {
     padding: 8px 13px;
+    border-color: var(--inventory-accent);
+    color: white;
+    background: var(--inventory-accent);
     font-size: 0.84rem;
+}
+
+.button.secondary.inventory-card-add-option:hover,
+.button.secondary.inventory-card-add-option:focus-visible {
+    border-color: var(--inventory-accent-dark);
+    color: white;
+    background: var(--inventory-accent-dark);
 }
 
 .inventory-card-options {
     display: grid;
     gap: 0;
-    border-top: 1px solid var(--green-border);
+    border-top: 2px solid var(--inventory-border);
 }
 
 .inventory-product-option {
     min-width: 0;
-    border-bottom: 1px solid #e4ece4;
-    background: var(--white);
+    border-bottom: 1px solid var(--inventory-border-soft);
+    background: var(--inventory-surface);
 }
 
 .inventory-product-option:last-child {
@@ -4423,7 +4503,7 @@ footer a:hover {
 }
 
 .inventory-product-option.inventory-slot-row {
-    background: #fbfefb;
+    background: var(--inventory-slot-surface);
 }
 
 .inventory-product-option .inventory-mobile-product-toggle {
@@ -4434,22 +4514,27 @@ footer a:hover {
     gap: 3px 12px;
     padding: 14px 18px;
     border: 0;
-    color: var(--text-main);
+    color: var(--inventory-ink);
     background: transparent;
     font: inherit;
     text-align: left;
     cursor: pointer;
 }
 
+.inventory-product-option .inventory-mobile-product-toggle:hover,
+.inventory-product-option .inventory-mobile-product-toggle:focus-visible {
+    background: var(--inventory-surface-soft);
+}
+
 .inventory-product-option .inventory-mobile-product-name {
     overflow-wrap: anywhere;
-    color: var(--green-dark);
+    color: var(--inventory-ink);
     font-weight: bold;
 }
 
 .inventory-product-option .inventory-mobile-product-summary {
     grid-column: 1;
-    color: var(--text-soft);
+    color: var(--inventory-muted);
     font-size: 0.82rem;
 }
 
@@ -4461,8 +4546,8 @@ footer a:hover {
     grid-row: 1 / 3;
     place-items: center;
     border-radius: 50%;
-    color: var(--green-dark);
-    background: var(--green-light);
+    color: white;
+    background: var(--inventory-accent);
     font-size: 1.25rem;
     font-weight: bold;
 }
@@ -4479,6 +4564,8 @@ footer a:hover {
     display: none;
     gap: 16px;
     padding: 0 18px 20px;
+    color: var(--inventory-ink);
+    background: #fbfdfb;
 }
 
 .inventory-product-option.inventory-mobile-expanded .inventory-product-editor-body {
@@ -4503,8 +4590,8 @@ footer a:hover {
 }
 
 .inventory-option-field-label {
-    color: var(--green-dark);
-    font-size: 0.82rem;
+    color: var(--inventory-ink);
+    font-size: 0.88rem;
     font-weight: bold;
 }
 
@@ -4516,24 +4603,47 @@ footer a:hover {
     min-width: 0;
     box-sizing: border-box;
     padding: 9px;
-    border: 1px solid #aac9ae;
+    border: 2px solid var(--inventory-border);
     border-radius: 8px;
-    color: var(--text-main);
-    background: var(--white);
+    color: var(--inventory-ink);
+    background: var(--inventory-surface);
     font: inherit;
+}
+
+.inventory-option-field input:focus,
+.inventory-option-field textarea:focus,
+.inventory-option-field select:focus,
+.inventory-card-name-field input:focus {
+    border-color: var(--inventory-accent);
+    outline: 3px solid rgba(40, 104, 58, 0.2);
+    outline-offset: 1px;
+}
+
+.inventory-option-field input:disabled {
+    border-color: #c4cec6;
+    color: #58635b;
+    background: #e4e9e5;
 }
 
 .inventory-option-field textarea {
     resize: vertical;
 }
 
+.inventory-option-field input::placeholder,
+.inventory-option-field textarea::placeholder,
+.inventory-card-name-field input::placeholder,
+#inventoryPanel .admin-search-bar input::placeholder {
+    color: #56685c;
+    opacity: 1;
+}
+
 .inventory-option-checkbox {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     padding: 10px 12px;
-    border: 1px solid #dce8dc;
+    border: 2px solid var(--inventory-border-soft);
     border-radius: 10px;
-    background: #fbfefb;
+    background: var(--inventory-surface-soft);
 }
 
 .inventory-option-checkbox .inventory-option-field-label {
@@ -4545,7 +4655,7 @@ footer a:hover {
     height: 22px;
     grid-column: 2;
     grid-row: 1;
-    accent-color: var(--green-dark);
+    accent-color: var(--inventory-accent-dark);
 }
 
 .inventory-option-images .inventory-image-editor {
@@ -4565,6 +4675,30 @@ footer a:hover {
 .inventory-product-actions .button {
     width: auto;
     flex: 1 1 180px;
+}
+
+.inventory-product-actions .inventory-own-card-button {
+    border-color: var(--inventory-accent);
+    color: var(--inventory-accent-dark);
+    background: var(--inventory-surface-soft);
+}
+
+.inventory-product-actions .inventory-own-card-button:hover,
+.inventory-product-actions .inventory-own-card-button:focus-visible {
+    border-color: var(--inventory-accent-dark);
+    color: white;
+    background: var(--inventory-accent-dark);
+}
+
+#inventoryPanel .inventory-image-slot {
+    border-color: var(--inventory-border);
+    background: var(--inventory-surface-soft);
+}
+
+#inventoryPanel .inventory-image-slot-label,
+#inventoryPanel .inventory-option-field .inventory-image-fit,
+#inventoryPanel .inventory-option-field .inventory-image-position {
+    color: var(--inventory-ink);
 }
 
 @media (max-width: 950px) {
