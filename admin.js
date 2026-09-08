@@ -1211,7 +1211,7 @@ document.addEventListener("DOMContentLoaded", function () {
             priceCell.appendChild(priceWrap);
 
             const quantityCell = document.createElement("td");
-            quantityCell.dataset.fieldLabel = "Quantity";
+            quantityCell.dataset.fieldLabel = "Quantity of Fresh";
             const quantityInput = createInventoryInput(
                 "number",
                 product.quantity === null ? "" : product.quantity,
@@ -1221,11 +1221,11 @@ document.addEventListener("DOMContentLoaded", function () {
             quantityInput.max = "1000000";
             quantityInput.step = "1";
             quantityInput.disabled = product.madeToOrder;
-            quantityInput.setAttribute("aria-label", product.name + " fresh quantity");
+            quantityInput.setAttribute("aria-label", product.name + " quantity of fresh product");
             quantityCell.appendChild(quantityInput);
 
             const frozenQuantityCell = document.createElement("td");
-            frozenQuantityCell.dataset.fieldLabel = "Frozen Quantity";
+            frozenQuantityCell.dataset.fieldLabel = "Quantity of Frozen";
             const frozenQuantityInput = createInventoryInput(
                 "number",
                 Number.isInteger(product.frozenQuantity) ? product.frozenQuantity : 0,
@@ -1235,7 +1235,7 @@ document.addEventListener("DOMContentLoaded", function () {
             frozenQuantityInput.max = "1000000";
             frozenQuantityInput.step = "1";
             frozenQuantityInput.disabled = product.frozenOption !== true;
-            frozenQuantityInput.setAttribute("aria-label", product.name + " frozen quantity");
+            frozenQuantityInput.setAttribute("aria-label", product.name + " quantity of frozen product");
             frozenQuantityCell.appendChild(frozenQuantityInput);
 
             const orderLimitCell = document.createElement("td");
@@ -1287,11 +1287,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
             row.append(
                 nameCell,
-                imageCell,
-                descriptionCell,
-                priceCell,
                 quantityCell,
                 frozenQuantityCell,
+                priceCell,
+                imageCell,
+                descriptionCell,
                 orderLimitCell,
                 unitCell,
                 madeCell,

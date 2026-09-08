@@ -176,7 +176,7 @@
                                 <span id="inventorySaveStatus" class="inventory-save-status" role="status" aria-live="polite"></span>
                             </div>
                         </div>
-                        <p class="admin-inventory-help"><strong>Fresh and Frozen quantities:</strong> enter each amount separately. Frozen is offered to customers only when <strong>Offer Frozen Option</strong> is checked and Frozen Quantity is greater than zero. <strong>Maximum per order:</strong> enter the most one household can request in a single order, or leave it blank for no limit. For a new product slot, enter the product details and save. It will move into that category's Current Products list and a new blank slot will appear. Check <strong>Available to order</strong> when it is ready for customers. Choose <strong>Made to order</strong> when the fresh product does not use a fixed quantity.</p>
+                        <p class="admin-inventory-help"><strong>Quantity of Fresh and Quantity of Frozen:</strong> open a product and enter each amount separately. Frozen is offered to customers only when <strong>Offer Frozen Option</strong> is checked and Quantity of Frozen is greater than zero. <strong>Maximum per order:</strong> enter the most one household can request in a single order, or leave it blank for no limit. For a new product slot, enter the product details and save. It will move into that category's Current Products list and a new blank slot will appear. Check <strong>Available to order</strong> when it is ready for customers. Choose <strong>Made to order</strong> when the fresh product does not use a fixed quantity.</p>
                         <div class="admin-search-bar admin-search-sticky">
                             <label for="adminInventorySearch">Search inventory</label>
                             <div class="search-input-row">
@@ -197,11 +197,11 @@
                                 <thead>
                                     <tr>
                                         <th scope="col">Product</th>
+                                        <th scope="col">Quantity of Fresh</th>
+                                        <th scope="col">Quantity of Frozen</th>
+                                        <th scope="col">Price</th>
                                         <th scope="col">Image</th>
                                         <th scope="col">Description</th>
-                                        <th scope="col">Price</th>
-                                        <th scope="col">Fresh Quantity</th>
-                                        <th scope="col">Frozen Quantity</th>
                                         <th scope="col">Maximum per order</th>
                                         <th scope="col">Selling unit</th>
                                         <th scope="col">Made to order</th>
@@ -603,6 +603,6 @@
         </section>
     </main>
 
-    <script src="admin.js?v=20260907-fresh-frozen-stock"></script>
+    <script src="admin.js?v=20260907-clear-fresh-frozen-labels"></script>
 </body>
 </html>
