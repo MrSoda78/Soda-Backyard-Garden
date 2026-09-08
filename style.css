@@ -4268,11 +4268,14 @@ footer a:hover {
 
 #inventoryPanel {
     --inventory-ink: #17351f;
-    --inventory-muted: #405247;
+    --inventory-muted: #263d2e;
     --inventory-accent: #28683a;
     --inventory-accent-dark: #174b28;
-    --inventory-border: #91a99a;
-    --inventory-border-soft: #cfdcd2;
+    --inventory-border: #6f8b78;
+    --inventory-border-soft: #b8c9bc;
+    --inventory-add: #f2c94c;
+    --inventory-add-hover: #dba91a;
+    --inventory-add-text: #2b2103;
     --inventory-surface: #ffffff;
     --inventory-surface-soft: #edf5ef;
     --inventory-slot-surface: #f6faf7;
@@ -4456,13 +4459,14 @@ footer a:hover {
     color: var(--inventory-ink);
     background: var(--inventory-surface-soft);
     font: inherit;
-    font-size: 1.08rem;
+    font-size: 1.15rem;
     font-weight: bold;
 }
 
 .inventory-card-option-count {
     color: var(--inventory-muted);
-    font-size: 0.86rem;
+    font-size: 0.95rem;
+    font-weight: bold;
 }
 
 .inventory-card-actions {
@@ -4473,17 +4477,18 @@ footer a:hover {
 
 .button.secondary.inventory-card-add-option {
     padding: 8px 13px;
-    border-color: var(--inventory-accent);
-    color: white;
-    background: var(--inventory-accent);
-    font-size: 0.84rem;
+    border-color: #ad7d05;
+    color: var(--inventory-add-text);
+    background: var(--inventory-add);
+    box-shadow: 0 2px 7px rgba(79, 55, 0, 0.22);
+    font-size: 0.95rem;
 }
 
 .button.secondary.inventory-card-add-option:hover,
 .button.secondary.inventory-card-add-option:focus-visible {
-    border-color: var(--inventory-accent-dark);
-    color: white;
-    background: var(--inventory-accent-dark);
+    border-color: #8a6100;
+    color: #171000;
+    background: var(--inventory-add-hover);
 }
 
 .inventory-card-options {
@@ -4529,13 +4534,15 @@ footer a:hover {
 .inventory-product-option .inventory-mobile-product-name {
     overflow-wrap: anywhere;
     color: var(--inventory-ink);
+    font-size: 1.05rem;
     font-weight: bold;
 }
 
 .inventory-product-option .inventory-mobile-product-summary {
     grid-column: 1;
     color: var(--inventory-muted);
-    font-size: 0.82rem;
+    font-size: 0.94rem;
+    font-weight: 600;
 }
 
 .inventory-product-option .inventory-mobile-product-icon {
@@ -4591,7 +4598,7 @@ footer a:hover {
 
 .inventory-option-field-label {
     color: var(--inventory-ink);
-    font-size: 0.88rem;
+    font-size: 0.95rem;
     font-weight: bold;
 }
 
@@ -4608,6 +4615,8 @@ footer a:hover {
     color: var(--inventory-ink);
     background: var(--inventory-surface);
     font: inherit;
+    font-size: 1rem;
+    font-weight: 500;
 }
 
 .inventory-option-field input:focus,
