@@ -3111,7 +3111,7 @@ footer a:hover {
 
 .admin-inventory-table {
     width: 100%;
-    min-width: 1890px;
+    min-width: 2260px;
     border-collapse: separate;
     border-spacing: 0;
 }
@@ -3169,6 +3169,37 @@ footer a:hover {
 
 .admin-inventory-table .inventory-name {
     min-width: 210px;
+}
+
+.inventory-card-assignment {
+    display: grid;
+    min-width: 210px;
+    gap: 8px;
+}
+
+.admin-inventory-table .inventory-card-name {
+    min-width: 210px;
+}
+
+.admin-inventory-table .inventory-card-label {
+    min-width: 160px;
+}
+
+.inventory-own-card-button {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 0.78rem;
+}
+
+.product-card-group-descriptions {
+    display: grid;
+    gap: 12px;
+}
+
+.product-card-group-descriptions h4 {
+    margin-bottom: 4px;
+    color: var(--green-dark);
+    font-size: 0.92rem;
 }
 
 .inventory-mobile-product-toggle {

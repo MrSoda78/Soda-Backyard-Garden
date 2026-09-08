@@ -27,6 +27,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const salesPanel = document.getElementById("salesPanel");
     const blockedPanel = document.getElementById("blockedPanel");
     const inventoryRows = document.getElementById("inventoryRows");
+    const inventoryCardNames = document.getElementById("inventoryCardNames");
     const inventoryMessage = document.getElementById("inventoryMessage");
     const refreshInventoryButton = document.getElementById("refreshInventory");
     const saveInventoryButton = document.getElementById("saveInventory");
@@ -864,7 +865,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const sectionRow = document.createElement("tr");
         const sectionCell = document.createElement("th");
         const toggle = document.createElement("button");
-        sectionCell.colSpan = 11;
+        sectionCell.colSpan = 13;
         sectionCell.scope = "rowgroup";
         sectionCell.className = "inventory-section-heading";
         sectionCell.classList.toggle("inventory-current-heading", isCurrentSection);
@@ -1032,6 +1033,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function renderInventory(products) {
         inventoryRows.replaceChildren();
+        inventoryCardNames.replaceChildren();
+        Array.from(new Set(products.filter(function (product) {
+            return product.category !== "retired" && !isEmptyProductSlot(product);
+        }).map(function (product) {
+            return (product.cardName || product.name).trim();
+        }).filter(Boolean))).sort(function (left, right) {
+            return left.localeCompare(right);
+        }).forEach(function (cardName) {
+            const option = document.createElement("option");
+            option.value = cardName;
+            inventoryCardNames.appendChild(option);
+        });
         const categories = [
             { id: "produce", label: "Fresh Produce" },
             { id: "tea", label: "Tea Mixes" },
@@ -1108,6 +1121,8 @@ document.addEventListener("DOMContentLoaded", function () {
             row.dataset.inventorySection = entry.sectionKey;
             row.dataset.inventorySearch = [
                 product.name,
+                product.cardName,
+                product.cardLabel,
                 product.description,
                 product.unit,
                 product.category,
@@ -1149,6 +1164,40 @@ document.addEventListener("DOMContentLoaded", function () {
             const nameInput = createInventoryInput("text", product.name, "inventory-name");
             nameInput.setAttribute("aria-label", "Product name");
             nameCell.append(mobileToggle, nameInput);
+
+            const cardNameCell = document.createElement("td");
+            cardNameCell.dataset.fieldLabel = "Product Card";
+            const cardAssignment = document.createElement("div");
+            cardAssignment.className = "inventory-card-assignment";
+            const cardNameInput = createInventoryInput(
+                "text",
+                product.cardName || (emptySlot ? "" : product.name),
+                "inventory-card-name"
+            );
+            cardNameInput.maxLength = 100;
+            cardNameInput.placeholder = "Uses product name";
+            cardNameInput.setAttribute("list", "inventoryCardNames");
+            cardNameInput.setAttribute("aria-label", product.name + " product card");
+            const ownCardButton = document.createElement("button");
+            ownCardButton.type = "button";
+            ownCardButton.className = "button secondary inventory-own-card-button";
+            ownCardButton.dataset.inventoryCardAction = "own";
+            ownCardButton.textContent = "Make Own Card";
+            ownCardButton.disabled = emptySlot;
+            cardAssignment.append(cardNameInput, ownCardButton);
+            cardNameCell.appendChild(cardAssignment);
+
+            const cardLabelCell = document.createElement("td");
+            cardLabelCell.dataset.fieldLabel = "Name on Card";
+            const cardLabelInput = createInventoryInput(
+                "text",
+                product.cardLabel || "",
+                "inventory-card-label"
+            );
+            cardLabelInput.maxLength = 100;
+            cardLabelInput.placeholder = "Optional short name";
+            cardLabelInput.setAttribute("aria-label", product.name + " name inside its product card");
+            cardLabelCell.appendChild(cardLabelInput);
 
             const imageCell = document.createElement("td");
             imageCell.dataset.fieldLabel = "Product images";
@@ -1287,6 +1336,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
             row.append(
                 nameCell,
+                cardNameCell,
+                cardLabelCell,
                 quantityCell,
                 frozenQuantityCell,
                 priceCell,
@@ -1340,6 +1391,8 @@ document.addEventListener("DOMContentLoaded", function () {
             return {
                 id: row.dataset.productId,
                 name: row.querySelector(".inventory-name").value,
+                cardName: row.querySelector(".inventory-card-name").value,
+                cardLabel: row.querySelector(".inventory-card-label").value,
                 description: row.querySelector(".inventory-description").value,
                 unit: row.querySelector(".inventory-unit").value,
                 priceCents: Math.round(price * 100),
@@ -3035,7 +3088,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     inventoryRows.addEventListener("click", function (event) {
         const button = event.target.closest(
-            "[data-inventory-image-action], [data-inventory-product-action]"
+            "[data-inventory-image-action], [data-inventory-product-action], [data-inventory-card-action]"
         );
 
         if (!button) {
@@ -3044,7 +3097,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const row = button.closest("tr[data-product-id]");
 
-        if (button.dataset.inventoryProductAction === "delete") {
+        if (button.dataset.inventoryCardAction === "own") {
+            const productName = row.querySelector(".inventory-name").value.trim();
+            row.querySelector(".inventory-card-name").value = productName;
+            row.querySelector(".inventory-card-label").value = "";
+            markInventoryUnsaved();
+            setMessage(
+                inventoryMessage,
+                productName + " will move to its own card when you save changes.",
+                "success"
+            );
+        } else if (button.dataset.inventoryProductAction === "delete") {
             deleteInventoryProduct(row, button);
         } else if (button.dataset.inventoryImageAction === "upload") {
             uploadInventoryImage(row, button);

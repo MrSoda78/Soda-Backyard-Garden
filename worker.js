@@ -33,7 +33,9 @@ const SCHEMA_STATEMENTS = [
         image_fit_2 TEXT NOT NULL DEFAULT 'cover',
         image_position_2 TEXT NOT NULL DEFAULT 'center',
         frozen_option INTEGER NOT NULL DEFAULT 0 CHECK (frozen_option IN (0, 1)),
-        frozen_quantity INTEGER NOT NULL DEFAULT 0 CHECK (frozen_quantity >= 0)
+        frozen_quantity INTEGER NOT NULL DEFAULT 0 CHECK (frozen_quantity >= 0),
+        card_name TEXT NOT NULL DEFAULT '',
+        card_label TEXT NOT NULL DEFAULT ''
     )`,
     `CREATE TABLE IF NOT EXISTS carousel_images (
         id TEXT PRIMARY KEY,
@@ -677,7 +679,9 @@ function ensureDatabase(db) {
                 ["image_fit_2", "ALTER TABLE products ADD COLUMN image_fit_2 TEXT NOT NULL DEFAULT 'cover'"],
                 ["image_position_2", "ALTER TABLE products ADD COLUMN image_position_2 TEXT NOT NULL DEFAULT 'center'"],
                 ["frozen_option", "ALTER TABLE products ADD COLUMN frozen_option INTEGER NOT NULL DEFAULT 0"],
-                ["frozen_quantity", "ALTER TABLE products ADD COLUMN frozen_quantity INTEGER NOT NULL DEFAULT 0"]
+                ["frozen_quantity", "ALTER TABLE products ADD COLUMN frozen_quantity INTEGER NOT NULL DEFAULT 0"],
+                ["card_name", "ALTER TABLE products ADD COLUMN card_name TEXT NOT NULL DEFAULT ''"],
+                ["card_label", "ALTER TABLE products ADD COLUMN card_label TEXT NOT NULL DEFAULT ''"]
             ];
 
             for (const [columnName, migration] of productMigrations) {
@@ -927,6 +931,117 @@ function ensureDatabase(db) {
                 ]);
             }
 
+            const productCardGroupingMigrationId = "2026-09-07-product-card-grouping";
+            const productCardGroupingMigration = await db.prepare(`
+                SELECT id
+                FROM site_migrations
+                WHERE id = ?
+            `).bind(productCardGroupingMigrationId).first();
+
+            if (!productCardGroupingMigration) {
+                await db.batch([
+                    db.prepare(`
+                        UPDATE products
+                        SET card_name = name,
+                            card_label = ''
+                        WHERE category <> 'retired'
+                          AND name NOT LIKE 'New Product Slot%'
+                          AND TRIM(card_name) = ''
+                    `),
+                    db.prepare(`
+                        UPDATE products
+                        SET card_name = 'Callaloo'
+                        WHERE id = 'callaloo'
+                    `),
+                    db.prepare(`
+                        UPDATE products
+                        SET card_name = 'Honey',
+                            card_label = CASE id
+                                WHEN 'honey-1kg' THEN '1 kg'
+                                WHEN 'honey-3kg' THEN '3 kg'
+                                ELSE card_label
+                            END
+                        WHERE id IN ('honey-1kg', 'honey-3kg')
+                    `),
+                    db.prepare(`
+                        UPDATE products
+                        SET card_name = 'Pasta Sauce',
+                            card_label = CASE id
+                                WHEN 'pasta-sauce-1l' THEN '1 litre'
+                                WHEN 'pasta-sauce-750ml' THEN '750 mL'
+                                ELSE card_label
+                            END
+                        WHERE id IN ('pasta-sauce-1l', 'pasta-sauce-750ml')
+                    `),
+                    db.prepare(`
+                        UPDATE products
+                        SET card_name = 'Zucchini',
+                            card_label = CASE id
+                                WHEN 'yellow-zucchini' THEN 'Yellow'
+                                WHEN 'green-zucchini' THEN 'Green'
+                                WHEN 'small-courgette' THEN 'Courgette'
+                                ELSE card_label
+                            END
+                        WHERE id IN ('yellow-zucchini', 'green-zucchini', 'small-courgette')
+                    `),
+                    db.prepare(`
+                        UPDATE products
+                        SET card_name = 'Fresh Beans',
+                            card_label = CASE id
+                                WHEN 'dragon-tongue-beans' THEN 'Dragon Tongue'
+                                WHEN 'purple-beans' THEN 'Purple'
+                                WHEN 'green-beans' THEN 'Green'
+                                WHEN 'yellow-beans' THEN 'Yellow'
+                                ELSE card_label
+                            END
+                        WHERE id IN (
+                            'dragon-tongue-beans', 'purple-beans',
+                            'green-beans', 'yellow-beans'
+                        )
+                    `),
+                    db.prepare(`
+                        UPDATE products
+                        SET card_name = 'Potatoes',
+                            card_label = CASE id
+                                WHEN 'red-potatoes' THEN 'Red'
+                                WHEN 'white-potatoes' THEN 'White'
+                                WHEN 'russet-potatoes' THEN 'Russet'
+                                ELSE card_label
+                            END
+                        WHERE id IN ('red-potatoes', 'white-potatoes', 'russet-potatoes')
+                    `),
+                    db.prepare(`
+                        UPDATE products
+                        SET card_name = CASE
+                                WHEN id LIKE 'cold-flu-tea%' THEN 'Cold & Flu'
+                                WHEN id LIKE 'menopause-tea%' THEN 'Perimenopause / Menopause'
+                                WHEN id LIKE 'mullein-tea%' THEN 'Mullein Leaf'
+                                WHEN id LIKE 'red-raspberry-leaf-tea%' THEN 'Red Raspberry Leaf'
+                                WHEN id LIKE 'bloating-tea%' THEN 'Bloating Tea Blend'
+                                WHEN id LIKE 'sleep-tea%' THEN 'Sleep Tea Blend'
+                                ELSE card_name
+                            END,
+                            card_label = CASE
+                                WHEN id LIKE '%-40g' THEN '40 g'
+                                ELSE '20 g'
+                            END
+                        WHERE id IN (
+                            'cold-flu-tea', 'cold-flu-tea-40g',
+                            'menopause-tea', 'menopause-tea-40g',
+                            'mullein-tea', 'mullein-tea-40g',
+                            'red-raspberry-leaf-tea', 'red-raspberry-leaf-tea-40g',
+                            'bloating-tea', 'bloating-tea-40g',
+                            'sleep-tea', 'sleep-tea-40g'
+                        )
+                    `),
+                    db.prepare(`
+                        INSERT INTO site_migrations (id)
+                        VALUES (?)
+                        ON CONFLICT(id) DO NOTHING
+                    `).bind(productCardGroupingMigrationId)
+                ]);
+            }
+
             const teaPackageSizesMigrationId = "2026-09-06-tea-package-sizes";
             const teaPackageSizesMigration = await db.prepare(`
                 SELECT id
@@ -940,13 +1055,23 @@ function ensureDatabase(db) {
                         INSERT INTO products (
                             id, name, unit, price_cents, quantity, made_to_order,
                             sort_order, active, description, category, is_slot,
-                            order_limit, frozen_option
+                            order_limit, frozen_option, card_name, card_label
                         )
                         SELECT
                             id || '-40g', name || ' — 40 g', '40 g package', 0,
                             CASE WHEN made_to_order = 1 THEN NULL ELSE 0 END,
                             made_to_order, sort_order + 1, 0, description, 'tea', 0,
-                            order_limit, 0
+                            order_limit, 0,
+                            CASE id
+                                WHEN 'cold-flu-tea' THEN 'Cold & Flu'
+                                WHEN 'menopause-tea' THEN 'Perimenopause / Menopause'
+                                WHEN 'mullein-tea' THEN 'Mullein Leaf'
+                                WHEN 'red-raspberry-leaf-tea' THEN 'Red Raspberry Leaf'
+                                WHEN 'bloating-tea' THEN 'Bloating Tea Blend'
+                                WHEN 'sleep-tea' THEN 'Sleep Tea Blend'
+                                ELSE name
+                            END,
+                            '40 g'
                         FROM products
                         WHERE id IN (
                             'cold-flu-tea', 'menopause-tea', 'mullein-tea',
@@ -1253,6 +1378,7 @@ async function getProducts(db, includeInactive = false) {
         SELECT
             id, name, unit, price_cents, quantity, made_to_order, active,
             description, category, is_slot, order_limit, frozen_option, frozen_quantity,
+            card_name, card_label,
             image_key, image_fit, image_position,
             image_key_2, image_fit_2, image_position_2
         FROM products
@@ -1275,6 +1401,8 @@ async function getProducts(db, includeInactive = false) {
             orderLimit: product.order_limit,
             frozenOption: product.frozen_option === 1,
             frozenQuantity: product.frozen_quantity,
+            cardName: product.card_name || product.name,
+            cardLabel: product.card_label || "",
             imageUrl: mediaUrlForKey(product.image_key),
             imageFit: normalizeImageFit(product.image_fit),
             imagePosition: normalizeImagePosition(product.image_position),
@@ -2129,6 +2257,7 @@ async function handleAdminInventory(db) {
         SELECT
             id, name, unit, price_cents, quantity, made_to_order, sort_order, active,
             description, category, is_slot, order_limit, frozen_option, frozen_quantity,
+            card_name, card_label,
             image_key, image_fit, image_position,
             image_key_2, image_fit_2, image_position_2
         FROM products
@@ -2151,6 +2280,8 @@ async function handleAdminInventory(db) {
                 orderLimit: product.order_limit,
                 frozenOption: product.frozen_option === 1,
                 frozenQuantity: product.frozen_quantity,
+                cardName: product.card_name || product.name,
+                cardLabel: product.card_label || "",
                 imageUrl: mediaUrlForKey(product.image_key),
                 imageFit: normalizeImageFit(product.image_fit),
                 imagePosition: normalizeImagePosition(product.image_position),
@@ -2461,7 +2592,10 @@ async function handleAdminInventoryUpdate(request, db) {
         return jsonResponse({ error: "No inventory changes were received." }, 400);
     }
 
-    const existingResult = await db.prepare("SELECT id, is_slot FROM products").all();
+    const existingResult = await db.prepare(`
+        SELECT id, is_slot, card_name, card_label
+        FROM products
+    `).all();
     const existingProducts = new Map(existingResult.results.map(function (product) {
         return [product.id, product];
     }));
@@ -2492,6 +2626,14 @@ async function handleAdminInventoryUpdate(request, db) {
         if (!existingProduct || seenIds.has(id)) {
             return jsonResponse({ error: "One of the inventory products was not recognized." }, 400);
         }
+
+        const submittedCardName = Object.prototype.hasOwnProperty.call(submitted, "cardName")
+            ? cleanText(submitted.cardName, 100)
+            : cleanText(existingProduct.card_name, 100);
+        const cardName = submittedCardName || (name.startsWith("New Product Slot") ? "" : name);
+        const cardLabel = Object.prototype.hasOwnProperty.call(submitted, "cardLabel")
+            ? cleanText(submitted.cardLabel, 100)
+            : cleanText(existingProduct.card_label, 100);
 
         if (name.length < 2 || unit.length < 1) {
             return jsonResponse({ error: "Every product needs a name and selling unit." }, 400);
@@ -2539,6 +2681,7 @@ async function handleAdminInventoryUpdate(request, db) {
                 SET name = ?, unit = ?, price_cents = ?, quantity = ?,
                     made_to_order = ?, active = ?, description = ?, order_limit = ?,
                     frozen_option = ?, frozen_quantity = ?,
+                    card_name = ?, card_label = ?,
                     image_fit = ?, image_position = ?,
                     image_fit_2 = ?, image_position_2 = ?
                 WHERE id = ?
@@ -2553,6 +2696,8 @@ async function handleAdminInventoryUpdate(request, db) {
                 orderLimit,
                 frozenOption ? 1 : 0,
                 frozenQuantity,
+                cardName,
+                cardLabel,
                 imageFit,
                 imagePosition,
                 imageFit2,

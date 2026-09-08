@@ -688,7 +688,7 @@ document.addEventListener("DOMContentLoaded", function () {
         };
 
         if (card.dataset.dynamicProductCard) {
-            addProductId(card.dataset.dynamicProductCard);
+            card.dataset.dynamicProductCard.split(",").forEach(addProductId);
         }
 
         [
@@ -1275,80 +1275,305 @@ document.addEventListener("DOMContentLoaded", function () {
         return image;
     }
 
+    const managedProductImageUrls = {
+        "callaloo": "images/Callalo.jpg",
+        "honey-1kg": "images/Honey 2.jpg",
+        "honey-3kg": "images/Honey 1.jpg",
+        "pasta-sauce-1l": "images/Pasta Sause.jpg",
+        "pasta-sauce-750ml": "images/Pasta Sause.jpg",
+        "hot-sauce-250ml": "images/Hot Sauce.jpg",
+        "fresh-beets": "images/Beets 2.jpg",
+        "yellow-zucchini": "images/Yellow Zuccinni.jpg",
+        "green-zucchini": "images/Green Zuccinni.jpg",
+        "lebanese-zucchini": "images/Lebanese Zuccinni.jpg",
+        "small-courgette": "images/Green Zuccinni.jpg",
+        "lemon-cucumber-pack": "images/Lemon Cucumber.jpg",
+        "dragon-tongue-beans": "images/Dragon Tongue Beans.jpg",
+        "purple-beans": "images/Purple Beans.jpg",
+        "green-beans": "images/Green Beans.jpg",
+        "yellow-beans": "images/Yellow Beans.jpg",
+        "potatoes": "images/Pink Potatoes.jpg",
+        "red-potatoes": "images/Red Potatoes.jpg",
+        "red-fingerling-potatoes": "images/Red Fingerling Potatoes.jpg",
+        "white-potatoes": "images/White Potatoes.jpg",
+        "white-fingerling-potatoes": "images/White Fingerling Potatoes.jpg",
+        "russet-potatoes": "images/Russet Potatoes.jpg",
+        "fresh-garlic": "images/Garlic Bunches.jpg",
+        "fresh-onions": "images/Fresh Onions.jpg",
+        "onions": "images/Yellow Spanish Onion.jpg",
+        "red-onion": "images/Red Onion.jpg",
+        "white-onion": "images/White Onion.jpg",
+        "tri-colour-carrots": "images/Tri-Colour Carrots.jpg",
+        "sage": "images/Sage.jpg",
+        "brown-eggs": "images/Brown Eggs - Large.jpg",
+        "white-eggs-flat": "images/Flat of White Eggs - Large.jpg",
+        "cold-flu-tea": "images/Cold and Flu.jpg",
+        "cold-flu-tea-40g": "images/Cold and Flu.jpg",
+        "menopause-tea": "images/Perimenopause - Menopause.jpg",
+        "menopause-tea-40g": "images/Perimenopause - Menopause.jpg",
+        "mullein-tea": "images/Mullein.jpg",
+        "mullein-tea-40g": "images/Mullein.jpg",
+        "red-raspberry-leaf-tea": "images/Red Raspberry Leaf.jpg",
+        "red-raspberry-leaf-tea-40g": "images/Red Raspberry Leaf.jpg",
+        "bloating-tea": "images/Bloating Blend.jpg",
+        "bloating-tea-40g": "images/Bloating Blend.jpg",
+        "sleep-tea": "images/Sleep Blend.jpg",
+        "sleep-tea-40g": "images/Sleep Blend.jpg",
+        "hardo-bread": "images/Hardo Bread.jpg"
+    };
+    const managedProductSecondImageUrls = {
+        "callaloo": "images/Callalo - Vacuum.jpg"
+    };
+    const containedManagedProductImages = new Set(["hardo-bread"]);
+
+    function managedProductFallbackImage(product) {
+        if (managedProductImageUrls[product.id]) {
+            return managedProductImageUrls[product.id];
+        }
+
+        if (!product.isSlot || product.name.startsWith("New Product Slot")) {
+            return "";
+        }
+
+        const imageFileName = product.name === "Sweet Corn"
+            ? "Sweet Corn 2.jpg"
+            : product.name + ".jpg";
+        return "images/" + encodeURIComponent(imageFileName);
+    }
+
+    function productCardName(product) {
+        return (product.cardName || product.name).trim() || product.name;
+    }
+
+    function productCardLabel(product, grouped) {
+        return (product.cardLabel || "").trim() || (grouped ? product.name : "");
+    }
+
+    function managedProductCardImages(products) {
+        const candidates = [];
+        const seenUrls = new Set();
+        const addCandidate = function (product, imageSlot, imageUrl) {
+            if (!imageUrl || seenUrls.has(imageUrl) || candidates.length >= 2) {
+                return;
+            }
+
+            seenUrls.add(imageUrl);
+            candidates.push({ product, imageSlot, imageUrl });
+        };
+
+        products.forEach(function (product) {
+            addCandidate(product, 1, product.imageUrl || managedProductFallbackImage(product));
+        });
+        products.forEach(function (product) {
+            addCandidate(
+                product,
+                2,
+                product.imageUrl2 || managedProductSecondImageUrls[product.id] || ""
+            );
+        });
+        return candidates;
+    }
+
+    function appendManagedProductDescriptions(content, products) {
+        const descriptions = [];
+
+        products.forEach(function (product) {
+            const description = (product.description || "").trim();
+
+            if (!description || descriptions.some(function (entry) {
+                return entry.description === description;
+            })) {
+                return;
+            }
+
+            descriptions.push({
+                description,
+                label: productCardLabel(product, products.length > 1)
+            });
+        });
+
+        if (descriptions.length === 1) {
+            content.appendChild(createProductDescriptionElement(
+                descriptions[0].description,
+                "dynamic-product-description"
+            ));
+            return;
+        }
+
+        if (descriptions.length > 1) {
+            const list = document.createElement("div");
+            list.className = "product-card-group-descriptions";
+            descriptions.forEach(function (entry) {
+                const item = document.createElement("div");
+                const label = document.createElement("h4");
+                label.textContent = entry.label;
+                item.append(
+                    label,
+                    createProductDescriptionElement(entry.description, "dynamic-product-description")
+                );
+                list.appendChild(item);
+            });
+            content.appendChild(list);
+        }
+    }
+
+    function pluralProductUnit(unit) {
+        return unit.endsWith("s") ? unit : unit + "s";
+    }
+
+    function createManagedProductCard(cardName, products) {
+        const card = document.createElement("div");
+        const productIds = products.map(function (product) {
+            return product.id;
+        });
+        card.className = "product-card";
+        card.dataset.dynamicProductCard = productIds.join(",");
+
+        const images = managedProductCardImages(products);
+
+        if (images.length === 0) {
+            const placeholder = document.createElement("div");
+            placeholder.className = "product-image-placeholder dynamic-product-image";
+            placeholder.textContent = "Image coming soon";
+            card.appendChild(placeholder);
+        } else if (images.length === 1) {
+            const image = createDynamicProductImage(
+                images[0].product,
+                images[0].imageSlot,
+                images[0].imageUrl
+            );
+            if (containedManagedProductImages.has(images[0].product.id)) {
+                image.classList.add("product-image-contain");
+            }
+            card.appendChild(image);
+        } else {
+            const imageStrip = document.createElement("div");
+            imageStrip.className = "product-photo-strip";
+            images.forEach(function (candidate) {
+                const image = createDynamicProductImage(
+                    candidate.product,
+                    candidate.imageSlot,
+                    candidate.imageUrl
+                );
+                if (containedManagedProductImages.has(candidate.product.id)) {
+                    image.classList.add("product-image-contain");
+                }
+                imageStrip.appendChild(image);
+            });
+            card.appendChild(imageStrip);
+        }
+
+        const content = document.createElement("div");
+        content.className = "product-card-content";
+        const heading = document.createElement("h3");
+        heading.textContent = cardName;
+        content.appendChild(heading);
+
+        if (products.length === 1) {
+            const product = products[0];
+            const price = document.createElement("p");
+            price.className = "price";
+            price.dataset.priceDisplay = product.id;
+            price.textContent = formatProductPrice(product);
+            content.appendChild(price);
+            appendManagedProductDescriptions(content, products);
+
+            const stock = document.createElement("p");
+            const stockText = document.createElement("strong");
+            stock.className = "stock-count";
+            stockText.dataset.stock = product.id;
+            stockText.dataset.unitSingular = product.unit;
+            stockText.dataset.unitPlural = pluralProductUnit(product.unit);
+            stockText.textContent = formatStock(product, stockText);
+            stock.appendChild(stockText);
+
+            const status = document.createElement("span");
+            const available = product.active && hasAvailableStock(product);
+            status.className = "status " + (available ? "available" : "coming");
+            status.dataset.productStatus = product.id;
+            status.textContent = available ? "Available" : "Checking availability...";
+            content.append(stock, status);
+        } else {
+            const availability = document.createElement("ul");
+            availability.className = "availability-list";
+            products.forEach(function (product) {
+                const item = document.createElement("li");
+                const label = document.createElement("span");
+                const info = document.createElement("span");
+                const price = document.createElement("strong");
+                const stock = document.createElement("small");
+                label.textContent = productCardLabel(product, true);
+                info.className = "product-variant-info";
+                price.dataset.priceDisplay = product.id;
+                price.textContent = formatProductPrice(product);
+                stock.dataset.stock = product.id;
+                stock.dataset.unitSingular = product.unit;
+                stock.dataset.unitPlural = pluralProductUnit(product.unit);
+                stock.textContent = formatStock(product, stock);
+                info.append(price, stock);
+                item.append(label, info);
+                availability.appendChild(item);
+            });
+            appendManagedProductDescriptions(content, products);
+            content.appendChild(availability);
+
+            const status = document.createElement("span");
+            const available = products.some(function (product) {
+                return product.active && hasAvailableStock(product);
+            });
+            status.className = "status " + (available ? "available" : "coming");
+            status.dataset.productGroupStatus = productIds.join(",");
+            status.textContent = available ? "Available" : "Checking availability...";
+            content.appendChild(status);
+        }
+
+        card.appendChild(content);
+        return card;
+    }
+
     function renderDynamicProductCards(products) {
         document.querySelectorAll("[data-dynamic-products]").forEach(function (grid) {
             const category = grid.dataset.dynamicProducts;
-            const activeProducts = products.filter(function (product) {
-                return (
-                    product.isSlot &&
-                    product.category === category &&
-                    product.active &&
-                    product.priceCents > 0
-                );
-            });
-
-            grid.querySelectorAll("[data-dynamic-product-card]").forEach(function (card) {
-                card.remove();
-            });
-
-            activeProducts.forEach(function (product) {
-                const card = document.createElement("div");
-                card.className = "product-card";
-                card.dataset.dynamicProductCard = product.id;
-
-                const imageFileName = product.name === "Sweet Corn"
-                    ? "Sweet Corn 2.jpg"
-                    : product.name + ".jpg";
-                const image = createDynamicProductImage(
-                    product,
-                    1,
-                    product.imageUrl || ("images/" + encodeURIComponent(imageFileName))
-                );
-
-                if (product.imageUrl2) {
-                    const imageStrip = document.createElement("div");
-                    imageStrip.className = "product-photo-strip";
-                    imageStrip.append(
-                        image,
-                        createDynamicProductImage(product, 2, product.imageUrl2)
-                    );
-                    card.appendChild(imageStrip);
-                } else {
-                    card.appendChild(image);
+            const isManagedGrid = grid.dataset.managedProductCards === "true";
+            const visibleProducts = products.filter(function (product) {
+                if (
+                    product.category !== category ||
+                    product.category === "retired" ||
+                    product.name.startsWith("New Product Slot")
+                ) {
+                    return false;
                 }
 
-                const content = document.createElement("div");
-                content.className = "product-card-content";
+                if (!isManagedGrid && !product.isSlot) {
+                    return false;
+                }
 
-                const heading = document.createElement("h3");
-                heading.textContent = product.name;
+                return !product.isSlot || product.active && product.priceCents > 0;
+            });
 
-                const price = document.createElement("p");
-                price.className = "price";
-                price.dataset.priceDisplay = product.id;
-                price.textContent = formatProductPrice(product);
+            if (isManagedGrid) {
+                grid.querySelectorAll(".product-card:not([data-static-product-card])").forEach(function (card) {
+                    card.remove();
+                });
+            } else {
+                grid.querySelectorAll("[data-dynamic-product-card]").forEach(function (card) {
+                    card.remove();
+                });
+            }
 
-                const description = createProductDescriptionElement(
-                    product.description,
-                    "dynamic-product-description"
-                );
+            const groups = new Map();
+            visibleProducts.forEach(function (product) {
+                const cardName = productCardName(product);
 
-                const stock = document.createElement("p");
-                stock.className = "stock-count";
-                const stockText = document.createElement("strong");
-                stockText.dataset.stock = product.id;
-                stockText.textContent = formatStock(product, stockText);
-                stock.appendChild(stockText);
+                if (!groups.has(cardName)) {
+                    groups.set(cardName, []);
+                }
 
-                const status = document.createElement("span");
-                const available = hasAvailableStock(product);
-                status.className = "status " + (available ? "available" : "sold-out");
-                status.dataset.productStatus = product.id;
-                status.textContent = available ? "Available" : "Sold out";
+                groups.get(cardName).push(product);
+            });
 
-                content.append(heading, price, description, stock, status);
-                card.appendChild(content);
-                grid.appendChild(card);
+            groups.forEach(function (cardProducts, cardName) {
+                grid.appendChild(createManagedProductCard(cardName, cardProducts));
             });
 
             const section = document.querySelector(
@@ -1356,7 +1581,7 @@ document.addEventListener("DOMContentLoaded", function () {
             );
 
             if (section) {
-                section.hidden = activeProducts.length === 0;
+                section.hidden = visibleProducts.length === 0;
             }
         });
 

@@ -12,7 +12,9 @@ CREATE TABLE IF NOT EXISTS products (
     is_slot INTEGER NOT NULL DEFAULT 0 CHECK (is_slot IN (0, 1)),
     order_limit INTEGER CHECK (order_limit IS NULL OR order_limit > 0),
     frozen_option INTEGER NOT NULL DEFAULT 0 CHECK (frozen_option IN (0, 1)),
-    frozen_quantity INTEGER NOT NULL DEFAULT 0 CHECK (frozen_quantity >= 0)
+    frozen_quantity INTEGER NOT NULL DEFAULT 0 CHECK (frozen_quantity >= 0),
+    card_name TEXT NOT NULL DEFAULT '',
+    card_label TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -306,6 +308,90 @@ WHERE id IN (
 );
 
 UPDATE products
+SET card_name = name,
+    card_label = ''
+WHERE category <> 'retired'
+  AND name NOT LIKE 'New Product Slot%'
+  AND TRIM(card_name) = '';
+
+UPDATE products SET card_name = 'Callaloo' WHERE id = 'callaloo';
+
+UPDATE products
+SET card_name = 'Honey',
+    card_label = CASE id
+        WHEN 'honey-1kg' THEN '1 kg'
+        WHEN 'honey-3kg' THEN '3 kg'
+        ELSE card_label
+    END
+WHERE id IN ('honey-1kg', 'honey-3kg');
+
+UPDATE products
+SET card_name = 'Pasta Sauce',
+    card_label = CASE id
+        WHEN 'pasta-sauce-1l' THEN '1 litre'
+        WHEN 'pasta-sauce-750ml' THEN '750 mL'
+        ELSE card_label
+    END
+WHERE id IN ('pasta-sauce-1l', 'pasta-sauce-750ml');
+
+UPDATE products
+SET card_name = 'Zucchini',
+    card_label = CASE id
+        WHEN 'yellow-zucchini' THEN 'Yellow'
+        WHEN 'green-zucchini' THEN 'Green'
+        WHEN 'small-courgette' THEN 'Courgette'
+        ELSE card_label
+    END
+WHERE id IN ('yellow-zucchini', 'green-zucchini', 'small-courgette');
+
+UPDATE products
+SET card_name = 'Fresh Beans',
+    card_label = CASE id
+        WHEN 'dragon-tongue-beans' THEN 'Dragon Tongue'
+        WHEN 'purple-beans' THEN 'Purple'
+        WHEN 'green-beans' THEN 'Green'
+        WHEN 'yellow-beans' THEN 'Yellow'
+        ELSE card_label
+    END
+WHERE id IN (
+    'dragon-tongue-beans', 'purple-beans',
+    'green-beans', 'yellow-beans'
+);
+
+UPDATE products
+SET card_name = 'Potatoes',
+    card_label = CASE id
+        WHEN 'red-potatoes' THEN 'Red'
+        WHEN 'white-potatoes' THEN 'White'
+        WHEN 'russet-potatoes' THEN 'Russet'
+        ELSE card_label
+    END
+WHERE id IN ('red-potatoes', 'white-potatoes', 'russet-potatoes');
+
+UPDATE products
+SET card_name = CASE
+        WHEN id LIKE 'cold-flu-tea%' THEN 'Cold & Flu'
+        WHEN id LIKE 'menopause-tea%' THEN 'Perimenopause / Menopause'
+        WHEN id LIKE 'mullein-tea%' THEN 'Mullein Leaf'
+        WHEN id LIKE 'red-raspberry-leaf-tea%' THEN 'Red Raspberry Leaf'
+        WHEN id LIKE 'bloating-tea%' THEN 'Bloating Tea Blend'
+        WHEN id LIKE 'sleep-tea%' THEN 'Sleep Tea Blend'
+        ELSE card_name
+    END,
+    card_label = CASE
+        WHEN id LIKE '%-40g' THEN '40 g'
+        ELSE '20 g'
+    END
+WHERE id IN (
+    'cold-flu-tea', 'cold-flu-tea-40g',
+    'menopause-tea', 'menopause-tea-40g',
+    'mullein-tea', 'mullein-tea-40g',
+    'red-raspberry-leaf-tea', 'red-raspberry-leaf-tea-40g',
+    'bloating-tea', 'bloating-tea-40g',
+    'sleep-tea', 'sleep-tea-40g'
+);
+
+UPDATE products
 SET name = 'Turnips'
 WHERE id = 'beets' AND name IN ('Beets', 'Turnip');
 
@@ -382,13 +468,23 @@ WHERE id IN (
 INSERT INTO products (
     id, name, unit, price_cents, quantity, made_to_order,
     sort_order, active, description, category, is_slot,
-    order_limit, frozen_option
+    order_limit, frozen_option, card_name, card_label
 )
 SELECT
     id || '-40g', name || ' — 40 g', '40 g package', 0,
     CASE WHEN made_to_order = 1 THEN NULL ELSE 0 END,
     made_to_order, sort_order + 1, 0, description, 'tea', 0,
-    order_limit, 0
+    order_limit, 0,
+    CASE id
+        WHEN 'cold-flu-tea' THEN 'Cold & Flu'
+        WHEN 'menopause-tea' THEN 'Perimenopause / Menopause'
+        WHEN 'mullein-tea' THEN 'Mullein Leaf'
+        WHEN 'red-raspberry-leaf-tea' THEN 'Red Raspberry Leaf'
+        WHEN 'bloating-tea' THEN 'Bloating Tea Blend'
+        WHEN 'sleep-tea' THEN 'Sleep Tea Blend'
+        ELSE name
+    END,
+    '40 g'
 FROM products
 WHERE id IN (
     'cold-flu-tea', 'menopause-tea', 'mullein-tea',
