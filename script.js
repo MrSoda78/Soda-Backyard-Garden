@@ -848,7 +848,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             const details = content.querySelector(":scope > .product-card-details");
-            const controlsContainer = document.body.classList.contains("fresh-produce-page") && details
+            const controlsContainer = document.body.classList.contains("product-catalog-page") && details
                 ? details
                 : content;
             controlsContainer.appendChild(controls);
@@ -1012,7 +1012,8 @@ document.addEventListener("DOMContentLoaded", function () {
             });
 
             const toggle = document.createElement("button");
-            const includesOrdering = document.body.classList.contains("fresh-produce-page");
+            const includesOrdering = document.body.classList.contains("product-catalog-page") &&
+                productIdsForCard(card).length > 0;
             const showLabel = includesOrdering ? "View details & order" : "View details";
             const hideLabel = includesOrdering ? "Hide details & order" : "Hide details";
             toggle.type = "button";
