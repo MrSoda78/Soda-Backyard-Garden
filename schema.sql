@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS products (
     category TEXT NOT NULL DEFAULT '',
     is_slot INTEGER NOT NULL DEFAULT 0 CHECK (is_slot IN (0, 1)),
     order_limit INTEGER CHECK (order_limit IS NULL OR order_limit > 0),
-    frozen_option INTEGER NOT NULL DEFAULT 0 CHECK (frozen_option IN (0, 1))
+    frozen_option INTEGER NOT NULL DEFAULT 0 CHECK (frozen_option IN (0, 1)),
+    frozen_quantity INTEGER NOT NULL DEFAULT 0 CHECK (frozen_quantity >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -39,6 +40,7 @@ CREATE TABLE IF NOT EXISTS order_items (
     unit_price_cents INTEGER NOT NULL,
     quantity INTEGER NOT NULL CHECK (quantity > 0),
     line_total_cents INTEGER NOT NULL,
+    preparation TEXT NOT NULL DEFAULT 'fresh' CHECK (preparation IN ('fresh', 'frozen')),
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
@@ -103,12 +105,55 @@ BEFORE INSERT ON order_items
 WHEN (SELECT made_to_order FROM products WHERE id = NEW.product_id) = 0
 BEGIN
     SELECT CASE
-        WHEN (SELECT quantity FROM products WHERE id = NEW.product_id) IS NULL
-          OR (SELECT quantity FROM products WHERE id = NEW.product_id) < NEW.quantity
+        WHEN NEW.preparation = 'frozen' AND (
+            (SELECT frozen_option FROM products WHERE id = NEW.product_id) <> 1
+            OR (SELECT frozen_quantity FROM products WHERE id = NEW.product_id) < NEW.quantity
+        )
+        THEN RAISE(ABORT, 'INSUFFICIENT_STOCK')
+        WHEN NEW.preparation <> 'frozen' AND (
+            (SELECT quantity FROM products WHERE id = NEW.product_id) IS NULL
+            OR (SELECT quantity FROM products WHERE id = NEW.product_id) < NEW.quantity
+        )
         THEN RAISE(ABORT, 'INSUFFICIENT_STOCK')
     END;
     UPDATE products
-    SET quantity = quantity - NEW.quantity
+    SET quantity = CASE
+            WHEN NEW.preparation = 'frozen' THEN quantity
+            ELSE quantity - NEW.quantity
+        END,
+        frozen_quantity = CASE
+            WHEN NEW.preparation = 'frozen' THEN frozen_quantity - NEW.quantity
+            ELSE frozen_quantity
+        END
+    WHERE id = NEW.product_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS deduct_inventory_before_order_item_increase
+BEFORE UPDATE OF quantity ON order_items
+WHEN NEW.quantity > OLD.quantity
+  AND (SELECT made_to_order FROM products WHERE id = NEW.product_id) = 0
+BEGIN
+    SELECT CASE
+        WHEN OLD.preparation = 'frozen' AND (
+            (SELECT frozen_option FROM products WHERE id = NEW.product_id) <> 1
+            OR (SELECT frozen_quantity FROM products WHERE id = NEW.product_id) < (NEW.quantity - OLD.quantity)
+        )
+        THEN RAISE(ABORT, 'INSUFFICIENT_STOCK')
+        WHEN OLD.preparation <> 'frozen' AND (
+            (SELECT quantity FROM products WHERE id = NEW.product_id) IS NULL
+            OR (SELECT quantity FROM products WHERE id = NEW.product_id) < (NEW.quantity - OLD.quantity)
+        )
+        THEN RAISE(ABORT, 'INSUFFICIENT_STOCK')
+    END;
+    UPDATE products
+    SET quantity = CASE
+            WHEN OLD.preparation = 'frozen' THEN quantity
+            ELSE quantity - (NEW.quantity - OLD.quantity)
+        END,
+        frozen_quantity = CASE
+            WHEN OLD.preparation = 'frozen' THEN frozen_quantity - (NEW.quantity - OLD.quantity)
+            ELSE frozen_quantity
+        END
     WHERE id = NEW.product_id;
 END;
 
@@ -122,6 +167,14 @@ BEGIN
         FROM order_items
         WHERE order_items.order_id = NEW.id
           AND order_items.product_id = products.id
+          AND order_items.preparation <> 'frozen'
+    ), 0),
+        frozen_quantity = frozen_quantity + COALESCE((
+        SELECT SUM(order_items.quantity)
+        FROM order_items
+        WHERE order_items.order_id = NEW.id
+          AND order_items.product_id = products.id
+          AND order_items.preparation = 'frozen'
     ), 0)
     WHERE made_to_order = 0
       AND id IN (
@@ -141,6 +194,14 @@ BEGIN
         FROM order_items
         WHERE order_items.order_id = NEW.id
           AND order_items.product_id = products.id
+          AND order_items.preparation <> 'frozen'
+    ), 0),
+        frozen_quantity = frozen_quantity + COALESCE((
+        SELECT SUM(order_items.quantity)
+        FROM order_items
+        WHERE order_items.order_id = NEW.id
+          AND order_items.product_id = products.id
+          AND order_items.preparation = 'frozen'
     ), 0)
     WHERE made_to_order = 0
       AND id IN (
@@ -153,19 +214,33 @@ END;
 CREATE TRIGGER IF NOT EXISTS restock_inventory_after_order_item_reduce
 AFTER UPDATE OF quantity ON order_items
 WHEN NEW.quantity < OLD.quantity
-  AND (SELECT status FROM orders WHERE id = OLD.order_id) <> 'cancelled'
+  AND (SELECT status FROM orders WHERE id = OLD.order_id) NOT IN ('cancelled', 'refused')
 BEGIN
     UPDATE products
-    SET quantity = quantity + (OLD.quantity - NEW.quantity)
+    SET quantity = CASE
+            WHEN OLD.preparation = 'frozen' THEN quantity
+            ELSE quantity + (OLD.quantity - NEW.quantity)
+        END,
+        frozen_quantity = CASE
+            WHEN OLD.preparation = 'frozen' THEN frozen_quantity + (OLD.quantity - NEW.quantity)
+            ELSE frozen_quantity
+        END
     WHERE id = OLD.product_id AND made_to_order = 0;
 END;
 
 CREATE TRIGGER IF NOT EXISTS restock_inventory_after_order_item_delete
 AFTER DELETE ON order_items
-WHEN (SELECT status FROM orders WHERE id = OLD.order_id) <> 'cancelled'
+WHEN (SELECT status FROM orders WHERE id = OLD.order_id) NOT IN ('cancelled', 'refused')
 BEGIN
     UPDATE products
-    SET quantity = quantity + OLD.quantity
+    SET quantity = CASE
+            WHEN OLD.preparation = 'frozen' THEN quantity
+            ELSE quantity + OLD.quantity
+        END,
+        frozen_quantity = CASE
+            WHEN OLD.preparation = 'frozen' THEN frozen_quantity + OLD.quantity
+            ELSE frozen_quantity
+        END
     WHERE id = OLD.product_id AND made_to_order = 0;
 END;
 
@@ -217,6 +292,17 @@ WHERE id IN (
     'callaloo', 'dragon-tongue-beans', 'purple-beans',
     'green-beans', 'yellow-beans', 'yellow-zucchini',
     'green-zucchini', 'small-courgette'
+);
+
+UPDATE products
+SET quantity = 0,
+    frozen_quantity = 0,
+    made_to_order = 0
+WHERE id IN (
+    'callaloo',
+    'yellow-zucchini', 'green-zucchini', 'small-courgette',
+    'dragon-tongue-beans', 'purple-beans',
+    'green-beans', 'yellow-beans'
 );
 
 UPDATE products

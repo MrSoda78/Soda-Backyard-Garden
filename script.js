@@ -76,6 +76,58 @@ document.addEventListener("DOMContentLoaded", function () {
         return Boolean(product) && product.frozenOption === true;
     }
 
+    function stockForPreparation(product, preparation) {
+        if (!product) {
+            return 0;
+        }
+
+        if (preparation === "frozen") {
+            return supportsFrozenOption(product)
+                ? Math.max(0, Number.parseInt(product.frozenQuantity, 10) || 0)
+                : 0;
+        }
+
+        return product.madeToOrder
+            ? 50
+            : Math.max(0, Number.parseInt(product.quantity, 10) || 0);
+    }
+
+    function hasAvailableStock(product) {
+        return Boolean(product) && (
+            stockForPreparation(product, "fresh") > 0 ||
+            stockForPreparation(product, "frozen") > 0
+        );
+    }
+
+    function selectedPreparation(product) {
+        if (!supportsFrozenOption(product)) {
+            return "fresh";
+        }
+
+        if (frozenSelections.has(product.id) && stockForPreparation(product, "frozen") > 0) {
+            return "frozen";
+        }
+
+        if (stockForPreparation(product, "fresh") > 0) {
+            return "fresh";
+        }
+
+        return stockForPreparation(product, "frozen") > 0 ? "frozen" : "fresh";
+    }
+
+    function ensureValidPreparation(product) {
+        const wasFrozen = frozenSelections.has(product.id);
+        const preparation = selectedPreparation(product);
+
+        if (preparation === "frozen") {
+            frozenSelections.add(product.id);
+        } else {
+            frozenSelections.delete(product.id);
+        }
+
+        return wasFrozen !== frozenSelections.has(product.id);
+    }
+
     function createPreparationChoice(product, prefix = "order") {
         const fieldset = document.createElement("fieldset");
         const legend = document.createElement("legend");
@@ -87,16 +139,20 @@ document.addEventListener("DOMContentLoaded", function () {
         legend.textContent = "Preparation";
         options.className = "preparation-options";
 
+        const currentPreparation = selectedPreparation(product);
+
         ["Fresh", "Frozen"].forEach(function (labelText) {
             const label = document.createElement("label");
             const radio = document.createElement("input");
+            const preparation = labelText.toLowerCase();
 
             label.className = "preparation-option";
             radio.type = "radio";
             radio.name = groupName;
-            radio.value = labelText.toLowerCase();
+            radio.value = preparation;
             radio.dataset.preparationProductId = product.id;
-            radio.checked = labelText === (frozenSelections.has(product.id) ? "Frozen" : "Fresh");
+            radio.checked = preparation === currentPreparation;
+            radio.disabled = maximumBasketQuantity(product, preparation) === 0;
             label.append(radio, document.createTextNode(labelText));
             options.appendChild(label);
         });
@@ -116,32 +172,43 @@ document.addEventListener("DOMContentLoaded", function () {
         select.dataset.preparationProductId = product.id;
         select.setAttribute("aria-label", "Choose Fresh or Frozen for " + product.name);
 
+        const currentPreparation = selectedPreparation(product);
+
         ["Fresh", "Frozen"].forEach(function (optionText) {
             const option = document.createElement("option");
             option.value = optionText.toLowerCase();
             option.textContent = optionText;
+            option.disabled = maximumBasketQuantity(product, option.value) === 0;
             select.appendChild(option);
         });
 
-        select.value = frozenSelections.has(product.id) ? "frozen" : "fresh";
+        select.value = currentPreparation;
         label.append(labelText, select);
         return label;
     }
 
     function syncPreparationOptions() {
+        let selectionsChanged = false;
+
         document.querySelectorAll(
             "fieldset[data-preparation-product-id], .basket-preparation-select[data-preparation-product-id]"
         ).forEach(function (control) {
             const productId = control.dataset.preparationProductId;
             const product = currentProductMap.get(productId);
-            const supported = supportsFrozenOption(product) && maximumBasketQuantity(product) > 0;
-            const selectedValue = frozenSelections.has(productId) ? "frozen" : "fresh";
+            const supported = supportsFrozenOption(product) && hasAvailableStock(product) &&
+                product.active && product.priceCents > 0;
+
+            if (product && ensureValidPreparation(product)) {
+                selectionsChanged = true;
+            }
+
+            const selectedValue = product ? selectedPreparation(product) : "fresh";
             control.hidden = !supported;
             control.closest(".product-row")?.classList.toggle("product-row-with-preparation", supported);
 
             if (control.matches("fieldset")) {
                 control.querySelectorAll("input[data-preparation-product-id]").forEach(function (radio) {
-                    radio.disabled = !supported;
+                    radio.disabled = !supported || maximumBasketQuantity(product, radio.value) === 0;
                     radio.checked = supported && radio.value === selectedValue;
                 });
             } else {
@@ -149,14 +216,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 if (select) {
                     select.disabled = !supported;
+                    Array.from(select.options).forEach(function (option) {
+                        option.disabled = !supported || maximumBasketQuantity(product, option.value) === 0;
+                    });
                     select.value = selectedValue;
                 }
             }
 
             if (product && !supported && frozenSelections.delete(productId)) {
-                saveFrozenSelections();
+                selectionsChanged = true;
             }
         });
+
+        if (selectionsChanged) {
+            saveFrozenSelections();
+        }
     }
 
     function automaticThemeForDate(date = new Date()) {
@@ -467,6 +541,14 @@ document.addEventListener("DOMContentLoaded", function () {
             return "Currently unavailable";
         }
 
+        if (supportsFrozenOption(product)) {
+            const freshQuantity = stockForPreparation(product, "fresh");
+            const frozenQuantity = stockForPreparation(product, "frozen");
+            const freshText = product.madeToOrder ? "made to order" : freshQuantity + " available";
+            return "Fresh: " + freshText + " · Frozen: " + frozenQuantity + " available" +
+                formatOrderLimit(product);
+        }
+
         if (
             usesSimpleAvailability(product) &&
             (product.madeToOrder || product.quantity > 0)
@@ -512,14 +594,13 @@ document.addEventListener("DOMContentLoaded", function () {
             : "";
     }
 
-    function maximumBasketQuantity(product) {
+    function maximumBasketQuantity(product, preparation) {
         if (!product || !product.active || product.priceCents <= 0) {
             return 0;
         }
 
-        const stockMaximum = product.madeToOrder
-            ? 50
-            : Math.max(0, Number.parseInt(product.quantity, 10) || 0);
+        const chosenPreparation = preparation || selectedPreparation(product);
+        const stockMaximum = stockForPreparation(product, chosenPreparation);
         const orderMaximum = Number.isInteger(product.orderLimit)
             ? product.orderLimit
             : 50;
@@ -564,7 +645,13 @@ document.addEventListener("DOMContentLoaded", function () {
         let changed = false;
 
         Object.keys(basket).forEach(function (productId) {
-            const maximum = maximumBasketQuantity(productMap.get(productId));
+            const product = productMap.get(productId);
+
+            if (product && ensureValidPreparation(product)) {
+                changed = true;
+            }
+
+            const maximum = maximumBasketQuantity(product);
             const quantity = Math.min(basketQuantity(productId), maximum);
 
             if (quantity <= 0) {
@@ -634,6 +721,7 @@ document.addEventListener("DOMContentLoaded", function () {
         action.className = "basket-product-action";
         action.dataset.basketProductId = product.id;
 
+        ensureValidPreparation(product);
         const maximum = maximumBasketQuantity(product);
         const quantity = Math.min(basketQuantity(product.id), maximum);
 
@@ -843,7 +931,9 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         saveFrozenSelections();
-        syncPreparationOptions();
+        setBasketQuantity(productId, basketQuantity(productId));
+        renderBasketDisplays(currentProductMap);
+        syncOrderFormFromBasket(currentProductMap);
     });
 
     document.addEventListener("click", function (event) {
@@ -975,7 +1065,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 return productMap.get(input.dataset.productId);
             }).filter(Boolean);
             const availableCount = products.filter(function (product) {
-                return product.active && product.priceCents > 0 && (product.madeToOrder || product.quantity > 0);
+                return product.active && product.priceCents > 0 && hasAvailableStock(product);
             }).length;
             const hasActivePricedProduct = products.some(function (product) {
                 return product.active && product.priceCents > 0;
@@ -1247,15 +1337,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 stock.className = "stock-count";
                 const stockText = document.createElement("strong");
                 stockText.dataset.stock = product.id;
-                stockText.textContent = (
-                    product.madeToOrder
-                        ? (usesSimpleAvailability(product) ? "Available" : "Made to order")
-                        : product.quantity + " available"
-                ) + formatOrderLimit(product);
+                stockText.textContent = formatStock(product, stockText);
                 stock.appendChild(stockText);
 
                 const status = document.createElement("span");
-                const available = product.madeToOrder || product.quantity > 0;
+                const available = hasAvailableStock(product);
                 status.className = "status " + (available ? "available" : "sold-out");
                 status.dataset.productStatus = product.id;
                 status.textContent = available ? "Available" : "Sold out";
@@ -1315,11 +1401,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 const stock = document.createElement("small");
                 stock.dataset.orderStock = product.id;
-                stock.textContent = (
-                    product.madeToOrder
-                        ? (usesSimpleAvailability(product) ? "Available" : "Made to order")
-                        : product.quantity + " available"
-                ) + formatOrderLimit(product);
+                stock.textContent = formatStock(product, stock);
                 label.appendChild(stock);
 
                 const input = document.createElement("input");
@@ -1335,17 +1417,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     input.dataset.orderLimit = product.orderLimit.toString();
                 }
 
-                if (product.madeToOrder) {
-                    if (product.orderLimit !== null) {
-                        input.max = product.orderLimit.toString();
-                    }
-                } else {
-                    const maximumQuantity = product.orderLimit === null
-                        ? product.quantity
-                        : Math.min(product.quantity, product.orderLimit);
-                    input.max = maximumQuantity.toString();
-                    input.disabled = product.quantity === 0;
-                }
+                const maximumQuantity = maximumBasketQuantity(product);
+                input.max = maximumQuantity.toString();
+                input.disabled = maximumQuantity === 0;
 
                 if (supportsFrozenOption(product)) {
                     const controls = document.createElement("div");
@@ -1543,7 +1617,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const productIds = element.dataset.stockStatus.split(",");
             const hasStock = productIds.some(function (productId) {
                 const product = productMap.get(productId);
-                return product && product.active && (product.madeToOrder || product.quantity > 0);
+                return product && product.active && hasAvailableStock(product);
             });
 
             element.textContent = hasStock ? "Available" : "Sold out";
@@ -1556,7 +1630,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 return productMap.get(productId);
             }).filter(Boolean);
             const isAvailable = productsInGroup.some(function (product) {
-                return product.active && (product.madeToOrder || product.quantity > 0);
+                return product.active && hasAvailableStock(product);
             });
             const hasActiveProduct = productsInGroup.some(function (product) {
                 return product.active && product.priceCents > 0;
@@ -1585,7 +1659,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const product = productMap.get(element.dataset.productStatus);
             const isComingSoon = !product || product.priceCents <= 0;
             const isUnavailable = product && product.priceCents > 0 && !product.active;
-            const isAvailable = product && product.active && (product.madeToOrder || product.quantity > 0);
+            const isAvailable = product && product.active && hasAvailableStock(product);
             element.textContent = isComingSoon
                 ? "Coming soon"
                 : (isUnavailable ? "Unavailable" : (isAvailable ? "Available" : "Sold out"));
@@ -1634,35 +1708,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 input.dataset.orderLimit = product.orderLimit.toString();
             }
 
-            if (product.madeToOrder) {
-                if (product.orderLimit === null) {
-                    input.removeAttribute("max");
-                } else {
-                    input.max = product.orderLimit.toString();
+            const maximumQuantity = maximumBasketQuantity(product);
+            input.max = maximumQuantity.toString();
+            input.disabled = maximumQuantity === 0;
 
-                    if (Number.parseInt(input.value, 10) > product.orderLimit) {
-                        input.value = product.orderLimit;
-                    }
-                }
-                input.disabled = false;
-            } else {
-                const maximumQuantity = product.orderLimit === null
-                    ? product.quantity
-                    : Math.min(product.quantity, product.orderLimit);
-                input.max = maximumQuantity.toString();
-                input.disabled = product.quantity === 0;
-
-                if (Number.parseInt(input.value, 10) > maximumQuantity) {
-                    input.value = maximumQuantity;
-                }
+            if (Number.parseInt(input.value, 10) > maximumQuantity) {
+                input.value = maximumQuantity;
             }
 
             if (stockLabel) {
-                stockLabel.textContent = (
-                    product.madeToOrder
-                        ? (usesSimpleAvailability(product) ? "Available" : "Made to order")
-                        : (product.quantity > 0 ? product.quantity + " available" : "Sold out")
-                ) + formatOrderLimit(product);
+                stockLabel.textContent = formatStock(product, stockLabel);
             }
         });
 
@@ -1891,7 +1946,17 @@ document.addEventListener("DOMContentLoaded", function () {
             quantityInputs.forEach(function (input) {
                 const product = productMap.get(input.dataset.productId);
                 const maximum = maximumBasketQuantity(product);
+                input.max = maximum.toString();
+                input.disabled = maximum === 0;
                 input.value = Math.min(basketQuantity(input.dataset.productId), maximum).toString();
+
+                const stockLabel = document.querySelector(
+                    '[data-order-stock="' + input.dataset.productId + '"]'
+                );
+
+                if (product && stockLabel) {
+                    stockLabel.textContent = formatStock(product, stockLabel);
+                }
             });
 
             orderForm.querySelectorAll(".order-product-group").forEach(function (group) {

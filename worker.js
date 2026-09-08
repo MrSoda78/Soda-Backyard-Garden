@@ -4,6 +4,14 @@ function supportsFrozenOption(product) {
     return Boolean(product) && product.frozenOption === true;
 }
 
+function productHasStock(product) {
+    return Boolean(product) && (
+        product.madeToOrder ||
+        Number(product.quantity) > 0 ||
+        (supportsFrozenOption(product) && Number(product.frozenQuantity) > 0)
+    );
+}
+
 const SCHEMA_STATEMENTS = [
     `CREATE TABLE IF NOT EXISTS products (
         id TEXT PRIMARY KEY,
@@ -24,7 +32,8 @@ const SCHEMA_STATEMENTS = [
         image_key_2 TEXT NOT NULL DEFAULT '',
         image_fit_2 TEXT NOT NULL DEFAULT 'cover',
         image_position_2 TEXT NOT NULL DEFAULT 'center',
-        frozen_option INTEGER NOT NULL DEFAULT 0 CHECK (frozen_option IN (0, 1))
+        frozen_option INTEGER NOT NULL DEFAULT 0 CHECK (frozen_option IN (0, 1)),
+        frozen_quantity INTEGER NOT NULL DEFAULT 0 CHECK (frozen_quantity >= 0)
     )`,
     `CREATE TABLE IF NOT EXISTS carousel_images (
         id TEXT PRIMARY KEY,
@@ -78,6 +87,7 @@ const SCHEMA_STATEMENTS = [
         unit_price_cents INTEGER NOT NULL,
         quantity INTEGER NOT NULL CHECK (quantity > 0),
         line_total_cents INTEGER NOT NULL,
+        preparation TEXT NOT NULL DEFAULT 'fresh' CHECK (preparation IN ('fresh', 'frozen')),
         FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
         FOREIGN KEY (product_id) REFERENCES products(id)
     )`,
@@ -126,12 +136,26 @@ const SCHEMA_STATEMENTS = [
     WHEN (SELECT made_to_order FROM products WHERE id = NEW.product_id) = 0
     BEGIN
         SELECT CASE
-            WHEN (SELECT quantity FROM products WHERE id = NEW.product_id) IS NULL
-              OR (SELECT quantity FROM products WHERE id = NEW.product_id) < NEW.quantity
+            WHEN NEW.preparation = 'frozen' AND (
+                (SELECT frozen_option FROM products WHERE id = NEW.product_id) <> 1
+                OR (SELECT frozen_quantity FROM products WHERE id = NEW.product_id) < NEW.quantity
+            )
+            THEN RAISE(ABORT, 'INSUFFICIENT_STOCK')
+            WHEN NEW.preparation <> 'frozen' AND (
+                (SELECT quantity FROM products WHERE id = NEW.product_id) IS NULL
+                OR (SELECT quantity FROM products WHERE id = NEW.product_id) < NEW.quantity
+            )
             THEN RAISE(ABORT, 'INSUFFICIENT_STOCK')
         END;
         UPDATE products
-        SET quantity = quantity - NEW.quantity
+        SET quantity = CASE
+                WHEN NEW.preparation = 'frozen' THEN quantity
+                ELSE quantity - NEW.quantity
+            END,
+            frozen_quantity = CASE
+                WHEN NEW.preparation = 'frozen' THEN frozen_quantity - NEW.quantity
+                ELSE frozen_quantity
+            END
         WHERE id = NEW.product_id;
     END`,
     `CREATE TRIGGER IF NOT EXISTS deduct_inventory_before_order_item_increase
@@ -140,12 +164,26 @@ const SCHEMA_STATEMENTS = [
       AND (SELECT made_to_order FROM products WHERE id = NEW.product_id) = 0
     BEGIN
         SELECT CASE
-            WHEN (SELECT quantity FROM products WHERE id = NEW.product_id) IS NULL
-              OR (SELECT quantity FROM products WHERE id = NEW.product_id) < (NEW.quantity - OLD.quantity)
+            WHEN OLD.preparation = 'frozen' AND (
+                (SELECT frozen_option FROM products WHERE id = NEW.product_id) <> 1
+                OR (SELECT frozen_quantity FROM products WHERE id = NEW.product_id) < (NEW.quantity - OLD.quantity)
+            )
+            THEN RAISE(ABORT, 'INSUFFICIENT_STOCK')
+            WHEN OLD.preparation <> 'frozen' AND (
+                (SELECT quantity FROM products WHERE id = NEW.product_id) IS NULL
+                OR (SELECT quantity FROM products WHERE id = NEW.product_id) < (NEW.quantity - OLD.quantity)
+            )
             THEN RAISE(ABORT, 'INSUFFICIENT_STOCK')
         END;
         UPDATE products
-        SET quantity = quantity - (NEW.quantity - OLD.quantity)
+        SET quantity = CASE
+                WHEN OLD.preparation = 'frozen' THEN quantity
+                ELSE quantity - (NEW.quantity - OLD.quantity)
+            END,
+            frozen_quantity = CASE
+                WHEN OLD.preparation = 'frozen' THEN frozen_quantity - (NEW.quantity - OLD.quantity)
+                ELSE frozen_quantity
+            END
         WHERE id = NEW.product_id;
     END`,
     `CREATE TRIGGER IF NOT EXISTS restock_inventory_after_order_cancel
@@ -158,6 +196,14 @@ const SCHEMA_STATEMENTS = [
             FROM order_items
             WHERE order_items.order_id = NEW.id
               AND order_items.product_id = products.id
+              AND order_items.preparation <> 'frozen'
+        ), 0),
+            frozen_quantity = frozen_quantity + COALESCE((
+            SELECT SUM(order_items.quantity)
+            FROM order_items
+            WHERE order_items.order_id = NEW.id
+              AND order_items.product_id = products.id
+              AND order_items.preparation = 'frozen'
         ), 0)
         WHERE made_to_order = 0
           AND id IN (
@@ -176,6 +222,14 @@ const SCHEMA_STATEMENTS = [
             FROM order_items
             WHERE order_items.order_id = NEW.id
               AND order_items.product_id = products.id
+              AND order_items.preparation <> 'frozen'
+        ), 0),
+            frozen_quantity = frozen_quantity + COALESCE((
+            SELECT SUM(order_items.quantity)
+            FROM order_items
+            WHERE order_items.order_id = NEW.id
+              AND order_items.product_id = products.id
+              AND order_items.preparation = 'frozen'
         ), 0)
         WHERE made_to_order = 0
           AND id IN (
@@ -187,18 +241,32 @@ const SCHEMA_STATEMENTS = [
     `CREATE TRIGGER IF NOT EXISTS restock_inventory_after_order_item_reduce
     AFTER UPDATE OF quantity ON order_items
     WHEN NEW.quantity < OLD.quantity
-      AND (SELECT status FROM orders WHERE id = OLD.order_id) <> 'cancelled'
+      AND (SELECT status FROM orders WHERE id = OLD.order_id) NOT IN ('cancelled', 'refused')
     BEGIN
         UPDATE products
-        SET quantity = quantity + (OLD.quantity - NEW.quantity)
+        SET quantity = CASE
+                WHEN OLD.preparation = 'frozen' THEN quantity
+                ELSE quantity + (OLD.quantity - NEW.quantity)
+            END,
+            frozen_quantity = CASE
+                WHEN OLD.preparation = 'frozen' THEN frozen_quantity + (OLD.quantity - NEW.quantity)
+                ELSE frozen_quantity
+            END
         WHERE id = OLD.product_id AND made_to_order = 0;
     END`,
     `CREATE TRIGGER IF NOT EXISTS restock_inventory_after_order_item_delete
     AFTER DELETE ON order_items
-    WHEN (SELECT status FROM orders WHERE id = OLD.order_id) <> 'cancelled'
+    WHEN (SELECT status FROM orders WHERE id = OLD.order_id) NOT IN ('cancelled', 'refused')
     BEGIN
         UPDATE products
-        SET quantity = quantity + OLD.quantity
+        SET quantity = CASE
+                WHEN OLD.preparation = 'frozen' THEN quantity
+                ELSE quantity + OLD.quantity
+            END,
+            frozen_quantity = CASE
+                WHEN OLD.preparation = 'frozen' THEN frozen_quantity + OLD.quantity
+                ELSE frozen_quantity
+            END
         WHERE id = OLD.product_id AND made_to_order = 0;
     END`,
     `INSERT INTO products (id, name, unit, price_cents, quantity, made_to_order, sort_order, active) VALUES
@@ -608,13 +676,25 @@ function ensureDatabase(db) {
                 ["image_key_2", "ALTER TABLE products ADD COLUMN image_key_2 TEXT NOT NULL DEFAULT ''"],
                 ["image_fit_2", "ALTER TABLE products ADD COLUMN image_fit_2 TEXT NOT NULL DEFAULT 'cover'"],
                 ["image_position_2", "ALTER TABLE products ADD COLUMN image_position_2 TEXT NOT NULL DEFAULT 'center'"],
-                ["frozen_option", "ALTER TABLE products ADD COLUMN frozen_option INTEGER NOT NULL DEFAULT 0"]
+                ["frozen_option", "ALTER TABLE products ADD COLUMN frozen_option INTEGER NOT NULL DEFAULT 0"],
+                ["frozen_quantity", "ALTER TABLE products ADD COLUMN frozen_quantity INTEGER NOT NULL DEFAULT 0"]
             ];
 
             for (const [columnName, migration] of productMigrations) {
                 if (!productColumnNames.has(columnName)) {
                     await db.prepare(migration).run();
                 }
+            }
+
+            const orderItemColumns = await db.prepare("PRAGMA table_info(order_items)").all();
+            const hasPreparation = orderItemColumns.results.some(function (column) {
+                return column.name === "preparation";
+            });
+
+            if (!hasPreparation) {
+                await db.prepare(
+                    "ALTER TABLE order_items ADD COLUMN preparation TEXT NOT NULL DEFAULT 'fresh'"
+                ).run();
             }
 
             const frozenOptionMigrationId = "2026-09-05-frozen-product-options";
@@ -661,6 +741,189 @@ function ensureDatabase(db) {
                         VALUES (?)
                         ON CONFLICT(id) DO NOTHING
                     `).bind(zucchiniFrozenOptionMigrationId)
+                ]);
+            }
+
+            const separateFrozenInventoryMigrationId = "2026-09-07-separate-fresh-frozen-inventory";
+            const separateFrozenInventoryMigration = await db.prepare(`
+                SELECT id
+                FROM site_migrations
+                WHERE id = ?
+            `).bind(separateFrozenInventoryMigrationId).first();
+
+            if (!separateFrozenInventoryMigration) {
+                await db.batch([
+                    db.prepare(`
+                        UPDATE order_items
+                        SET preparation = 'frozen'
+                        WHERE product_name LIKE '%— Frozen'
+                    `),
+                    db.prepare(`
+                        UPDATE products
+                        SET quantity = 0,
+                            frozen_quantity = 0,
+                            made_to_order = 0,
+                            frozen_option = 1
+                        WHERE id IN (
+                            'callaloo',
+                            'yellow-zucchini', 'green-zucchini', 'small-courgette',
+                            'dragon-tongue-beans', 'purple-beans',
+                            'green-beans', 'yellow-beans'
+                        )
+                    `),
+                    db.prepare("DROP TRIGGER IF EXISTS deduct_inventory_before_order_item"),
+                    db.prepare("DROP TRIGGER IF EXISTS deduct_inventory_before_order_item_increase"),
+                    db.prepare("DROP TRIGGER IF EXISTS restock_inventory_after_order_cancel"),
+                    db.prepare("DROP TRIGGER IF EXISTS restock_inventory_after_order_refuse"),
+                    db.prepare("DROP TRIGGER IF EXISTS restock_inventory_after_order_item_reduce"),
+                    db.prepare("DROP TRIGGER IF EXISTS restock_inventory_after_order_item_delete"),
+                    db.prepare(`
+                        CREATE TRIGGER deduct_inventory_before_order_item
+                        BEFORE INSERT ON order_items
+                        WHEN (SELECT made_to_order FROM products WHERE id = NEW.product_id) = 0
+                        BEGIN
+                            SELECT CASE
+                                WHEN NEW.preparation = 'frozen' AND (
+                                    (SELECT frozen_option FROM products WHERE id = NEW.product_id) <> 1
+                                    OR (SELECT frozen_quantity FROM products WHERE id = NEW.product_id) < NEW.quantity
+                                )
+                                THEN RAISE(ABORT, 'INSUFFICIENT_STOCK')
+                                WHEN NEW.preparation <> 'frozen' AND (
+                                    (SELECT quantity FROM products WHERE id = NEW.product_id) IS NULL
+                                    OR (SELECT quantity FROM products WHERE id = NEW.product_id) < NEW.quantity
+                                )
+                                THEN RAISE(ABORT, 'INSUFFICIENT_STOCK')
+                            END;
+                            UPDATE products
+                            SET quantity = CASE
+                                    WHEN NEW.preparation = 'frozen' THEN quantity
+                                    ELSE quantity - NEW.quantity
+                                END,
+                                frozen_quantity = CASE
+                                    WHEN NEW.preparation = 'frozen' THEN frozen_quantity - NEW.quantity
+                                    ELSE frozen_quantity
+                                END
+                            WHERE id = NEW.product_id;
+                        END
+                    `),
+                    db.prepare(`
+                        CREATE TRIGGER deduct_inventory_before_order_item_increase
+                        BEFORE UPDATE OF quantity ON order_items
+                        WHEN NEW.quantity > OLD.quantity
+                          AND (SELECT made_to_order FROM products WHERE id = NEW.product_id) = 0
+                        BEGIN
+                            SELECT CASE
+                                WHEN OLD.preparation = 'frozen' AND (
+                                    (SELECT frozen_option FROM products WHERE id = NEW.product_id) <> 1
+                                    OR (SELECT frozen_quantity FROM products WHERE id = NEW.product_id) < (NEW.quantity - OLD.quantity)
+                                )
+                                THEN RAISE(ABORT, 'INSUFFICIENT_STOCK')
+                                WHEN OLD.preparation <> 'frozen' AND (
+                                    (SELECT quantity FROM products WHERE id = NEW.product_id) IS NULL
+                                    OR (SELECT quantity FROM products WHERE id = NEW.product_id) < (NEW.quantity - OLD.quantity)
+                                )
+                                THEN RAISE(ABORT, 'INSUFFICIENT_STOCK')
+                            END;
+                            UPDATE products
+                            SET quantity = CASE
+                                    WHEN OLD.preparation = 'frozen' THEN quantity
+                                    ELSE quantity - (NEW.quantity - OLD.quantity)
+                                END,
+                                frozen_quantity = CASE
+                                    WHEN OLD.preparation = 'frozen' THEN frozen_quantity - (NEW.quantity - OLD.quantity)
+                                    ELSE frozen_quantity
+                                END
+                            WHERE id = NEW.product_id;
+                        END
+                    `),
+                    db.prepare(`
+                        CREATE TRIGGER restock_inventory_after_order_cancel
+                        AFTER UPDATE OF status ON orders
+                        WHEN NEW.status = 'cancelled' AND OLD.status <> 'cancelled'
+                        BEGIN
+                            UPDATE products
+                            SET quantity = quantity + COALESCE((
+                                    SELECT SUM(order_items.quantity)
+                                    FROM order_items
+                                    WHERE order_items.order_id = NEW.id
+                                      AND order_items.product_id = products.id
+                                      AND order_items.preparation <> 'frozen'
+                                ), 0),
+                                frozen_quantity = frozen_quantity + COALESCE((
+                                    SELECT SUM(order_items.quantity)
+                                    FROM order_items
+                                    WHERE order_items.order_id = NEW.id
+                                      AND order_items.product_id = products.id
+                                      AND order_items.preparation = 'frozen'
+                                ), 0)
+                            WHERE made_to_order = 0
+                              AND id IN (SELECT product_id FROM order_items WHERE order_id = NEW.id);
+                        END
+                    `),
+                    db.prepare(`
+                        CREATE TRIGGER restock_inventory_after_order_refuse
+                        AFTER UPDATE OF status ON orders
+                        WHEN NEW.status = 'refused' AND OLD.status <> 'refused'
+                        BEGIN
+                            UPDATE products
+                            SET quantity = quantity + COALESCE((
+                                    SELECT SUM(order_items.quantity)
+                                    FROM order_items
+                                    WHERE order_items.order_id = NEW.id
+                                      AND order_items.product_id = products.id
+                                      AND order_items.preparation <> 'frozen'
+                                ), 0),
+                                frozen_quantity = frozen_quantity + COALESCE((
+                                    SELECT SUM(order_items.quantity)
+                                    FROM order_items
+                                    WHERE order_items.order_id = NEW.id
+                                      AND order_items.product_id = products.id
+                                      AND order_items.preparation = 'frozen'
+                                ), 0)
+                            WHERE made_to_order = 0
+                              AND id IN (SELECT product_id FROM order_items WHERE order_id = NEW.id);
+                        END
+                    `),
+                    db.prepare(`
+                        CREATE TRIGGER restock_inventory_after_order_item_reduce
+                        AFTER UPDATE OF quantity ON order_items
+                        WHEN NEW.quantity < OLD.quantity
+                          AND (SELECT status FROM orders WHERE id = OLD.order_id) NOT IN ('cancelled', 'refused')
+                        BEGIN
+                            UPDATE products
+                            SET quantity = CASE
+                                    WHEN OLD.preparation = 'frozen' THEN quantity
+                                    ELSE quantity + (OLD.quantity - NEW.quantity)
+                                END,
+                                frozen_quantity = CASE
+                                    WHEN OLD.preparation = 'frozen' THEN frozen_quantity + (OLD.quantity - NEW.quantity)
+                                    ELSE frozen_quantity
+                                END
+                            WHERE id = OLD.product_id AND made_to_order = 0;
+                        END
+                    `),
+                    db.prepare(`
+                        CREATE TRIGGER restock_inventory_after_order_item_delete
+                        AFTER DELETE ON order_items
+                        WHEN (SELECT status FROM orders WHERE id = OLD.order_id) NOT IN ('cancelled', 'refused')
+                        BEGIN
+                            UPDATE products
+                            SET quantity = CASE
+                                    WHEN OLD.preparation = 'frozen' THEN quantity
+                                    ELSE quantity + OLD.quantity
+                                END,
+                                frozen_quantity = CASE
+                                    WHEN OLD.preparation = 'frozen' THEN frozen_quantity + OLD.quantity
+                                    ELSE frozen_quantity
+                                END
+                            WHERE id = OLD.product_id AND made_to_order = 0;
+                        END
+                    `),
+                    db.prepare(`
+                        INSERT INTO site_migrations (id)
+                        VALUES (?)
+                        ON CONFLICT(id) DO NOTHING
+                    `).bind(separateFrozenInventoryMigrationId)
                 ]);
             }
 
@@ -989,7 +1252,7 @@ async function getProducts(db, includeInactive = false) {
     const result = await db.prepare(`
         SELECT
             id, name, unit, price_cents, quantity, made_to_order, active,
-            description, category, is_slot, order_limit, frozen_option,
+            description, category, is_slot, order_limit, frozen_option, frozen_quantity,
             image_key, image_fit, image_position,
             image_key_2, image_fit_2, image_position_2
         FROM products
@@ -1011,6 +1274,7 @@ async function getProducts(db, includeInactive = false) {
             isSlot: product.is_slot === 1,
             orderLimit: product.order_limit,
             frozenOption: product.frozen_option === 1,
+            frozenQuantity: product.frozen_quantity,
             imageUrl: mediaUrlForKey(product.image_key),
             imageFit: normalizeImageFit(product.image_fit),
             imagePosition: normalizeImagePosition(product.image_position),
@@ -1480,6 +1744,7 @@ async function createOrderRecord(body, db, options = {}) {
         requestedItems.push({
             product,
             quantity,
+            preparation: frozenProductIds.has(productId) ? "frozen" : "fresh",
             displayName: product.name + (supportsFrozenOption(product)
                 ? (frozenProductIds.has(productId) ? " — Frozen" : " — Fresh")
                 : "")
@@ -1523,15 +1788,16 @@ async function createOrderRecord(body, db, options = {}) {
             db.prepare(`
                 INSERT INTO order_items (
                     order_id, product_id, product_name,
-                    unit_price_cents, quantity, line_total_cents
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                    unit_price_cents, quantity, line_total_cents, preparation
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
             `).bind(
                 orderId,
                 item.product.id,
                 item.displayName,
                 item.product.priceCents,
                 item.quantity,
-                item.product.priceCents * item.quantity
+                item.product.priceCents * item.quantity,
+                item.preparation
             )
         );
     });
@@ -1769,7 +2035,11 @@ async function handleAdminOrders(db) {
             order_items.unit_price_cents,
             order_items.quantity,
             order_items.line_total_cents,
-            products.quantity AS available_quantity,
+            order_items.preparation,
+            CASE
+                WHEN order_items.preparation = 'frozen' THEN products.frozen_quantity
+                ELSE products.quantity
+            END AS available_quantity,
             products.made_to_order
         FROM orders
         LEFT JOIN order_items ON order_items.order_id = orders.id
@@ -1825,6 +2095,7 @@ async function handleAdminOrders(db) {
                 quantity: row.quantity,
                 unitPriceCents: row.unit_price_cents,
                 lineTotalCents: row.line_total_cents,
+                preparation: row.preparation || "fresh",
                 availableQuantity: row.available_quantity,
                 madeToOrder: row.made_to_order === 1
             });
@@ -1848,7 +2119,7 @@ async function handleAdminOrders(db) {
         orders: Array.from(orderMap.values()),
         blockedCustomers,
         adjustmentProducts: adjustmentProducts.filter(function (product) {
-            return product.active && product.priceCents > 0;
+            return product.active && product.priceCents > 0 && productHasStock(product);
         })
     });
 }
@@ -1857,7 +2128,7 @@ async function handleAdminInventory(db) {
     const result = await db.prepare(`
         SELECT
             id, name, unit, price_cents, quantity, made_to_order, sort_order, active,
-            description, category, is_slot, order_limit, frozen_option,
+            description, category, is_slot, order_limit, frozen_option, frozen_quantity,
             image_key, image_fit, image_position,
             image_key_2, image_fit_2, image_position_2
         FROM products
@@ -1879,6 +2150,7 @@ async function handleAdminInventory(db) {
                 isSlot: product.is_slot === 1,
                 orderLimit: product.order_limit,
                 frozenOption: product.frozen_option === 1,
+                frozenQuantity: product.frozen_quantity,
                 imageUrl: mediaUrlForKey(product.image_key),
                 imageFit: normalizeImageFit(product.image_fit),
                 imagePosition: normalizeImagePosition(product.image_position),
@@ -2205,6 +2477,7 @@ async function handleAdminInventoryUpdate(request, db) {
         const madeToOrder = submitted.madeToOrder === true;
         const active = submitted.active === true;
         const frozenOption = submitted.frozenOption === true;
+        const frozenQuantity = Number(submitted.frozenQuantity);
         const quantity = madeToOrder ? null : Number(submitted.quantity);
         const orderLimit = submitted.orderLimit === null || submitted.orderLimit === ""
             ? null
@@ -2230,6 +2503,10 @@ async function handleAdminInventoryUpdate(request, db) {
 
         if (!madeToOrder && (!Number.isInteger(quantity) || quantity < 0 || quantity > 1000000)) {
             return jsonResponse({ error: "Enter a valid quantity for " + name + "." }, 400);
+        }
+
+        if (!Number.isInteger(frozenQuantity) || frozenQuantity < 0 || frozenQuantity > 1000000) {
+            return jsonResponse({ error: "Enter a valid frozen quantity for " + name + "." }, 400);
         }
 
         if (
@@ -2261,7 +2538,7 @@ async function handleAdminInventoryUpdate(request, db) {
                 UPDATE products
                 SET name = ?, unit = ?, price_cents = ?, quantity = ?,
                     made_to_order = ?, active = ?, description = ?, order_limit = ?,
-                    frozen_option = ?,
+                    frozen_option = ?, frozen_quantity = ?,
                     image_fit = ?, image_position = ?,
                     image_fit_2 = ?, image_position_2 = ?
                 WHERE id = ?
@@ -2275,6 +2552,7 @@ async function handleAdminInventoryUpdate(request, db) {
                 description,
                 orderLimit,
                 frozenOption ? 1 : 0,
+                frozenQuantity,
                 imageFit,
                 imagePosition,
                 imageFit2,
@@ -3203,12 +3481,19 @@ async function handleAdminOrderItemsUpdate(request, db, orderId) {
     for (const submitted of submittedAdditions) {
         const productId = cleanText(submitted.productId, 100);
         const quantity = Number(submitted.quantity);
+        const preparation = cleanText(submitted.preparation, 20).toLowerCase() === "frozen"
+            ? "frozen"
+            : "fresh";
         const product = productMap.get(productId);
 
         if (!product || !product.active || product.priceCents <= 0 ||
             existingProductIds.has(productId) || seenProductIds.has(productId) ||
             !Number.isInteger(quantity)) {
             return jsonResponse({ error: "One of the products being added was not valid." }, 400);
+        }
+
+        if (preparation === "frozen" && !supportsFrozenOption(product)) {
+            return jsonResponse({ error: "Frozen is not available for " + product.name + "." }, 400);
         }
 
         if (quantity < 1 || quantity > 50) {
@@ -3218,7 +3503,14 @@ async function handleAdminOrderItemsUpdate(request, db, orderId) {
         }
 
         seenProductIds.add(productId);
-        additions.push({ product, quantity });
+        additions.push({
+            product,
+            quantity,
+            preparation,
+            displayName: product.name + (supportsFrozenOption(product)
+                ? (preparation === "frozen" ? " — Frozen" : " — Fresh")
+                : "")
+        });
     }
 
     if (changes.length === 0 && additions.length === 0) {
@@ -3246,15 +3538,16 @@ async function handleAdminOrderItemsUpdate(request, db, orderId) {
         statements.push(db.prepare(`
             INSERT INTO order_items (
                 order_id, product_id, product_name,
-                unit_price_cents, quantity, line_total_cents
-            ) VALUES (?, ?, ?, ?, ?, ?)
+                unit_price_cents, quantity, line_total_cents, preparation
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
         `).bind(
             orderId,
             addition.product.id,
-            addition.product.name,
+            addition.displayName,
             addition.product.priceCents,
             addition.quantity,
-            addition.product.priceCents * addition.quantity
+            addition.product.priceCents * addition.quantity,
+            addition.preparation
         ));
     });
 
