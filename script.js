@@ -1257,15 +1257,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function createDynamicProductImage(product, imageSlot, imageUrl) {
         const image = document.createElement("img");
+        const imageFit = imageSlot === 3
+            ? product.imageFit3
+            : (imageSlot === 2 ? product.imageFit2 : product.imageFit);
+        const imagePosition = imageSlot === 3
+            ? product.imagePosition3
+            : (imageSlot === 2 ? product.imagePosition2 : product.imagePosition);
         image.className = "dynamic-product-image";
         image.src = imageUrl;
-        image.alt = product.name + (imageSlot === 2 ? " — second view" : "");
-        image.style.objectFit = imageSlot === 2
-            ? (product.imageFit2 || "cover")
-            : (product.imageFit || "cover");
-        image.style.objectPosition = imageSlot === 2
-            ? (product.imagePosition2 || "center")
-            : (product.imagePosition || "center");
+        image.alt = product.name + (imageSlot > 1 ? " — view " + imageSlot : "");
+        image.style.objectFit = imageFit || "cover";
+        image.style.objectPosition = imagePosition || "center";
         image.addEventListener("error", function () {
             const placeholder = document.createElement("div");
             placeholder.className = "product-image-placeholder dynamic-product-image";
@@ -1353,7 +1355,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const candidates = [];
         const seenUrls = new Set();
         const addCandidate = function (product, imageSlot, imageUrl) {
-            if (!imageUrl || seenUrls.has(imageUrl) || candidates.length >= 2) {
+            if (!imageUrl || seenUrls.has(imageUrl) || candidates.length >= 3) {
                 return;
             }
 
@@ -1370,6 +1372,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 2,
                 product.imageUrl2 || managedProductSecondImageUrls[product.id] || ""
             );
+        });
+        products.forEach(function (product) {
+            addCandidate(product, 3, product.imageUrl3 || "");
         });
         return candidates;
     }
@@ -1770,7 +1775,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const product = productIds.map(function (productId) {
                 return productMap.get(productId.trim());
             }).find(function (candidate) {
-                return candidate && (candidate.imageUrl || candidate.imageUrl2);
+                return candidate && (candidate.imageUrl || candidate.imageUrl2 || candidate.imageUrl3);
             });
 
             if (!product) {
@@ -1784,7 +1789,24 @@ document.addEventListener("DOMContentLoaded", function () {
                 image.style.objectPosition = product.imagePosition || "center";
             }
 
-            if (!product.imageUrl2 || productIds.length !== 1) {
+            const extraImages = [
+                {
+                    slot: 2,
+                    url: product.imageUrl2,
+                    fit: product.imageFit2,
+                    position: product.imagePosition2
+                },
+                {
+                    slot: 3,
+                    url: product.imageUrl3,
+                    fit: product.imageFit3,
+                    position: product.imagePosition3
+                }
+            ].filter(function (entry) {
+                return Boolean(entry.url);
+            });
+
+            if (extraImages.length === 0 || productIds.length !== 1) {
                 return;
             }
 
@@ -1797,25 +1819,22 @@ document.addEventListener("DOMContentLoaded", function () {
                 imageStrip.appendChild(image);
             }
 
-            let secondImage = imageStrip.querySelector(
-                '[data-managed-product-second-image="' + product.id + '"]'
-            );
+            extraImages.forEach(function (entry) {
+                let extraImage = imageStrip.querySelector(
+                    '[data-managed-product-image-slot="' + entry.slot + '"]'
+                );
 
-            if (!secondImage) {
-                secondImage = Array.from(imageStrip.querySelectorAll("img")).find(function (candidate) {
-                    return candidate !== image && !candidate.dataset.productImage;
-                }) || document.createElement("img");
-                secondImage.dataset.managedProductSecondImage = product.id;
-
-                if (!secondImage.parentElement) {
-                    imageStrip.appendChild(secondImage);
+                if (!extraImage) {
+                    extraImage = document.createElement("img");
+                    extraImage.dataset.managedProductImageSlot = entry.slot.toString();
+                    imageStrip.appendChild(extraImage);
                 }
-            }
 
-            secondImage.src = product.imageUrl2;
-            secondImage.alt = product.name + " — second view";
-            secondImage.style.objectFit = product.imageFit2 || "cover";
-            secondImage.style.objectPosition = product.imagePosition2 || "center";
+                extraImage.src = entry.url;
+                extraImage.alt = product.name + " — view " + entry.slot;
+                extraImage.style.objectFit = entry.fit || "cover";
+                extraImage.style.objectPosition = entry.position || "center";
+            });
         });
     }
 

@@ -1113,11 +1113,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 ? product.imageFit
                 : (existingContainedProductImages.has(product.id) ? "contain" : product.imageFit);
             const currentImageFit2 = product.imageUrl2 ? product.imageFit2 : "cover";
+            const currentImageFit3 = product.imageUrl3 ? product.imageFit3 : "cover";
 
             const row = document.createElement("tr");
             row.dataset.productId = product.id;
             row.dataset.fallbackImageUrl = fallbackImageUrl;
             row.dataset.fallbackImageUrl2 = fallbackImageUrl2;
+            row.dataset.fallbackImageUrl3 = "";
             row.dataset.inventorySection = entry.sectionKey;
             row.dataset.inventorySearch = [
                 product.name,
@@ -1219,7 +1221,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 currentImageFit2,
                 product.imagePosition2
             );
-            imageEditor.append(imageSlot1, imageSlot2);
+            const imageSlot3 = createInventoryImageSlot(
+                product,
+                3,
+                product.imageUrl3,
+                "",
+                currentImageFit3,
+                product.imagePosition3
+            );
+            imageEditor.append(imageSlot1, imageSlot2, imageSlot3);
 
             if (!emptySlot) {
                 const productActions = document.createElement("div");
@@ -1405,7 +1415,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 imageFit: row.querySelector('.inventory-image-fit[data-image-slot="1"]').value,
                 imagePosition: row.querySelector('.inventory-image-position[data-image-slot="1"]').value,
                 imageFit2: row.querySelector('.inventory-image-fit[data-image-slot="2"]').value,
-                imagePosition2: row.querySelector('.inventory-image-position[data-image-slot="2"]').value
+                imagePosition2: row.querySelector('.inventory-image-position[data-image-slot="2"]').value,
+                imageFit3: row.querySelector('.inventory-image-fit[data-image-slot="3"]').value,
+                imagePosition3: row.querySelector('.inventory-image-position[data-image-slot="3"]').value
             };
         });
     }
@@ -1417,9 +1429,9 @@ document.addEventListener("DOMContentLoaded", function () {
         const preview = slotEditor.querySelector(".inventory-image-preview");
         const removeButton = slotEditor.querySelector(".inventory-image-remove");
         const uploadButton = slotEditor.querySelector(".inventory-image-upload");
-        const fallbackImageUrl = imageSlot === 2
-            ? row.dataset.fallbackImageUrl2
-            : row.dataset.fallbackImageUrl;
+        const fallbackImageUrl = imageSlot === 3
+            ? row.dataset.fallbackImageUrl3
+            : (imageSlot === 2 ? row.dataset.fallbackImageUrl2 : row.dataset.fallbackImageUrl);
         const currentImageUrl = imageUrl || fallbackImageUrl;
         displayInventoryImage(
             preview,
@@ -1455,7 +1467,7 @@ document.addEventListener("DOMContentLoaded", function () {
             formData.append("imagePosition", slotEditor.querySelector(".inventory-image-position").value);
             const response = await fetch(
                 "/api/admin/products/" + encodeURIComponent(row.dataset.productId) +
-                    "/image" + (imageSlot === 2 ? "/2" : ""),
+                    "/image" + (imageSlot === 1 ? "" : "/" + imageSlot),
                 { method: "POST", headers: { "Accept": "application/json" }, body: formData }
             );
             const result = await response.json();
@@ -1490,7 +1502,7 @@ document.addEventListener("DOMContentLoaded", function () {
         try {
             const response = await fetch(
                 "/api/admin/products/" + encodeURIComponent(row.dataset.productId) +
-                    "/image" + (imageSlot === 2 ? "/2" : ""),
+                    "/image" + (imageSlot === 1 ? "" : "/" + imageSlot),
                 { method: "DELETE", headers: { "Accept": "application/json" } }
             );
             const result = await response.json();

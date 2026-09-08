@@ -32,6 +32,9 @@ const SCHEMA_STATEMENTS = [
         image_key_2 TEXT NOT NULL DEFAULT '',
         image_fit_2 TEXT NOT NULL DEFAULT 'cover',
         image_position_2 TEXT NOT NULL DEFAULT 'center',
+        image_key_3 TEXT NOT NULL DEFAULT '',
+        image_fit_3 TEXT NOT NULL DEFAULT 'cover',
+        image_position_3 TEXT NOT NULL DEFAULT 'center',
         frozen_option INTEGER NOT NULL DEFAULT 0 CHECK (frozen_option IN (0, 1)),
         frozen_quantity INTEGER NOT NULL DEFAULT 0 CHECK (frozen_quantity >= 0),
         card_name TEXT NOT NULL DEFAULT '',
@@ -678,6 +681,9 @@ function ensureDatabase(db) {
                 ["image_key_2", "ALTER TABLE products ADD COLUMN image_key_2 TEXT NOT NULL DEFAULT ''"],
                 ["image_fit_2", "ALTER TABLE products ADD COLUMN image_fit_2 TEXT NOT NULL DEFAULT 'cover'"],
                 ["image_position_2", "ALTER TABLE products ADD COLUMN image_position_2 TEXT NOT NULL DEFAULT 'center'"],
+                ["image_key_3", "ALTER TABLE products ADD COLUMN image_key_3 TEXT NOT NULL DEFAULT ''"],
+                ["image_fit_3", "ALTER TABLE products ADD COLUMN image_fit_3 TEXT NOT NULL DEFAULT 'cover'"],
+                ["image_position_3", "ALTER TABLE products ADD COLUMN image_position_3 TEXT NOT NULL DEFAULT 'center'"],
                 ["frozen_option", "ALTER TABLE products ADD COLUMN frozen_option INTEGER NOT NULL DEFAULT 0"],
                 ["frozen_quantity", "ALTER TABLE products ADD COLUMN frozen_quantity INTEGER NOT NULL DEFAULT 0"],
                 ["card_name", "ALTER TABLE products ADD COLUMN card_name TEXT NOT NULL DEFAULT ''"],
@@ -1380,7 +1386,8 @@ async function getProducts(db, includeInactive = false) {
             description, category, is_slot, order_limit, frozen_option, frozen_quantity,
             card_name, card_label,
             image_key, image_fit, image_position,
-            image_key_2, image_fit_2, image_position_2
+            image_key_2, image_fit_2, image_position_2,
+            image_key_3, image_fit_3, image_position_3
         FROM products
         ${includeInactive ? "" : "WHERE active = 1"}
         ORDER BY sort_order, name
@@ -1408,7 +1415,10 @@ async function getProducts(db, includeInactive = false) {
             imagePosition: normalizeImagePosition(product.image_position),
             imageUrl2: mediaUrlForKey(product.image_key_2),
             imageFit2: normalizeImageFit(product.image_fit_2),
-            imagePosition2: normalizeImagePosition(product.image_position_2)
+            imagePosition2: normalizeImagePosition(product.image_position_2),
+            imageUrl3: mediaUrlForKey(product.image_key_3),
+            imageFit3: normalizeImageFit(product.image_fit_3),
+            imagePosition3: normalizeImagePosition(product.image_position_3)
         };
     });
 }
@@ -2259,7 +2269,8 @@ async function handleAdminInventory(db) {
             description, category, is_slot, order_limit, frozen_option, frozen_quantity,
             card_name, card_label,
             image_key, image_fit, image_position,
-            image_key_2, image_fit_2, image_position_2
+            image_key_2, image_fit_2, image_position_2,
+            image_key_3, image_fit_3, image_position_3
         FROM products
         ORDER BY sort_order, name
     `).all();
@@ -2287,7 +2298,10 @@ async function handleAdminInventory(db) {
                 imagePosition: normalizeImagePosition(product.image_position),
                 imageUrl2: mediaUrlForKey(product.image_key_2),
                 imageFit2: normalizeImageFit(product.image_fit_2),
-                imagePosition2: normalizeImagePosition(product.image_position_2)
+                imagePosition2: normalizeImagePosition(product.image_position_2),
+                imageUrl3: mediaUrlForKey(product.image_key_3),
+                imageFit3: normalizeImageFit(product.image_fit_3),
+                imagePosition3: normalizeImagePosition(product.image_position_3)
             };
         })
     });
@@ -2620,6 +2634,8 @@ async function handleAdminInventoryUpdate(request, db) {
         const imagePosition = normalizeImagePosition(submitted.imagePosition);
         const imageFit2 = normalizeImageFit(submitted.imageFit2);
         const imagePosition2 = normalizeImagePosition(submitted.imagePosition2);
+        const imageFit3 = normalizeImageFit(submitted.imageFit3);
+        const imagePosition3 = normalizeImagePosition(submitted.imagePosition3);
 
         const existingProduct = existingProducts.get(id);
 
@@ -2683,7 +2699,8 @@ async function handleAdminInventoryUpdate(request, db) {
                     frozen_option = ?, frozen_quantity = ?,
                     card_name = ?, card_label = ?,
                     image_fit = ?, image_position = ?,
-                    image_fit_2 = ?, image_position_2 = ?
+                    image_fit_2 = ?, image_position_2 = ?,
+                    image_fit_3 = ?, image_position_3 = ?
                 WHERE id = ?
             `).bind(
                 name,
@@ -2702,6 +2719,8 @@ async function handleAdminInventoryUpdate(request, db) {
                 imagePosition,
                 imageFit2,
                 imagePosition2,
+                imageFit3,
+                imagePosition3,
                 id
             )
         );
@@ -2761,10 +2780,11 @@ async function deleteMediaIfUnused(db, bucket, key) {
         SELECT
             (SELECT COUNT(*) FROM products WHERE image_key = ?) +
             (SELECT COUNT(*) FROM products WHERE image_key_2 = ?) +
+            (SELECT COUNT(*) FROM products WHERE image_key_3 = ?) +
             (SELECT COUNT(*) FROM carousel_images WHERE image_key = ? AND deleted = 0) +
             (SELECT COUNT(*) FROM support_images WHERE image_key = ? AND deleted = 0)
             AS reference_count
-    `).bind(key, key, key, key).first();
+    `).bind(key, key, key, key, key).first();
 
     if (!usage || Number(usage.reference_count) === 0) {
         await bucket.delete(key);
@@ -2808,7 +2828,7 @@ async function handleAdminProductImageUpload(request, db, bucket, productId, ima
     }
 
     const product = await db.prepare(`
-        SELECT id, name, image_key, image_key_2
+        SELECT id, name, image_key, image_key_2, image_key_3
         FROM products
         WHERE id = ?
     `).bind(productId).first();
@@ -2824,7 +2844,7 @@ async function handleAdminProductImageUpload(request, db, bucket, productId, ima
             request,
             bucket,
             "products/" + productId.replace(/[^a-z0-9-]/gi, "-") +
-                (imageSlot === 2 ? "-image-2" : "-image-1")
+                "-image-" + imageSlot
         );
     } catch (error) {
         return jsonResponse({ error: error.message || "The product image could not be uploaded." }, 400);
@@ -2833,10 +2853,18 @@ async function handleAdminProductImageUpload(request, db, bucket, productId, ima
     const imageFit = normalizeImageFit(cleanText(stored.formData.get("imageFit"), 20));
     const imagePosition = normalizeImagePosition(cleanText(stored.formData.get("imagePosition"), 20));
 
-    const previousKey = imageSlot === 2 ? product.image_key_2 : product.image_key;
+    const previousKey = imageSlot === 3
+        ? product.image_key_3
+        : (imageSlot === 2 ? product.image_key_2 : product.image_key);
 
     try {
-        if (imageSlot === 2) {
+        if (imageSlot === 3) {
+            await db.prepare(`
+                UPDATE products
+                SET image_key_3 = ?, image_fit_3 = ?, image_position_3 = ?
+                WHERE id = ?
+            `).bind(stored.key, imageFit, imagePosition, productId).run();
+        } else if (imageSlot === 2) {
             await db.prepare(`
                 UPDATE products
                 SET image_key_2 = ?, image_fit_2 = ?, image_position_2 = ?
@@ -2876,7 +2904,7 @@ async function handleAdminProductImageUpload(request, db, bucket, productId, ima
 
 async function handleAdminProductImageDelete(db, bucket, productId, imageSlot = 1) {
     const product = await db.prepare(`
-        SELECT id, name, image_key, image_key_2
+        SELECT id, name, image_key, image_key_2, image_key_3
         FROM products
         WHERE id = ?
     `).bind(productId).first();
@@ -2885,8 +2913,12 @@ async function handleAdminProductImageDelete(db, bucket, productId, imageSlot = 
         return jsonResponse({ error: "That product was not found." }, 404);
     }
 
-    const imageColumn = imageSlot === 2 ? "image_key_2" : "image_key";
-    const previousKey = imageSlot === 2 ? product.image_key_2 : product.image_key;
+    const imageColumn = imageSlot === 3
+        ? "image_key_3"
+        : (imageSlot === 2 ? "image_key_2" : "image_key");
+    const previousKey = imageSlot === 3
+        ? product.image_key_3
+        : (imageSlot === 2 ? product.image_key_2 : product.image_key);
     await db.prepare("UPDATE products SET " + imageColumn + " = '' WHERE id = ?")
         .bind(productId)
         .run();
@@ -2899,7 +2931,7 @@ async function handleAdminProductImageDelete(db, bucket, productId, imageSlot = 
 
 async function handleAdminProductDelete(db, bucket, productId) {
     const product = await db.prepare(`
-        SELECT id, name, image_key, image_key_2, is_slot
+        SELECT id, name, image_key, image_key_2, image_key_3, is_slot
         FROM products
         WHERE id = ?
     `).bind(productId).first();
@@ -2922,12 +2954,14 @@ async function handleAdminProductDelete(db, bucket, productId) {
         `).bind(productId),
         db.prepare(`
             UPDATE products
-            SET active = 0, category = 'retired', image_key = '', image_key_2 = ''
+            SET active = 0, category = 'retired',
+                image_key = '', image_key_2 = '', image_key_3 = ''
             WHERE id = ?
         `).bind(productId)
     ]);
     await deleteMediaIfUnused(db, bucket, product.image_key);
     await deleteMediaIfUnused(db, bucket, product.image_key_2);
+    await deleteMediaIfUnused(db, bucket, product.image_key_3);
     await ensureEmptyProductSlots(db);
 
     return jsonResponse({
@@ -3877,7 +3911,7 @@ export default {
                 }
 
                 const productImageMatch = url.pathname.match(
-                    /^\/api\/admin\/products\/([^/]+)\/image(?:\/(2))?$/
+                    /^\/api\/admin\/products\/([^/]+)\/image(?:\/(2|3))?$/
                 );
 
                 if (productImageMatch && request.method === "POST") {
@@ -3886,7 +3920,7 @@ export default {
                         env.DB,
                         env.MEDIA_BUCKET,
                         decodeURIComponent(productImageMatch[1]),
-                        productImageMatch[2] ? 2 : 1
+                        productImageMatch[2] ? Number(productImageMatch[2]) : 1
                     );
                 }
 
@@ -3895,7 +3929,7 @@ export default {
                         env.DB,
                         env.MEDIA_BUCKET,
                         decodeURIComponent(productImageMatch[1]),
-                        productImageMatch[2] ? 2 : 1
+                        productImageMatch[2] ? Number(productImageMatch[2]) : 1
                     );
                 }
 
