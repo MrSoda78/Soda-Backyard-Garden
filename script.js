@@ -847,7 +847,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
             }
 
-            content.appendChild(controls);
+            const details = content.querySelector(":scope > .product-card-details");
+            const controlsContainer = document.body.classList.contains("fresh-produce-page") && details
+                ? details
+                : content;
+            controlsContainer.appendChild(controls);
         });
 
         applyProductPageSearch();
@@ -1008,20 +1012,23 @@ document.addEventListener("DOMContentLoaded", function () {
             });
 
             const toggle = document.createElement("button");
+            const includesOrdering = document.body.classList.contains("fresh-produce-page");
+            const showLabel = includesOrdering ? "View details & order" : "View details";
+            const hideLabel = includesOrdering ? "Hide details & order" : "Hide details";
             toggle.type = "button";
             toggle.className = "product-details-toggle";
-            toggle.textContent = "View details";
+            toggle.textContent = showLabel;
             toggle.setAttribute("aria-expanded", "false");
             toggle.setAttribute("aria-controls", detailsId);
-            toggle.setAttribute("aria-label", "View details for " + heading.textContent.trim());
+            toggle.setAttribute("aria-label", showLabel + " for " + heading.textContent.trim());
             toggle.addEventListener("click", function () {
                 const willOpen = details.hidden;
                 details.hidden = !willOpen;
-                toggle.textContent = willOpen ? "Hide details" : "View details";
+                toggle.textContent = willOpen ? hideLabel : showLabel;
                 toggle.setAttribute("aria-expanded", willOpen.toString());
                 toggle.setAttribute(
                     "aria-label",
-                    (willOpen ? "Hide details for " : "View details for ") + heading.textContent.trim()
+                    (willOpen ? hideLabel : showLabel) + " for " + heading.textContent.trim()
                 );
             });
 
