@@ -2032,9 +2032,43 @@ document.addEventListener("DOMContentLoaded", function () {
         const validationSummary = document.getElementById("orderValidationSummary");
         const requiredFields = Array.from(orderForm.querySelectorAll("[required]"));
         let isSubmitting = false;
+        let submitActionAuthorized = false;
         let validationFocusScheduled = false;
 
         syncPreparationOptions();
+
+        function authorizeSubmitAction() {
+            submitActionAuthorized = true;
+            window.setTimeout(function () {
+                submitActionAuthorized = false;
+            }, 0);
+        }
+
+        submitButton.addEventListener("pointerdown", authorizeSubmitAction);
+        submitButton.addEventListener("keydown", function (event) {
+            if (event.key === "Enter" || event.key === " ") {
+                authorizeSubmitAction();
+            }
+        });
+        submitButton.addEventListener("click", authorizeSubmitAction);
+
+        orderForm.addEventListener("keydown", function (event) {
+            if (
+                event.key !== "Enter" ||
+                event.target === submitButton ||
+                event.target.tagName === "TEXTAREA"
+            ) {
+                return;
+            }
+
+            event.preventDefault();
+            submitActionAuthorized = false;
+
+            if (formMessage) {
+                formMessage.textContent = "Your basket is saved. Continue shopping, or use Submit Order Request when you are finished.";
+                formMessage.className = "form-message";
+            }
+        });
 
         function getFieldLabel(field) {
             const label = orderForm.querySelector('label[for="' + field.id + '"]');
@@ -2343,6 +2377,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
         orderForm.addEventListener("submit", async function (event) {
             event.preventDefault();
+
+            if (event.submitter !== submitButton || !submitActionAuthorized) {
+                submitActionAuthorized = false;
+                formMessage.textContent = "Your order was not submitted. Use Submit Order Request when you are ready.";
+                formMessage.className = "form-message";
+                return;
+            }
+
+            submitActionAuthorized = false;
 
             if (isSubmitting) {
                 return;
