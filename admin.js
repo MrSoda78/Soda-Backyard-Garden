@@ -862,21 +862,149 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function appendInventoryHeading(label, isCurrentSection, sectionKey, productCount) {
-        const sectionRow = document.createElement("tr");
-        const sectionCell = document.createElement("th");
+        const section = document.createElement("section");
+        const sectionHeader = document.createElement("div");
         const toggle = document.createElement("button");
-        sectionCell.colSpan = 13;
-        sectionCell.scope = "rowgroup";
-        sectionCell.className = "inventory-section-heading";
-        sectionCell.classList.toggle("inventory-current-heading", isCurrentSection);
-        sectionRow.dataset.inventoryHeading = sectionKey;
+        const body = document.createElement("div");
+        section.className = "inventory-category-section";
+        section.dataset.inventoryHeading = sectionKey;
+        sectionHeader.className = "inventory-section-heading";
+        sectionHeader.classList.toggle("inventory-current-heading", isCurrentSection);
         toggle.type = "button";
         toggle.className = "inventory-section-toggle";
         toggle.dataset.inventorySectionToggle = sectionKey;
         toggle.innerHTML = "<span>" + label + " <small>(" + productCount + ")</small></span><span class=\"inventory-toggle-icon\" aria-hidden=\"true\"></span>";
-        sectionCell.appendChild(toggle);
-        sectionRow.appendChild(sectionCell);
-        inventoryRows.appendChild(sectionRow);
+        body.className = "inventory-card-grid";
+        body.dataset.inventorySectionBody = sectionKey;
+        sectionHeader.appendChild(toggle);
+        section.append(sectionHeader, body);
+        inventoryRows.appendChild(section);
+        return body;
+    }
+
+    function createInventoryField(labelText, control, className) {
+        const field = document.createElement("div");
+        const label = document.createElement("span");
+        field.className = "inventory-option-field" + (className ? " " + className : "");
+        label.className = "inventory-option-field-label";
+        label.textContent = labelText;
+        field.append(label, control);
+        return field;
+    }
+
+    function inventoryCardName(product) {
+        return (product.cardName || product.name || "").trim();
+    }
+
+    function updateInventorySectionCount(section) {
+        if (!section) {
+            return;
+        }
+
+        const count = section.querySelectorAll(".inventory-admin-card").length;
+        const countLabel = section.querySelector(".inventory-section-toggle small");
+
+        if (countLabel) {
+            countLabel.textContent = "(" + count + ")";
+        }
+    }
+
+    function updateInventoryCardSummary(card) {
+        if (!card) {
+            return;
+        }
+
+        const options = Array.from(card.querySelectorAll("[data-product-id]"));
+        const count = card.querySelector(".inventory-card-option-count");
+        const gallery = card.querySelector(".inventory-admin-card-gallery");
+
+        if (count) {
+            count.textContent = options.length === 1 ? "1 product option" : options.length + " product options";
+        }
+
+        if (!gallery) {
+            return;
+        }
+
+        const cardImages = [];
+        options.forEach(function (option) {
+            option.querySelectorAll(".inventory-image-preview img").forEach(function (image) {
+                const imageUrl = image.getAttribute("src");
+
+                if (
+                    imageUrl &&
+                    !cardImages.some(function (cardImage) { return cardImage.url === imageUrl; }) &&
+                    cardImages.length < 3
+                ) {
+                    cardImages.push({
+                        url: imageUrl,
+                        fit: image.style.objectFit || "cover",
+                        position: image.style.objectPosition || "center center"
+                    });
+                }
+            });
+        });
+
+        gallery.replaceChildren();
+        gallery.classList.toggle("inventory-admin-card-gallery-empty", cardImages.length === 0);
+
+        if (cardImages.length === 0) {
+            gallery.textContent = "No card image yet";
+            return;
+        }
+
+        cardImages.forEach(function (cardImage, index) {
+            const image = document.createElement("img");
+            image.src = cardImage.url;
+            image.alt = "Card image " + (index + 1);
+            image.style.objectFit = cardImage.fit;
+            image.style.objectPosition = cardImage.position;
+            gallery.appendChild(image);
+        });
+    }
+
+    function createInventoryCardShell(cardName, sectionKey, category, isEmptyCard) {
+        const card = document.createElement("article");
+        const header = document.createElement("header");
+        const gallery = document.createElement("div");
+        const heading = document.createElement("div");
+        const cardNameLabel = document.createElement("label");
+        const cardNameLabelText = document.createElement("span");
+        const cardNameInput = createInventoryInput("text", cardName, "inventory-group-card-name");
+        const count = document.createElement("span");
+        const actions = document.createElement("div");
+        const options = document.createElement("div");
+
+        card.className = "inventory-admin-card";
+        card.classList.toggle("inventory-empty-card", isEmptyCard);
+        card.dataset.inventorySection = sectionKey;
+        card.dataset.inventoryCategory = category;
+        header.className = "inventory-admin-card-header";
+        gallery.className = "inventory-admin-card-gallery";
+        heading.className = "inventory-admin-card-heading";
+        cardNameLabel.className = "inventory-card-name-field";
+        cardNameLabelText.textContent = "Product Card Name";
+        cardNameInput.maxLength = 100;
+        cardNameInput.placeholder = isEmptyCard ? "Name the new product card" : "Product card name";
+        cardNameInput.setAttribute("aria-label", "Product card name");
+        count.className = "inventory-card-option-count";
+        actions.className = "inventory-card-actions";
+        options.className = "inventory-card-options";
+
+        if (!isEmptyCard) {
+            const addOptionButton = document.createElement("button");
+            addOptionButton.type = "button";
+            addOptionButton.className = "button secondary inventory-card-add-option";
+            addOptionButton.dataset.inventoryCardAction = "add-option";
+            addOptionButton.textContent = "Add Option";
+            actions.appendChild(addOptionButton);
+        }
+
+        cardNameLabel.append(cardNameLabelText, cardNameInput);
+        heading.append(cardNameLabel, count, actions);
+        header.append(gallery, heading);
+        card.append(header, options);
+        return { card, options };
     }
 
     function normalizedSearch(value) {
@@ -973,11 +1101,14 @@ document.addEventListener("DOMContentLoaded", function () {
             : (madeToOrderInput.checked
                 ? "Made to order"
                 : (Number.isInteger(quantity) ? quantity : 0) + " in stock");
+        const cardLabelInput = row.querySelector(".inventory-card-label");
+        const optionName = cardLabelInput ? cardLabelInput.value.trim() : "";
         const title = row.querySelector(".inventory-mobile-product-name");
         const summary = row.querySelector(".inventory-mobile-product-summary");
 
-        title.textContent = name;
-        summary.textContent = (activeInput.checked ? "Available" : "Unavailable") + " • " + stockText;
+        title.textContent = optionName || name;
+        summary.textContent = (optionName ? name + " • " : "") +
+            (activeInput.checked ? "Available" : "Unavailable") + " • " + stockText;
     }
 
     function filterSales() {
@@ -1003,13 +1134,12 @@ document.addEventListener("DOMContentLoaded", function () {
         const sectionMatches = new Map();
         let visibleCount = 0;
 
-        inventoryRows.querySelectorAll("tr[data-product-id]").forEach(function (row) {
+        inventoryRows.querySelectorAll("[data-product-id]").forEach(function (row) {
             const liveValues = Array.from(row.querySelectorAll("input, textarea")).map(function (input) {
                 return input.value;
             }).join(" ").toLocaleLowerCase();
             const matches = !query || (row.dataset.inventorySearch + " " + liveValues).includes(query);
-            const collapsed = collapsedInventorySections.has(row.dataset.inventorySection);
-            row.hidden = !matches || (!query && collapsed);
+            row.hidden = !matches;
 
             if (matches) {
                 visibleCount += 1;
@@ -1017,13 +1147,22 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
 
-        inventoryRows.querySelectorAll("tr[data-inventory-heading]").forEach(function (row) {
-            const sectionKey = row.dataset.inventoryHeading;
-            const toggle = row.querySelector(".inventory-section-toggle");
+        inventoryRows.querySelectorAll("[data-inventory-heading]").forEach(function (section) {
+            const sectionKey = section.dataset.inventoryHeading;
+            const toggle = section.querySelector(".inventory-section-toggle");
+            const body = section.querySelector("[data-inventory-section-body]");
             const collapsed = collapsedInventorySections.has(sectionKey);
-            row.hidden = query ? !sectionMatches.get(sectionKey) : false;
+            section.hidden = query ? !sectionMatches.get(sectionKey) : false;
+            body.hidden = collapsed && !query;
             toggle.setAttribute("aria-expanded", (!collapsed || Boolean(query)).toString());
             toggle.classList.toggle("is-collapsed", collapsed && !query);
+
+            body.querySelectorAll(".inventory-admin-card").forEach(function (card) {
+                const hasVisibleOption = Array.from(card.querySelectorAll("[data-product-id]")).some(function (option) {
+                    return !option.hidden;
+                });
+                card.hidden = query && !hasVisibleOption;
+            });
         });
 
         inventorySearchMessage.textContent = query
@@ -1031,20 +1170,397 @@ document.addEventListener("DOMContentLoaded", function () {
             : "";
     }
 
+    function createInventoryProductEditor(product, sectionKey) {
+        const emptySlot = isEmptyProductSlot(product);
+        const fallbackImageUrl = existingProductImageUrl(product);
+        const fallbackImageUrl2 = existingProductSecondImageUrls[product.id] || "";
+        const currentImageFit = product.imageUrl
+            ? product.imageFit
+            : (existingContainedProductImages.has(product.id) ? "contain" : product.imageFit);
+        const currentImageFit2 = product.imageUrl2 ? product.imageFit2 : "cover";
+        const currentImageFit3 = product.imageUrl3 ? product.imageFit3 : "cover";
+
+        const option = document.createElement("article");
+        option.dataset.productId = product.id;
+        option.dataset.fallbackImageUrl = fallbackImageUrl;
+        option.dataset.fallbackImageUrl2 = fallbackImageUrl2;
+        option.dataset.fallbackImageUrl3 = "";
+        option.dataset.inventorySection = sectionKey;
+        option.dataset.inventorySearch = [
+            product.name,
+            product.cardName,
+            product.cardLabel,
+            product.description,
+            product.unit,
+            product.category,
+            product.active ? "available" : "unavailable",
+            product.madeToOrder ? "made to order" : "fixed quantity",
+            product.frozenOption ? "fresh frozen option" : "fresh only"
+        ].join(" ").toLocaleLowerCase();
+        option.className = "inventory-product-option";
+        option.classList.toggle("inventory-slot-row", emptySlot);
+        option.classList.toggle("inventory-custom-product-row", product.isSlot);
+        option.classList.toggle(
+            "inventory-mobile-expanded",
+            expandedMobileInventoryProducts.has(product.id)
+        );
+
+        const mobileToggle = document.createElement("button");
+        mobileToggle.type = "button";
+        mobileToggle.className = "inventory-mobile-product-toggle";
+        mobileToggle.dataset.inventoryProductToggle = product.id;
+        mobileToggle.setAttribute(
+            "aria-expanded",
+            expandedMobileInventoryProducts.has(product.id).toString()
+        );
+        mobileToggle.setAttribute("aria-label", "Edit " + product.name);
+        const mobileTitle = createTextElement(
+            "span",
+            "inventory-mobile-product-name",
+            product.cardLabel || product.name
+        );
+        const mobileSummary = createTextElement(
+            "span",
+            "inventory-mobile-product-summary",
+            ""
+        );
+        const mobileIcon = createTextElement("span", "inventory-mobile-product-icon", "");
+        mobileIcon.setAttribute("aria-hidden", "true");
+        mobileToggle.append(mobileTitle, mobileSummary, mobileIcon);
+
+        const editorBody = document.createElement("div");
+        editorBody.className = "inventory-product-editor-body";
+        const fields = document.createElement("div");
+        fields.className = "inventory-option-fields";
+
+        const cardNameInput = createInventoryInput(
+            "hidden",
+            product.cardName || (emptySlot ? "" : product.name),
+            "inventory-card-name"
+        );
+
+        const nameInput = createInventoryInput("text", product.name, "inventory-name");
+        nameInput.maxLength = 100;
+        nameInput.setAttribute("aria-label", "Full product name");
+        fields.appendChild(createInventoryField(
+            "Full Product Name (orders and emails)",
+            nameInput,
+            "inventory-option-field-wide"
+        ));
+
+        const cardLabelInput = createInventoryInput(
+            "text",
+            product.cardLabel || "",
+            "inventory-card-label"
+        );
+        cardLabelInput.maxLength = 100;
+        cardLabelInput.placeholder = "Optional, such as Dragon Tongue or 20 g";
+        cardLabelInput.setAttribute("aria-label", product.name + " option name inside its product card");
+        fields.appendChild(createInventoryField(
+            "Option Name (shown inside this card)",
+            cardLabelInput,
+            "inventory-option-field-wide"
+        ));
+
+        const quantityInput = createInventoryInput(
+            "number",
+            product.quantity === null ? "" : product.quantity,
+            "inventory-quantity"
+        );
+        quantityInput.min = "0";
+        quantityInput.max = "1000000";
+        quantityInput.step = "1";
+        quantityInput.disabled = product.madeToOrder;
+        quantityInput.setAttribute("aria-label", product.name + " quantity of fresh product");
+        fields.appendChild(createInventoryField("Quantity of Fresh", quantityInput));
+
+        const frozenQuantityInput = createInventoryInput(
+            "number",
+            Number.isInteger(product.frozenQuantity) ? product.frozenQuantity : 0,
+            "inventory-frozen-quantity"
+        );
+        frozenQuantityInput.min = "0";
+        frozenQuantityInput.max = "1000000";
+        frozenQuantityInput.step = "1";
+        frozenQuantityInput.disabled = product.frozenOption !== true;
+        frozenQuantityInput.setAttribute("aria-label", product.name + " quantity of frozen product");
+        fields.appendChild(createInventoryField("Quantity of Frozen", frozenQuantityInput));
+
+        const priceWrap = document.createElement("label");
+        priceWrap.className = "inventory-price";
+        priceWrap.append("$");
+        const priceInput = createInventoryInput(
+            "number",
+            (product.priceCents / 100).toFixed(2),
+            "inventory-price-input"
+        );
+        priceInput.min = "0";
+        priceInput.max = "10000";
+        priceInput.step = "0.01";
+        priceInput.setAttribute("aria-label", product.name + " price");
+        priceWrap.appendChild(priceInput);
+        fields.appendChild(createInventoryField("Price", priceWrap));
+
+        const unitInput = createInventoryInput("text", product.unit, "inventory-unit");
+        unitInput.maxLength = 30;
+        unitInput.setAttribute("aria-label", product.name + " selling unit");
+        fields.appendChild(createInventoryField("Selling Unit", unitInput));
+
+        const orderLimitInput = createInventoryInput(
+            "number",
+            product.orderLimit === null ? "" : product.orderLimit,
+            "inventory-order-limit"
+        );
+        orderLimitInput.min = "1";
+        orderLimitInput.max = "50";
+        orderLimitInput.step = "1";
+        orderLimitInput.placeholder = "No limit";
+        orderLimitInput.setAttribute("aria-label", product.name + " maximum per order");
+        fields.appendChild(createInventoryField("Maximum per Order", orderLimitInput));
+
+        const madeInput = document.createElement("input");
+        madeInput.type = "checkbox";
+        madeInput.checked = product.madeToOrder;
+        madeInput.className = "inventory-made-to-order";
+        madeInput.setAttribute("aria-label", product.name + " is made to order");
+        fields.appendChild(createInventoryField("Made to Order", madeInput, "inventory-option-checkbox"));
+
+        const frozenOptionInput = document.createElement("input");
+        frozenOptionInput.type = "checkbox";
+        frozenOptionInput.checked = product.frozenOption === true;
+        frozenOptionInput.className = "inventory-frozen-option";
+        frozenOptionInput.setAttribute("aria-label", product.name + " offers a Fresh or Frozen choice");
+        fields.appendChild(createInventoryField("Offer Frozen Option", frozenOptionInput, "inventory-option-checkbox"));
+
+        const activeInput = document.createElement("input");
+        activeInput.type = "checkbox";
+        activeInput.checked = product.active;
+        activeInput.className = "inventory-active";
+        activeInput.setAttribute("aria-label", product.name + " is available to order");
+        fields.appendChild(createInventoryField("Available to Order", activeInput, "inventory-option-checkbox"));
+
+        const descriptionInput = document.createElement("textarea");
+        descriptionInput.value = product.description || "";
+        descriptionInput.className = "inventory-description";
+        descriptionInput.rows = 4;
+        descriptionInput.maxLength = 500;
+        descriptionInput.placeholder = "Description is optional. Begin with Ingredients: when needed.";
+        descriptionInput.setAttribute("aria-label", product.name + " description");
+        fields.appendChild(createInventoryField(
+            "Description or Ingredients (optional)",
+            descriptionInput,
+            "inventory-option-field-wide"
+        ));
+
+        const imageEditor = document.createElement("div");
+        imageEditor.className = "inventory-image-editor";
+        imageEditor.append(
+            createInventoryImageSlot(
+                product,
+                1,
+                product.imageUrl,
+                fallbackImageUrl,
+                currentImageFit,
+                product.imagePosition
+            ),
+            createInventoryImageSlot(
+                product,
+                2,
+                product.imageUrl2,
+                fallbackImageUrl2,
+                currentImageFit2,
+                product.imagePosition2
+            ),
+            createInventoryImageSlot(
+                product,
+                3,
+                product.imageUrl3,
+                "",
+                currentImageFit3,
+                product.imagePosition3
+            )
+        );
+        fields.appendChild(createInventoryField(
+            "Product Images (up to three)",
+            imageEditor,
+            "inventory-option-field-wide inventory-option-images"
+        ));
+
+        const productActions = document.createElement("div");
+        productActions.className = "inventory-product-actions inventory-option-field-wide";
+
+        const ownCardButton = document.createElement("button");
+        ownCardButton.type = "button";
+        ownCardButton.className = "button secondary inventory-own-card-button";
+        ownCardButton.dataset.inventoryCardAction = "own";
+        ownCardButton.textContent = "Move to Own Card";
+        ownCardButton.disabled = emptySlot;
+        productActions.appendChild(ownCardButton);
+
+        if (!emptySlot) {
+            const deleteProductButton = document.createElement("button");
+            deleteProductButton.type = "button";
+            deleteProductButton.className = "button danger inventory-product-delete";
+            deleteProductButton.dataset.inventoryProductAction = "delete";
+            deleteProductButton.textContent = "Delete Product";
+            productActions.appendChild(deleteProductButton);
+        }
+
+        editorBody.append(cardNameInput, fields, productActions);
+        option.append(mobileToggle, editorBody);
+        updateMobileInventorySummary(option);
+        return option;
+    }
+
+    function appendInventoryCard(body, products, sectionKey, category, isEmptyCard) {
+        const cardName = isEmptyCard ? "" : inventoryCardName(products[0]);
+        const shell = createInventoryCardShell(
+            cardName,
+            sectionKey,
+            category,
+            isEmptyCard
+        );
+
+        products.forEach(function (product) {
+            shell.options.appendChild(createInventoryProductEditor(product, sectionKey));
+        });
+
+        body.appendChild(shell.card);
+        updateInventoryCardSummary(shell.card);
+        return shell.card;
+    }
+
+    function addInventoryCardOption(button) {
+        const targetCard = button.closest(".inventory-admin-card");
+        const cardNameInput = targetCard.querySelector(".inventory-group-card-name");
+        const cardName = cardNameInput.value.trim();
+
+        if (!cardName) {
+            setMessage(inventoryMessage, "Name this product card before adding an option.", "error");
+            cardNameInput.focus();
+            return;
+        }
+
+        const category = targetCard.dataset.inventoryCategory;
+        const slotCard = Array.from(inventoryRows.querySelectorAll(".inventory-empty-card")).find(function (card) {
+            return card.dataset.inventoryCategory === category;
+        });
+
+        if (!slotCard) {
+            setMessage(
+                inventoryMessage,
+                "There is no empty product slot available in this category. Save any unfinished new cards first, then try again.",
+                "error"
+            );
+            return;
+        }
+
+        const option = slotCard.querySelector("[data-product-id]");
+        const productNameInput = option.querySelector(".inventory-name");
+        const optionNameInput = option.querySelector(".inventory-card-label");
+        const hiddenCardName = option.querySelector(".inventory-card-name");
+        const targetOptions = targetCard.querySelector(".inventory-card-options");
+        const targetSectionKey = targetCard.dataset.inventorySection;
+        const oldSection = slotCard.closest("[data-inventory-heading]");
+
+        productNameInput.value = cardName + " — New Option";
+        optionNameInput.value = "New Option";
+        hiddenCardName.value = cardName;
+        option.dataset.inventorySection = targetSectionKey;
+        option.classList.remove("inventory-slot-row");
+        option.querySelector(".inventory-own-card-button").disabled = false;
+        expandedMobileInventoryProducts.add(option.dataset.productId);
+        option.classList.add("inventory-mobile-expanded");
+        option.querySelector("[data-inventory-product-toggle]").setAttribute("aria-expanded", "true");
+        targetOptions.appendChild(option);
+        slotCard.remove();
+
+        updateMobileInventorySummary(option);
+        updateInventoryCardSummary(targetCard);
+        updateInventorySectionCount(oldSection);
+        markInventoryUnsaved();
+        setMessage(
+            inventoryMessage,
+            "A new option was added to " + cardName + ". Replace “New Option” with its option name and complete its details, then save.",
+            "success"
+        );
+        optionNameInput.focus();
+        optionNameInput.select();
+    }
+
+    function moveInventoryOptionToOwnCard(option) {
+        const productName = option.querySelector(".inventory-name").value.trim();
+
+        if (!productName) {
+            setMessage(inventoryMessage, "Enter the full product name before moving it to its own card.", "error");
+            option.querySelector(".inventory-name").focus();
+            return;
+        }
+
+        const currentCard = option.closest(".inventory-admin-card");
+
+        if (currentCard.querySelectorAll("[data-product-id]").length === 1) {
+            currentCard.querySelector(".inventory-group-card-name").value = productName;
+            option.querySelector(".inventory-card-name").value = productName;
+            option.querySelector(".inventory-card-label").value = "";
+            updateMobileInventorySummary(option);
+            markInventoryUnsaved();
+            setMessage(inventoryMessage, productName + " is already on its own card. Its card name has been reset.", "success");
+            return;
+        }
+
+        const sectionKey = currentCard.dataset.inventorySection;
+        const category = currentCard.dataset.inventoryCategory;
+        const body = currentCard.parentElement;
+        const shell = createInventoryCardShell(productName, sectionKey, category, false);
+
+        option.querySelector(".inventory-card-name").value = productName;
+        option.querySelector(".inventory-card-label").value = "";
+        shell.options.appendChild(option);
+        currentCard.after(shell.card);
+        updateMobileInventorySummary(option);
+        updateInventoryCardSummary(currentCard);
+        updateInventoryCardSummary(shell.card);
+        updateInventorySectionCount(body.closest("[data-inventory-heading]"));
+        markInventoryUnsaved();
+        setMessage(
+            inventoryMessage,
+            productName + " will appear on its own product card after you save changes.",
+            "success"
+        );
+    }
+
+    function groupInventoryProducts(products) {
+        const groups = new Map();
+
+        products.forEach(function (product) {
+            const name = inventoryCardName(product) || product.name;
+            const key = name.toLocaleLowerCase();
+
+            if (!groups.has(key)) {
+                groups.set(key, []);
+            }
+
+            groups.get(key).push(product);
+        });
+
+        return Array.from(groups.values());
+    }
+
     function renderInventory(products) {
         inventoryRows.replaceChildren();
         inventoryCardNames.replaceChildren();
+
         Array.from(new Set(products.filter(function (product) {
             return product.category !== "retired" && !isEmptyProductSlot(product);
-        }).map(function (product) {
-            return (product.cardName || product.name).trim();
-        }).filter(Boolean))).sort(function (left, right) {
+        }).map(inventoryCardName).filter(Boolean))).sort(function (left, right) {
             return left.localeCompare(right);
         }).forEach(function (cardName) {
             const option = document.createElement("option");
             option.value = cardName;
             inventoryCardNames.appendChild(option);
         });
+
         const categories = [
             { id: "produce", label: "Fresh Produce" },
             { id: "tea", label: "Tea Mixes" },
@@ -1052,7 +1568,6 @@ document.addEventListener("DOMContentLoaded", function () {
             { id: "pain-rub", label: "Pain Rub" }
         ];
         const displayedProductIds = new Set();
-        const displayRows = [];
 
         categories.forEach(function (category) {
             const currentProducts = products.filter(function (product) {
@@ -1061,19 +1576,34 @@ document.addEventListener("DOMContentLoaded", function () {
             const emptySlots = products.filter(function (product) {
                 return product.category === category.id && isEmptyProductSlot(product);
             });
+            const currentCards = groupInventoryProducts(currentProducts);
 
-            if (currentProducts.length > 0) {
-                displayRows.push({ heading: category.label + " — Current Products", current: true, sectionKey: category.id + "-current", productCount: currentProducts.length });
-                currentProducts.forEach(function (product) {
-                    displayRows.push({ product, sectionKey: category.id + "-current" });
-                    displayedProductIds.add(product.id);
+            if (currentCards.length > 0) {
+                const currentKey = category.id + "-current";
+                const currentBody = appendInventoryHeading(
+                    category.label + " — Current Product Cards",
+                    true,
+                    currentKey,
+                    currentCards.length
+                );
+                currentCards.forEach(function (cardProducts) {
+                    appendInventoryCard(currentBody, cardProducts, currentKey, category.id, false);
+                    cardProducts.forEach(function (product) {
+                        displayedProductIds.add(product.id);
+                    });
                 });
             }
 
             if (emptySlots.length > 0) {
-                displayRows.push({ heading: category.label + " — New Product Slots", current: false, sectionKey: category.id + "-slots", productCount: emptySlots.length });
+                const slotKey = category.id + "-slots";
+                const slotBody = appendInventoryHeading(
+                    category.label + " — New Product Cards",
+                    false,
+                    slotKey,
+                    emptySlots.length
+                );
                 emptySlots.forEach(function (product) {
-                    displayRows.push({ product, sectionKey: category.id + "-slots" });
+                    appendInventoryCard(slotBody, [product], slotKey, category.id, true);
                     displayedProductIds.add(product.id);
                 });
             }
@@ -1084,288 +1614,28 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         if (uncategorizedProducts.length > 0) {
-            displayRows.push({ heading: "Other Products", current: true, sectionKey: "other-current", productCount: uncategorizedProducts.length });
-            uncategorizedProducts.forEach(function (product) {
-                displayRows.push({ product, sectionKey: "other-current" });
+            const sectionKey = "other-current";
+            const cards = groupInventoryProducts(uncategorizedProducts);
+            const body = appendInventoryHeading(
+                "Other Product Cards",
+                true,
+                sectionKey,
+                cards.length
+            );
+            cards.forEach(function (cardProducts) {
+                appendInventoryCard(body, cardProducts, sectionKey, cardProducts[0].category, false);
             });
         }
 
         if (!inventorySectionsInitialized) {
-            displayRows.filter(function (entry) {
-                return entry.sectionKey && entry.sectionKey.endsWith("-slots");
-            }).forEach(function (entry) {
-                collapsedInventorySections.add(entry.sectionKey);
+            inventoryRows.querySelectorAll('[data-inventory-heading$="-slots"]').forEach(function (section) {
+                collapsedInventorySections.add(section.dataset.inventoryHeading);
             });
             inventorySectionsInitialized = true;
         }
 
-        displayRows.forEach(function (entry) {
-            if (entry.heading) {
-                appendInventoryHeading(entry.heading, entry.current, entry.sectionKey, entry.productCount);
-                return;
-            }
-
-            const product = entry.product;
-            const emptySlot = isEmptyProductSlot(product);
-            const fallbackImageUrl = existingProductImageUrl(product);
-            const fallbackImageUrl2 = existingProductSecondImageUrls[product.id] || "";
-            const currentImageFit = product.imageUrl
-                ? product.imageFit
-                : (existingContainedProductImages.has(product.id) ? "contain" : product.imageFit);
-            const currentImageFit2 = product.imageUrl2 ? product.imageFit2 : "cover";
-            const currentImageFit3 = product.imageUrl3 ? product.imageFit3 : "cover";
-
-            const row = document.createElement("tr");
-            row.dataset.productId = product.id;
-            row.dataset.fallbackImageUrl = fallbackImageUrl;
-            row.dataset.fallbackImageUrl2 = fallbackImageUrl2;
-            row.dataset.fallbackImageUrl3 = "";
-            row.dataset.inventorySection = entry.sectionKey;
-            row.dataset.inventorySearch = [
-                product.name,
-                product.cardName,
-                product.cardLabel,
-                product.description,
-                product.unit,
-                product.category,
-                product.active ? "available" : "unavailable",
-                product.madeToOrder ? "made to order" : "fixed quantity",
-                product.frozenOption ? "fresh frozen option" : "fresh only"
-            ].join(" ").toLocaleLowerCase();
-            row.classList.toggle("inventory-slot-row", emptySlot);
-            row.classList.toggle("inventory-custom-product-row", product.isSlot);
-            row.classList.toggle(
-                "inventory-mobile-expanded",
-                expandedMobileInventoryProducts.has(product.id)
-            );
-
-            const nameCell = document.createElement("td");
-            nameCell.dataset.fieldLabel = "Product name";
-            const mobileToggle = document.createElement("button");
-            mobileToggle.type = "button";
-            mobileToggle.className = "inventory-mobile-product-toggle";
-            mobileToggle.dataset.inventoryProductToggle = product.id;
-            mobileToggle.setAttribute(
-                "aria-expanded",
-                expandedMobileInventoryProducts.has(product.id).toString()
-            );
-            mobileToggle.setAttribute("aria-label", "Edit " + product.name);
-            const mobileTitle = createTextElement(
-                "span",
-                "inventory-mobile-product-name",
-                product.name
-            );
-            const mobileSummary = createTextElement(
-                "span",
-                "inventory-mobile-product-summary",
-                ""
-            );
-            const mobileIcon = createTextElement("span", "inventory-mobile-product-icon", "");
-            mobileIcon.setAttribute("aria-hidden", "true");
-            mobileToggle.append(mobileTitle, mobileSummary, mobileIcon);
-            const nameInput = createInventoryInput("text", product.name, "inventory-name");
-            nameInput.setAttribute("aria-label", "Product name");
-            nameCell.append(mobileToggle, nameInput);
-
-            const cardNameCell = document.createElement("td");
-            cardNameCell.dataset.fieldLabel = "Product Card";
-            const cardAssignment = document.createElement("div");
-            cardAssignment.className = "inventory-card-assignment";
-            const cardNameInput = createInventoryInput(
-                "text",
-                product.cardName || (emptySlot ? "" : product.name),
-                "inventory-card-name"
-            );
-            cardNameInput.maxLength = 100;
-            cardNameInput.placeholder = "Uses product name";
-            cardNameInput.setAttribute("list", "inventoryCardNames");
-            cardNameInput.setAttribute("aria-label", product.name + " product card");
-            const ownCardButton = document.createElement("button");
-            ownCardButton.type = "button";
-            ownCardButton.className = "button secondary inventory-own-card-button";
-            ownCardButton.dataset.inventoryCardAction = "own";
-            ownCardButton.textContent = "Make Own Card";
-            ownCardButton.disabled = emptySlot;
-            cardAssignment.append(cardNameInput, ownCardButton);
-            cardNameCell.appendChild(cardAssignment);
-
-            const cardLabelCell = document.createElement("td");
-            cardLabelCell.dataset.fieldLabel = "Name on Card";
-            const cardLabelInput = createInventoryInput(
-                "text",
-                product.cardLabel || "",
-                "inventory-card-label"
-            );
-            cardLabelInput.maxLength = 100;
-            cardLabelInput.placeholder = "Optional short name";
-            cardLabelInput.setAttribute("aria-label", product.name + " name inside its product card");
-            cardLabelCell.appendChild(cardLabelInput);
-
-            const imageCell = document.createElement("td");
-            imageCell.dataset.fieldLabel = "Product images";
-            const imageEditor = document.createElement("div");
-            imageEditor.className = "inventory-image-editor";
-            const imageSlot1 = createInventoryImageSlot(
-                product,
-                1,
-                product.imageUrl,
-                fallbackImageUrl,
-                currentImageFit,
-                product.imagePosition
-            );
-            const imageSlot2 = createInventoryImageSlot(
-                product,
-                2,
-                product.imageUrl2,
-                fallbackImageUrl2,
-                currentImageFit2,
-                product.imagePosition2
-            );
-            const imageSlot3 = createInventoryImageSlot(
-                product,
-                3,
-                product.imageUrl3,
-                "",
-                currentImageFit3,
-                product.imagePosition3
-            );
-            imageEditor.append(imageSlot1, imageSlot2, imageSlot3);
-
-            if (!emptySlot) {
-                const productActions = document.createElement("div");
-                productActions.className = "inventory-product-actions";
-                const deleteProductButton = document.createElement("button");
-                deleteProductButton.type = "button";
-                deleteProductButton.className = "button danger inventory-product-delete";
-                deleteProductButton.dataset.inventoryProductAction = "delete";
-                deleteProductButton.textContent = "Delete Product";
-                productActions.appendChild(deleteProductButton);
-                imageEditor.appendChild(productActions);
-            }
-
-            imageCell.appendChild(imageEditor);
-
-            const descriptionCell = document.createElement("td");
-            descriptionCell.dataset.fieldLabel = "Description";
-            const descriptionInput = document.createElement("textarea");
-            descriptionInput.value = product.description || "";
-            descriptionInput.className = "inventory-description";
-            descriptionInput.rows = 3;
-            descriptionInput.maxLength = 500;
-            descriptionInput.placeholder = "Describe the product, or begin with Ingredients:";
-            descriptionInput.setAttribute("aria-label", product.name + " description");
-            descriptionCell.appendChild(descriptionInput);
-
-            const priceCell = document.createElement("td");
-            priceCell.dataset.fieldLabel = "Price";
-            const priceWrap = document.createElement("label");
-            priceWrap.className = "inventory-price";
-            priceWrap.append("$");
-            const priceInput = createInventoryInput("number", (product.priceCents / 100).toFixed(2), "inventory-price-input");
-            priceInput.min = "0";
-            priceInput.max = "10000";
-            priceInput.step = "0.01";
-            priceInput.setAttribute("aria-label", product.name + " price");
-            priceWrap.appendChild(priceInput);
-            priceCell.appendChild(priceWrap);
-
-            const quantityCell = document.createElement("td");
-            quantityCell.dataset.fieldLabel = "Quantity of Fresh";
-            const quantityInput = createInventoryInput(
-                "number",
-                product.quantity === null ? "" : product.quantity,
-                "inventory-quantity"
-            );
-            quantityInput.min = "0";
-            quantityInput.max = "1000000";
-            quantityInput.step = "1";
-            quantityInput.disabled = product.madeToOrder;
-            quantityInput.setAttribute("aria-label", product.name + " quantity of fresh product");
-            quantityCell.appendChild(quantityInput);
-
-            const frozenQuantityCell = document.createElement("td");
-            frozenQuantityCell.dataset.fieldLabel = "Quantity of Frozen";
-            const frozenQuantityInput = createInventoryInput(
-                "number",
-                Number.isInteger(product.frozenQuantity) ? product.frozenQuantity : 0,
-                "inventory-frozen-quantity"
-            );
-            frozenQuantityInput.min = "0";
-            frozenQuantityInput.max = "1000000";
-            frozenQuantityInput.step = "1";
-            frozenQuantityInput.disabled = product.frozenOption !== true;
-            frozenQuantityInput.setAttribute("aria-label", product.name + " quantity of frozen product");
-            frozenQuantityCell.appendChild(frozenQuantityInput);
-
-            const orderLimitCell = document.createElement("td");
-            orderLimitCell.dataset.fieldLabel = "Maximum per order";
-            const orderLimitInput = createInventoryInput(
-                "number",
-                product.orderLimit === null ? "" : product.orderLimit,
-                "inventory-order-limit"
-            );
-            orderLimitInput.min = "1";
-            orderLimitInput.max = "50";
-            orderLimitInput.step = "1";
-            orderLimitInput.placeholder = "No limit";
-            orderLimitInput.setAttribute("aria-label", product.name + " maximum per order");
-            orderLimitCell.appendChild(orderLimitInput);
-
-            const unitCell = document.createElement("td");
-            unitCell.dataset.fieldLabel = "Selling unit";
-            const unitInput = createInventoryInput("text", product.unit, "inventory-unit");
-            unitInput.setAttribute("aria-label", product.name + " selling unit");
-            unitCell.appendChild(unitInput);
-
-            const madeCell = document.createElement("td");
-            madeCell.dataset.fieldLabel = "Made to order";
-            const madeInput = document.createElement("input");
-            madeInput.type = "checkbox";
-            madeInput.checked = product.madeToOrder;
-            madeInput.className = "inventory-made-to-order";
-            madeInput.setAttribute("aria-label", product.name + " is made to order");
-            madeCell.appendChild(madeInput);
-
-            const frozenOptionCell = document.createElement("td");
-            frozenOptionCell.dataset.fieldLabel = "Offer Frozen Option";
-            const frozenOptionInput = document.createElement("input");
-            frozenOptionInput.type = "checkbox";
-            frozenOptionInput.checked = product.frozenOption === true;
-            frozenOptionInput.className = "inventory-frozen-option";
-            frozenOptionInput.setAttribute("aria-label", product.name + " offers a Fresh or Frozen choice");
-            frozenOptionCell.appendChild(frozenOptionInput);
-
-            const activeCell = document.createElement("td");
-            activeCell.dataset.fieldLabel = "Available to order";
-            const activeInput = document.createElement("input");
-            activeInput.type = "checkbox";
-            activeInput.checked = product.active;
-            activeInput.className = "inventory-active";
-            activeInput.setAttribute("aria-label", product.name + " is available to order");
-            activeCell.appendChild(activeInput);
-
-            row.append(
-                nameCell,
-                cardNameCell,
-                cardLabelCell,
-                quantityCell,
-                frozenQuantityCell,
-                priceCell,
-                imageCell,
-                descriptionCell,
-                orderLimitCell,
-                unitCell,
-                madeCell,
-                frozenOptionCell,
-                activeCell
-            );
-            inventoryRows.appendChild(row);
-            updateMobileInventorySummary(row);
-        });
-
         filterInventoryRows();
     }
-
     async function loadInventory() {
         setMessage(inventoryMessage, "Loading inventory...", "success");
         const response = await fetch("/api/admin/inventory", {
@@ -1392,7 +1662,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function collectInventory() {
-        return Array.from(inventoryRows.querySelectorAll("tr[data-product-id]")).map(function (row) {
+        return Array.from(inventoryRows.querySelectorAll("[data-product-id]")).map(function (row) {
             const price = Number.parseFloat(row.querySelector(".inventory-price-input").value);
             const quantityValue = row.querySelector(".inventory-quantity").value;
             const frozenQuantityValue = row.querySelector(".inventory-frozen-quantity").value;
@@ -1442,6 +1712,7 @@ document.addEventListener("DOMContentLoaded", function () {
         );
         removeButton.hidden = !imageUrl;
         uploadButton.textContent = currentImageUrl ? "Replace" : "Upload";
+        updateInventoryCardSummary(row.closest(".inventory-admin-card"));
     }
 
     async function uploadInventoryImage(row, button) {
@@ -1573,7 +1844,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function setAllInventoryAvailability(available) {
-        const rows = Array.from(inventoryRows.querySelectorAll("tr[data-product-id]"));
+        const rows = Array.from(inventoryRows.querySelectorAll("[data-product-id]"));
         let skipped = 0;
 
         rows.forEach(function (row) {
@@ -3053,7 +3324,7 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        const row = event.target.closest("tr[data-product-id]");
+        const row = event.target.closest("[data-product-id]");
 
         if (!row) {
             return;
@@ -3077,7 +3348,16 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     inventoryRows.addEventListener("input", function (event) {
-        const row = event.target.closest("tr[data-product-id]");
+        if (event.target.classList.contains("inventory-group-card-name")) {
+            const card = event.target.closest(".inventory-admin-card");
+            card.querySelectorAll(".inventory-card-name").forEach(function (input) {
+                input.value = event.target.value;
+            });
+            markInventoryUnsaved();
+            return;
+        }
+
+        const row = event.target.closest("[data-product-id]");
 
         if (row) {
             updateMobileInventorySummary(row);
@@ -3107,18 +3387,15 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        const row = button.closest("tr[data-product-id]");
+        if (button.dataset.inventoryCardAction === "add-option") {
+            addInventoryCardOption(button);
+            return;
+        }
+
+        const row = button.closest("[data-product-id]");
 
         if (button.dataset.inventoryCardAction === "own") {
-            const productName = row.querySelector(".inventory-name").value.trim();
-            row.querySelector(".inventory-card-name").value = productName;
-            row.querySelector(".inventory-card-label").value = "";
-            markInventoryUnsaved();
-            setMessage(
-                inventoryMessage,
-                productName + " will move to its own card when you save changes.",
-                "success"
-            );
+            moveInventoryOptionToOwnCard(row);
         } else if (button.dataset.inventoryProductAction === "delete") {
             deleteInventoryProduct(row, button);
         } else if (button.dataset.inventoryImageAction === "upload") {
@@ -3548,7 +3825,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const productToggle = event.target.closest("[data-inventory-product-toggle]");
 
         if (productToggle) {
-            const row = productToggle.closest("tr[data-product-id]");
+            const row = productToggle.closest("[data-product-id]");
             const productId = row.dataset.productId;
 
             if (expandedMobileInventoryProducts.has(productId)) {
@@ -3582,6 +3859,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
     saveInventoryButton.addEventListener("click", async function () {
         const changedProducts = getChangedInventoryProducts();
+        const unfinishedOption = changedProducts.find(function (product) {
+            return product.cardLabel.trim() === "New Option" || product.name.trim().endsWith("— New Option");
+        });
+
+        if (unfinishedOption) {
+            const editor = inventoryRows.querySelector('[data-product-id="' + unfinishedOption.id + '"]');
+            expandedMobileInventoryProducts.add(unfinishedOption.id);
+            editor.classList.add("inventory-mobile-expanded");
+            editor.querySelector("[data-inventory-product-toggle]").setAttribute("aria-expanded", "true");
+            setMessage(
+                inventoryMessage,
+                "Finish the new option name and full product name before saving.",
+                "error"
+            );
+            editor.querySelector(".inventory-card-label").focus();
+            return;
+        }
 
         if (changedProducts.length === 0) {
             saveInventoryButton.textContent = "Up to date \u2713";

@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="favicons/admin.png">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <title>SBG | Admin</title>
-    <link rel="stylesheet" href="style.css?v=20260908-three-card-images">
+    <link rel="stylesheet" href="style.css?v=20260908-card-first-inventory">
 </head>
 <body class="admin-page">
     <header>
@@ -176,7 +176,7 @@
                                 <span id="inventorySaveStatus" class="inventory-save-status" role="status" aria-live="polite"></span>
                             </div>
                         </div>
-                        <p class="admin-inventory-help"><strong>Product cards:</strong> products using the same Product Card name appear together. Enter a new card name to create a card, select an existing name to add an item to that card, or use <strong>Make Own Card</strong> to remove it from a group. A new product automatically begins on its own card and can use all three image spaces. Complete a New Product Slot and save to add it to that category. <strong>Quantity of Fresh and Quantity of Frozen:</strong> enter each amount separately. Frozen is offered only when <strong>Offer Frozen Option</strong> is checked and Quantity of Frozen is greater than zero. <strong>Maximum per order:</strong> enter the most one household can request in a single order, or leave it blank for no limit.</p>
+                        <p class="admin-inventory-help"><strong>Product cards:</strong> Inventory now mirrors the live product pages. Each card has one shared card name and contains one or more editable product options. For example, <strong>Fresh Beans</strong> contains Dragon Tongue, Purple, Green, and Yellow options. Use <strong>Add Option</strong> to add another choice to a card, or <strong>Move to Own Card</strong> to separate an option. Each card can display up to three images gathered from its options. <strong>Quantity of Fresh and Quantity of Frozen:</strong> enter each amount separately. Frozen is offered only when <strong>Offer Frozen Option</strong> is checked and Quantity of Frozen is greater than zero. <strong>Maximum per order:</strong> enter the most one household can request in a single order, or leave it blank for no limit.</p>
                         <datalist id="inventoryCardNames"></datalist>
                         <div class="admin-search-bar admin-search-sticky">
                             <label for="adminInventorySearch">Search inventory</label>
@@ -193,27 +193,8 @@
                             <span>Use Save Changes when finished.</span>
                         </div>
                         <p id="inventoryMessage" class="form-message"></p>
-                        <div class="admin-inventory-wrap" role="region" aria-label="Scrollable inventory table" tabindex="0">
-                            <table class="admin-inventory-table">
-                                <thead>
-                                    <tr>
-                                        <th scope="col">Product</th>
-                                        <th scope="col">Product Card</th>
-                                        <th scope="col">Name on Card</th>
-                                        <th scope="col">Quantity of Fresh</th>
-                                        <th scope="col">Quantity of Frozen</th>
-                                        <th scope="col">Price</th>
-                                        <th scope="col">Image</th>
-                                        <th scope="col">Description</th>
-                                        <th scope="col">Maximum per order</th>
-                                        <th scope="col">Selling unit</th>
-                                        <th scope="col">Made to order</th>
-                                        <th scope="col">Offer Frozen Option</th>
-                                        <th scope="col">Available to order</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="inventoryRows"></tbody>
-                            </table>
+                        <div class="admin-inventory-wrap" role="region" aria-label="Inventory product cards" tabindex="0">
+                            <div id="inventoryRows" class="admin-inventory-cards"></div>
                         </div>
                     </section>
 
@@ -606,6 +587,6 @@
         </section>
     </main>
 
-    <script src="admin.js?v=20260908-three-card-images"></script>
+    <script src="admin.js?v=20260908-card-first-inventory"></script>
 </body>
 </html>
