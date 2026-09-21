@@ -787,6 +787,19 @@ document.addEventListener("DOMContentLoaded", function () {
         );
         imagePositionSelect.dataset.imageSlot = imageSlot.toString();
 
+        const imageFitControl = document.createElement("label");
+        imageFitControl.className = "inventory-image-control";
+        imageFitControl.append(
+            createTextElement("span", "inventory-image-control-label", "Image sizing"),
+            imageFitSelect
+        );
+        const imagePositionControl = document.createElement("label");
+        imagePositionControl.className = "inventory-image-control";
+        imagePositionControl.append(
+            createTextElement("span", "inventory-image-control-label", "Visible area"),
+            imagePositionSelect
+        );
+
         const imageActions = document.createElement("div");
         imageActions.className = "inventory-image-actions";
         const uploadImageButton = document.createElement("button");
@@ -808,8 +821,8 @@ document.addEventListener("DOMContentLoaded", function () {
             slotLabel,
             imagePreview,
             imageFile,
-            imageFitSelect,
-            imagePositionSelect,
+            imageFitControl,
+            imagePositionControl,
             imageActions
         );
         return slotEditor;
@@ -919,7 +932,9 @@ document.addEventListener("DOMContentLoaded", function () {
         const gallery = card.querySelector(".inventory-admin-card-gallery");
 
         if (count) {
-            count.textContent = options.length === 1 ? "1 product option" : options.length + " product options";
+            count.textContent = card.classList.contains("inventory-empty-card")
+                ? "Name this card, then add its first type"
+                : (options.length === 1 ? "1 product type" : options.length + " product types");
         }
 
         if (!gallery) {
@@ -991,14 +1006,12 @@ document.addEventListener("DOMContentLoaded", function () {
         actions.className = "inventory-card-actions";
         options.className = "inventory-card-options";
 
-        if (!isEmptyCard) {
-            const addOptionButton = document.createElement("button");
-            addOptionButton.type = "button";
-            addOptionButton.className = "button secondary inventory-card-add-option";
-            addOptionButton.dataset.inventoryCardAction = "add-option";
-            addOptionButton.textContent = "Add Option";
-            actions.appendChild(addOptionButton);
-        }
+        const addOptionButton = document.createElement("button");
+        addOptionButton.type = "button";
+        addOptionButton.className = "button secondary inventory-card-add-option";
+        addOptionButton.dataset.inventoryCardAction = "add-option";
+        addOptionButton.textContent = isEmptyCard ? "Add First Type" : "Add Another Type";
+        actions.appendChild(addOptionButton);
 
         cardNameLabel.append(cardNameLabelText, cardNameInput);
         heading.append(cardNameLabel, count, actions);
@@ -1442,8 +1455,41 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         const category = targetCard.dataset.inventoryCategory;
+        const targetOptions = targetCard.querySelector(".inventory-card-options");
+        const targetSectionKey = targetCard.dataset.inventorySection;
+
+        if (targetCard.classList.contains("inventory-empty-card")) {
+            const firstOption = targetCard.querySelector("[data-product-id]");
+            const productNameInput = firstOption.querySelector(".inventory-name");
+            const optionNameInput = firstOption.querySelector(".inventory-card-label");
+            const hiddenCardName = firstOption.querySelector(".inventory-card-name");
+
+            productNameInput.value = cardName + " — New Type";
+            optionNameInput.value = "New Type";
+            hiddenCardName.value = cardName;
+            firstOption.classList.remove("inventory-slot-row");
+            firstOption.querySelector(".inventory-own-card-button").disabled = false;
+            targetCard.classList.remove("inventory-empty-card");
+            button.textContent = "Add Another Type";
+            expandedMobileInventoryProducts.add(firstOption.dataset.productId);
+            firstOption.classList.add("inventory-mobile-expanded");
+            firstOption.querySelector("[data-inventory-product-toggle]").setAttribute("aria-expanded", "true");
+
+            updateMobileInventorySummary(firstOption);
+            updateInventoryCardSummary(targetCard);
+            markInventoryUnsaved();
+            setMessage(
+                inventoryMessage,
+                "The first type was added to " + cardName + ". Replace “New Type” with a name such as Butternut, then use Add Another Type for the remaining varieties.",
+                "success"
+            );
+            optionNameInput.focus();
+            optionNameInput.select();
+            return;
+        }
+
         const slotCard = Array.from(inventoryRows.querySelectorAll(".inventory-empty-card")).find(function (card) {
-            return card.dataset.inventoryCategory === category;
+            return card !== targetCard && card.dataset.inventoryCategory === category;
         });
 
         if (!slotCard) {
@@ -1459,12 +1505,10 @@ document.addEventListener("DOMContentLoaded", function () {
         const productNameInput = option.querySelector(".inventory-name");
         const optionNameInput = option.querySelector(".inventory-card-label");
         const hiddenCardName = option.querySelector(".inventory-card-name");
-        const targetOptions = targetCard.querySelector(".inventory-card-options");
-        const targetSectionKey = targetCard.dataset.inventorySection;
         const oldSection = slotCard.closest("[data-inventory-heading]");
 
-        productNameInput.value = cardName + " — New Option";
-        optionNameInput.value = "New Option";
+        productNameInput.value = cardName + " — New Type";
+        optionNameInput.value = "New Type";
         hiddenCardName.value = cardName;
         option.dataset.inventorySection = targetSectionKey;
         option.classList.remove("inventory-slot-row");
@@ -1481,7 +1525,7 @@ document.addEventListener("DOMContentLoaded", function () {
         markInventoryUnsaved();
         setMessage(
             inventoryMessage,
-            "A new option was added to " + cardName + ". Replace “New Option” with its option name and complete its details, then save.",
+            "Another type was added to " + cardName + ". Replace “New Type” with its variety name and complete its details, then save.",
             "success"
         );
         optionNameInput.focus();
@@ -3326,6 +3370,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 image.style.objectFit = slotEditor.querySelector(".inventory-image-fit").value;
                 image.style.objectPosition = slotEditor.querySelector(".inventory-image-position").value;
             }
+
+            const row = event.target.closest("[data-product-id]");
+            updateInventoryCardSummary(row.closest(".inventory-admin-card"));
+            markInventoryUnsaved();
+            setMessage(
+                inventoryMessage,
+                "Image view updated in the preview. Click Save Changes to publish this position.",
+                "success"
+            );
             return;
         }
 
@@ -3865,7 +3918,8 @@ document.addEventListener("DOMContentLoaded", function () {
     saveInventoryButton.addEventListener("click", async function () {
         const changedProducts = getChangedInventoryProducts();
         const unfinishedOption = changedProducts.find(function (product) {
-            return product.cardLabel.trim() === "New Option" || product.name.trim().endsWith("— New Option");
+            return ["New Option", "New Type"].includes(product.cardLabel.trim()) ||
+                /\u2014 New (?:Option|Type)$/.test(product.name.trim());
         });
 
         if (unfinishedOption) {
@@ -3875,7 +3929,7 @@ document.addEventListener("DOMContentLoaded", function () {
             editor.querySelector("[data-inventory-product-toggle]").setAttribute("aria-expanded", "true");
             setMessage(
                 inventoryMessage,
-                "Finish the new option name and full product name before saving.",
+                "Finish the new type name and full product name before saving.",
                 "error"
             );
             editor.querySelector(".inventory-card-label").focus();

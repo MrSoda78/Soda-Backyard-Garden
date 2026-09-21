@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="favicons/admin.png">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <title>SBG | Admin</title>
-    <link rel="stylesheet" href="style.css?v=20260908-card-contrast-2">
+    <link rel="stylesheet" href="style.css?v=20260921-product-types-image-position">
 </head>
 <body class="admin-page">
     <header>
@@ -176,7 +176,7 @@
                                 <span id="inventorySaveStatus" class="inventory-save-status" role="status" aria-live="polite"></span>
                             </div>
                         </div>
-                        <p class="admin-inventory-help"><strong>Product cards:</strong> Inventory now mirrors the live product pages. Each card has one shared card name and contains one or more editable product options. For example, <strong>Fresh Beans</strong> contains Dragon Tongue, Purple, Green, and Yellow options. Use <strong>Add Option</strong> to add another choice to a card, or <strong>Move to Own Card</strong> to separate an option. Each card can display up to three images gathered from its options. <strong>Quantity of Fresh and Quantity of Frozen:</strong> enter each amount separately. Frozen is offered only when <strong>Offer Frozen Option</strong> is checked and Quantity of Frozen is greater than zero. <strong>Maximum per order:</strong> enter the most one household can request in a single order, or leave it blank for no limit.</p>
+                        <p class="admin-inventory-help"><strong>Product cards:</strong> Inventory mirrors the live product pages. To create a grouped product such as Squash, name a blank card, choose <strong>Add First Type</strong>, then use <strong>Add Another Type</strong> for each variety. Existing types have an <strong>Edit</strong> button where you can adjust details, move the type to its own card, or delete it. Each card can display up to three images gathered from its types. <strong>Images:</strong> Image sizing controls whether the frame is filled or the whole photo is shown; Visible area moves a filled image up, down, left, or right. Click <strong>Save Changes</strong> after adjusting the view. <strong>Quantity of Fresh and Quantity of Frozen:</strong> enter each amount separately. Frozen is offered only when <strong>Offer Frozen Option</strong> is checked and Quantity of Frozen is greater than zero. <strong>Maximum per order:</strong> enter the most one household can request in a single order, or leave it blank for no limit.</p>
                         <datalist id="inventoryCardNames"></datalist>
                         <div class="admin-search-bar admin-search-sticky">
                             <label for="adminInventorySearch">Search inventory</label>
@@ -587,6 +587,6 @@
         </section>
     </main>
 
-    <script src="admin.js?v=20260921-faster-admin-load"></script>
+    <script src="admin.js?v=20260921-product-types-image-position"></script>
 </body>
 </html>
