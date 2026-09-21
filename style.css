@@ -5638,3 +5638,147 @@ footer a:hover {
         flex-direction: row;
     }
 }
+
+/* ==========================================================
+   2026-09-21 — CONSISTENT ADMIN TAB LAYOUT
+========================================================== */
+
+.admin-panel {
+    min-width: 0;
+}
+
+.admin-panel-header {
+    align-items: center;
+    margin-bottom: 18px;
+    padding: 20px 22px;
+    border: 1px solid var(--green-border);
+    border-radius: 14px;
+    background: white;
+    box-shadow: var(--shadow);
+}
+
+.admin-panel-header > div:first-child {
+    max-width: 800px;
+}
+
+.admin-panel-header h2 {
+    margin: 0 0 4px;
+    color: var(--green-dark);
+    line-height: 1.2;
+}
+
+.admin-panel-header h2 span {
+    font-size: 0.82em;
+}
+
+.admin-panel-header p:not(.admin-panel-kicker) {
+    margin: 0;
+    color: var(--text-soft);
+}
+
+.admin-panel-kicker {
+    margin: 0 0 6px;
+    color: var(--green-main);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.11em;
+    line-height: 1.3;
+    text-transform: uppercase;
+}
+
+.admin-panel-header .admin-toolbar-actions {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+}
+
+.admin-panel-header .button {
+    margin: 0;
+}
+
+.admin-panel > .admin-search-bar,
+.admin-panel .home-admin-card,
+.admin-panel .admin-theme-card,
+.admin-panel .sales-card,
+.admin-panel .admin-offline-order,
+.admin-panel .admin-blocked-customers,
+.admin-panel .admin-inventory-wrap {
+    border-color: var(--green-border);
+    border-radius: 14px;
+    background: white;
+    box-shadow: var(--shadow);
+}
+
+.admin-panel > .admin-search-bar {
+    margin: 16px 0 22px;
+}
+
+.admin-panel > .admin-inventory-help,
+.admin-panel > .admin-export-note {
+    margin: 0 0 16px;
+    padding: 12px 15px;
+    border: 1px solid var(--green-border);
+    border-left: 5px solid var(--green-main);
+    border-radius: 10px;
+    color: var(--text-soft);
+    background: var(--green-light);
+}
+
+#themePanel .admin-theme-card {
+    max-width: none;
+}
+
+#themePanel .theme-actions {
+    margin-top: 0;
+}
+
+#blockedPanel .admin-blocked-customers {
+    margin-top: 0;
+    padding: 22px;
+    border-color: var(--green-border);
+    background: white;
+}
+
+#ordersPanel .order-status-filters {
+    margin: 0 0 4px;
+    padding: 12px;
+    border: 1px solid var(--green-border);
+    border-radius: 14px;
+    background: white;
+    box-shadow: var(--shadow);
+}
+
+#inventoryPanel .admin-panel-header {
+    margin-bottom: 14px;
+}
+
+@media (max-width: 750px) {
+    .admin-panel-header,
+    .admin-panel-header .admin-toolbar-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .admin-panel-header {
+        padding: 18px;
+    }
+
+    .admin-panel-header .admin-toolbar-actions {
+        display: grid;
+        width: 100%;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-panel-header .admin-toolbar-actions .button {
+        width: 100%;
+    }
+
+    .admin-panel-header .admin-toolbar-actions .button:only-child {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-panel-header .admin-toolbar-actions {
+        grid-template-columns: 1fr;
+    }
+}

@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="favicons/admin.png">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <title>SBG | Admin</title>
-    <link rel="stylesheet" href="style.css?v=20260921-dashboard-navigation">
+    <link rel="stylesheet" href="style.css?v=20260921-admin-panel-consistency">
 </head>
 <body class="admin-page">
     <header>
@@ -76,9 +76,10 @@
 
                         <div class="admin-workspace">
 
-                    <section id="ordersPanel" role="tabpanel" aria-labelledby="ordersTab">
-                        <div class="admin-toolbar">
+                    <section id="ordersPanel" class="admin-panel" role="tabpanel" aria-labelledby="ordersTab">
+                        <div class="admin-toolbar admin-panel-header">
                             <div>
+                                <p class="admin-panel-kicker">Orders &amp; Fulfilment</p>
                                 <h2>Customer Orders</h2>
                                 <p>Select an order to expand its items, customer details, and actions. Confirm paid orders, refuse orders, cancel and return stock, or mark deliveries complete.</p>
                             </div>
@@ -188,10 +189,10 @@
                         <div id="ordersList" class="admin-orders" aria-live="polite"></div>
                     </section>
 
-                    <section id="inventoryPanel" role="tabpanel" aria-labelledby="inventoryTab" hidden>
-                        <div class="admin-toolbar inventory-heading-toolbar">
+                    <section id="inventoryPanel" class="admin-panel" role="tabpanel" aria-labelledby="inventoryTab" hidden>
+                        <div class="admin-toolbar admin-panel-header inventory-heading-toolbar">
                             <div>
-                                <p class="section-kicker">Live-page card editor</p>
+                                <p class="admin-panel-kicker">Products &amp; Availability</p>
                                 <h2>Inventory Hub</h2>
                                 <p>Choose a category from the menu, open the product you need, and save when finished.</p>
                             </div>
@@ -225,10 +226,11 @@
                         </div>
                     </section>
 
-                    <section id="homePanel" role="tabpanel" aria-labelledby="homeTab" hidden>
-                        <div class="admin-toolbar">
+                    <section id="homePanel" class="admin-panel" role="tabpanel" aria-labelledby="homeTab" hidden>
+                        <div class="admin-toolbar admin-panel-header">
                             <div>
-                                <h2>Home Page Carousel</h2>
+                                <p class="admin-panel-kicker">Homepage Media</p>
+                                <h2>Home Carousel</h2>
                                 <p>Add or remove rotating garden photos, change their order, hide individual slides, and choose how each image is framed.</p>
                             </div>
                             <div class="admin-toolbar-actions">
@@ -289,10 +291,11 @@
                         <div id="carouselItems" class="admin-carousel-list" aria-live="polite"></div>
                     </section>
 
-                    <section id="supportPanel" role="tabpanel" aria-labelledby="supportTab" hidden>
-                        <div class="admin-toolbar">
+                    <section id="supportPanel" class="admin-panel" role="tabpanel" aria-labelledby="supportTab" hidden>
+                        <div class="admin-toolbar admin-panel-header">
                             <div>
-                                <h2>Support the Garden Images</h2>
+                                <p class="admin-panel-kicker">Support Media</p>
+                                <h2>Support Page Images</h2>
                                 <p>Add or remove photos, change their order, hide individual images, and choose how each photo is framed on the Support the Garden page.</p>
                             </div>
                             <div class="admin-toolbar-actions">
@@ -353,11 +356,16 @@
                         <div id="supportImageItems" class="admin-carousel-list" aria-live="polite"></div>
                     </section>
 
-                    <section id="themePanel" role="tabpanel" aria-labelledby="themeTab" hidden>
-                        <div class="admin-toolbar">
+                    <section id="themePanel" class="admin-panel" role="tabpanel" aria-labelledby="themeTab" hidden>
+                        <div class="admin-toolbar admin-panel-header">
                             <div>
+                                <p class="admin-panel-kicker">Appearance</p>
                                 <h2>Website Theme</h2>
                                 <p>Preview a seasonal colour scheme here before publishing it across the garden website.</p>
+                            </div>
+                            <div class="admin-toolbar-actions theme-actions">
+                                <button type="button" class="button secondary" id="cancelThemePreview" disabled>Cancel Preview</button>
+                                <button type="button" class="button" id="saveTheme" disabled>Save Theme</button>
                             </div>
                         </div>
 
@@ -417,17 +425,14 @@
                             <div class="theme-preview-note" id="themePreviewNote" aria-live="polite">
                                 Choose a theme above to preview it on this Admin page.
                             </div>
-                            <div class="admin-toolbar-actions theme-actions">
-                                <button type="button" class="button secondary" id="cancelThemePreview" disabled>Cancel Preview</button>
-                                <button type="button" class="button" id="saveTheme" disabled>Save Theme</button>
-                            </div>
                             <p id="themeMessage" class="form-message" aria-live="polite"></p>
                         </div>
                     </section>
 
-                    <section id="salesPanel" role="tabpanel" aria-labelledby="salesTab" hidden>
-                        <div class="admin-toolbar">
+                    <section id="salesPanel" class="admin-panel" role="tabpanel" aria-labelledby="salesTab" hidden>
+                        <div class="admin-toolbar admin-panel-header">
                             <div>
+                                <p class="admin-panel-kicker">Revenue &amp; Records</p>
                                 <h2>Sales</h2>
                                 <p>Running totals from orders where payment has been confirmed.</p>
                             </div>
@@ -569,9 +574,10 @@
                         </div>
                     </section>
 
-                    <section id="blockedPanel" role="tabpanel" aria-labelledby="blockedTab" hidden>
-                        <div class="admin-toolbar">
+                    <section id="blockedPanel" class="admin-panel" role="tabpanel" aria-labelledby="blockedTab" hidden>
+                        <div class="admin-toolbar admin-panel-header">
                             <div>
+                                <p class="admin-panel-kicker">Customer Access</p>
                                 <h2>Blocked Customers <span id="blockedCustomerCount">(0)</span></h2>
                                 <p>Add, review, and unblock customers whose current and future website orders should be refused.</p>
                             </div>
@@ -668,6 +674,6 @@
         </div>
     </dialog>
 
-    <script src="admin.js?v=20260921-dashboard-navigation"></script>
+    <script src="admin.js?v=20260921-admin-panel-consistency"></script>
 </body>
 </html>
