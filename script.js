@@ -1431,7 +1431,25 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function pluralProductUnit(unit) {
-        return unit.endsWith("s") ? unit : unit + "s";
+        const normalizedUnit = unit.trim().toLocaleLowerCase();
+
+        if (["each", "dozen"].includes(normalizedUnit)) {
+            return normalizedUnit;
+        }
+
+        if (normalizedUnit === "loaf") {
+            return "loaves";
+        }
+
+        if (/[^aeiou]y$/.test(normalizedUnit)) {
+            return normalizedUnit.slice(0, -1) + "ies";
+        }
+
+        if (/(?:s|x|z|ch|sh)$/.test(normalizedUnit)) {
+            return normalizedUnit + "es";
+        }
+
+        return normalizedUnit + "s";
     }
 
     function createManagedProductCard(cardName, products) {
