@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="favicons/admin.png">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <title>SBG | Admin</title>
-    <link rel="stylesheet" href="style.css?v=20260921-image-cropper">
+    <link rel="stylesheet" href="style.css?v=20260921-dashboard-navigation">
 </head>
 <body class="admin-page">
     <header>
@@ -37,20 +37,44 @@
                 </div>
 
                 <div id="adminDashboard" hidden>
-                    <div class="admin-dashboard-bar">
-                        <div class="admin-tabs" role="tablist" aria-label="Garden management">
-                            <button type="button" class="admin-tab active" id="ordersTab" role="tab" aria-selected="true" aria-controls="ordersPanel">Customer Orders</button>
-                            <button type="button" class="admin-tab" id="inventoryTab" role="tab" aria-selected="false" aria-controls="inventoryPanel">Inventory</button>
-                            <button type="button" class="admin-tab" id="homeTab" role="tab" aria-selected="false" aria-controls="homePanel">Home Page</button>
-                            <button type="button" class="admin-tab" id="supportTab" role="tab" aria-selected="false" aria-controls="supportPanel">Support Page</button>
-                            <button type="button" class="admin-tab" id="themeTab" role="tab" aria-selected="false" aria-controls="themePanel">Website Theme</button>
-                            <button type="button" class="admin-tab" id="salesTab" role="tab" aria-selected="false" aria-controls="salesPanel">Sales</button>
-                            <button type="button" class="admin-tab" id="blockedTab" role="tab" aria-selected="false" aria-controls="blockedPanel">Blocked Customers</button>
-                        </div>
-                        <div class="admin-toolbar-actions">
-                            <button type="button" class="button secondary" id="adminLogout">Sign Out</button>
-                        </div>
-                    </div>
+                    <button type="button" class="admin-mobile-menu" id="adminMobileMenu" aria-controls="adminSidebar" aria-expanded="false">
+                        <span aria-hidden="true">☰</span> Management Menu
+                    </button>
+                    <div class="admin-sidebar-backdrop" id="adminSidebarBackdrop" hidden></div>
+                    <div class="admin-shell">
+                        <aside class="admin-sidebar" id="adminSidebar" aria-label="Garden management navigation">
+                            <div class="admin-sidebar-heading">
+                                <strong>Management</strong>
+                                <button type="button" class="admin-sidebar-collapse" id="adminSidebarCollapse" aria-label="Collapse management menu" aria-expanded="true">‹</button>
+                            </div>
+                            <div class="admin-tabs" role="tablist" aria-label="Garden management">
+                                <button type="button" class="admin-tab active" id="ordersTab" role="tab" aria-selected="true" aria-controls="ordersPanel"><span class="admin-tab-icon" aria-hidden="true">▤</span><span class="admin-tab-label">Customer Orders</span></button>
+                                <button type="button" class="admin-tab" id="inventoryTab" role="tab" aria-selected="false" aria-controls="inventoryPanel"><span class="admin-tab-icon" aria-hidden="true">▦</span><span class="admin-tab-label">Inventory</span></button>
+                                <div class="admin-inventory-nav" id="adminInventoryNav" hidden>
+                                    <button type="button" class="admin-inventory-nav-button active" data-inventory-category="produce" aria-pressed="true">Fresh Produce <span data-inventory-category-count="produce">0</span></button>
+                                    <button type="button" class="admin-inventory-nav-button" data-inventory-category="tea" aria-pressed="false">Tea Mixes <span data-inventory-category-count="tea">0</span></button>
+                                    <button type="button" class="admin-inventory-nav-button" data-inventory-category="baked" aria-pressed="false">Baked Goods <span data-inventory-category-count="baked">0</span></button>
+                                    <button type="button" class="admin-inventory-nav-button" data-inventory-category="pain-rub" aria-pressed="false">Pain Rub <span data-inventory-category-count="pain-rub">0</span></button>
+                                    <button type="button" class="admin-inventory-nav-button" data-inventory-category="slots" aria-pressed="false">New Product Cards <span data-inventory-category-count="slots">0</span></button>
+                                </div>
+                                <button type="button" class="admin-tab" id="homeTab" role="tab" aria-selected="false" aria-controls="homePanel"><span class="admin-tab-icon" aria-hidden="true">▣</span><span class="admin-tab-label">Home Carousel</span></button>
+                                <button type="button" class="admin-tab" id="supportTab" role="tab" aria-selected="false" aria-controls="supportPanel"><span class="admin-tab-icon" aria-hidden="true">♥</span><span class="admin-tab-label">Support Page</span></button>
+                                <button type="button" class="admin-tab" id="themeTab" role="tab" aria-selected="false" aria-controls="themePanel"><span class="admin-tab-icon" aria-hidden="true">◐</span><span class="admin-tab-label">Website Theme</span></button>
+                                <button type="button" class="admin-tab" id="salesTab" role="tab" aria-selected="false" aria-controls="salesPanel"><span class="admin-tab-icon" aria-hidden="true">$</span><span class="admin-tab-label">Sales</span></button>
+                                <button type="button" class="admin-tab" id="blockedTab" role="tab" aria-selected="false" aria-controls="blockedPanel"><span class="admin-tab-icon" aria-hidden="true">⊘</span><span class="admin-tab-label">Blocked Customers</span></button>
+                            </div>
+                            <details class="admin-sidebar-help" id="adminInventoryHelp" hidden>
+                                <summary>How to Use Inventory</summary>
+                                <p>Name a blank card, add its product types, and save. Product descriptions are optional. Use <strong>Ingredients:</strong> at the start when the text belongs in an Ingredients section. Images can be cropped before upload, and each card can display up to three.</p>
+                                <p>Fresh and frozen quantities are separate. A frozen choice appears only when <strong>Offer Frozen Option</strong> is selected and frozen quantity is above zero.</p>
+                            </details>
+                            <div class="admin-sidebar-footer">
+                                <a href="index.html" class="button secondary admin-sidebar-website">View Website</a>
+                                <button type="button" class="button secondary" id="adminLogout">Sign Out</button>
+                            </div>
+                        </aside>
+
+                        <div class="admin-workspace">
 
                     <section id="ordersPanel" role="tabpanel" aria-labelledby="ordersTab">
                         <div class="admin-toolbar">
@@ -165,32 +189,35 @@
                     </section>
 
                     <section id="inventoryPanel" role="tabpanel" aria-labelledby="inventoryTab" hidden>
-                        <div class="admin-toolbar">
+                        <div class="admin-toolbar inventory-heading-toolbar">
                             <div>
+                                <p class="section-kicker">Live-page card editor</p>
                                 <h2>Inventory Hub</h2>
-                                <p>Edit product cards, images, prices, fresh and frozen quantities, order limits, descriptions, and availability. Descriptions are optional; when entered, they appear on the product cards. Begin the text with <strong>Ingredients:</strong> to place it inside an Ingredients section. Completed new products move into their category automatically, and a fresh blank slot replaces each one.</p>
+                                <p>Choose a category from the menu, open the product you need, and save when finished.</p>
                             </div>
-                            <div class="admin-toolbar-actions">
+                        </div>
+                        <datalist id="inventoryCardNames"></datalist>
+                        <div class="inventory-command-bar admin-search-sticky">
+                            <div class="admin-search-bar">
+                                <label for="adminInventorySearch">Search this inventory view</label>
+                                <div class="search-input-row">
+                                    <input type="search" id="adminInventorySearch" placeholder="Product, description, or selling unit">
+                                    <button type="button" class="button secondary search-clear-button" data-clear-search="adminInventorySearch">Clear</button>
+                                </div>
+                                <p class="search-result-message" id="adminInventorySearchMessage" aria-live="polite"></p>
+                            </div>
+                            <details class="inventory-availability-tools">
+                                <summary>Availability Tools</summary>
+                                <div class="inventory-bulk-actions" aria-label="Bulk availability controls">
+                                    <button type="button" class="button secondary inventory-bulk-button" id="selectAllInventory">Select All</button>
+                                    <button type="button" class="button secondary inventory-bulk-button" id="deselectAllInventory">Deselect All</button>
+                                </div>
+                            </details>
+                            <div class="admin-toolbar-actions inventory-command-actions">
                                 <button type="button" class="button secondary" id="refreshInventory">Discard Changes</button>
                                 <button type="button" class="button" id="saveInventory">Save Changes</button>
                                 <span id="inventorySaveStatus" class="inventory-save-status" role="status" aria-live="polite"></span>
                             </div>
-                        </div>
-                        <p class="admin-inventory-help"><strong>Product cards:</strong> Inventory mirrors the live product pages. To create a grouped product such as Squash, name a blank card and either choose <strong>Add First Type</strong> or enter the first type's details directly. Once the first name is entered, use <strong>Add Another Type</strong> for every remaining variety—you do not need to save between types. Existing types have an <strong>Edit</strong> button where you can adjust details, move the type to its own card, or delete it. Each card can display up to three images gathered from its types. <strong>Images:</strong> Upload or Replace opens a crop editor before the photo is stored. Image sizing and Visible area can still adjust how the uploaded result appears on the website. Click <strong>Save Changes</strong> after changing those display controls. <strong>Quantity of Fresh and Quantity of Frozen:</strong> enter each amount separately. Frozen is offered only when <strong>Offer Frozen Option</strong> is checked and Quantity of Frozen is greater than zero. <strong>Maximum per order:</strong> enter the most one household can request in a single order, or leave it blank for no limit.</p>
-                        <datalist id="inventoryCardNames"></datalist>
-                        <div class="admin-search-bar admin-search-sticky">
-                            <label for="adminInventorySearch">Search inventory</label>
-                            <div class="search-input-row">
-                                <input type="search" id="adminInventorySearch" placeholder="Product, category, description, or selling unit">
-                                <button type="button" class="button secondary search-clear-button" data-clear-search="adminInventorySearch">Clear</button>
-                            </div>
-                            <p class="search-result-message" id="adminInventorySearchMessage" aria-live="polite"></p>
-                        </div>
-                        <div class="inventory-bulk-actions" aria-label="Bulk availability controls">
-                            <strong>Available to order:</strong>
-                            <button type="button" class="button secondary inventory-bulk-button" id="selectAllInventory">Select All</button>
-                            <button type="button" class="button secondary inventory-bulk-button" id="deselectAllInventory">Deselect All</button>
-                            <span>Use Save Changes when finished.</span>
                         </div>
                         <p id="inventoryMessage" class="form-message"></p>
                         <div class="admin-inventory-wrap" role="region" aria-label="Inventory product cards" tabindex="0">
@@ -582,6 +609,8 @@
                             <div id="blockedCustomersList" class="blocked-customers-list"></div>
                         </div>
                     </section>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -639,6 +668,6 @@
         </div>
     </dialog>
 
-    <script src="admin.js?v=20260921-image-cropper"></script>
+    <script src="admin.js?v=20260921-dashboard-navigation"></script>
 </body>
 </html>

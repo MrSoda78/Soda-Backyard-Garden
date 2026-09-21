@@ -315,6 +315,99 @@ document.addEventListener("DOMContentLoaded", function () {
 
     loadPublishedTheme();
 
+    function enhancePublicNavigation() {
+        const header = document.querySelector("body > header");
+        const headerContainer = header && header.querySelector(":scope > .container");
+        const primaryNav = headerContainer && headerContainer.querySelector(":scope > nav");
+
+        if (!headerContainer || !primaryNav) {
+            return;
+        }
+
+        const path = window.location.pathname.toLocaleLowerCase();
+        const isShopPage = ["fresh-produce", "available", "teas", "baked-goods", "pain-rub"].some(function (page) {
+            return path.includes(page);
+        });
+        const isHome = path === "/" || path.endsWith("/index.html") || path.endsWith("/index");
+        const links = [
+            { label: "Home", href: "index.html", active: isHome },
+            { label: "Shop", href: "fresh-produce.html", active: isShopPage },
+            { label: "Questions", href: "questions.html", active: path.includes("questions") },
+            { label: "Support", href: "donate.html", active: path.includes("donate") },
+            { label: "Place Order", href: "order.html", active: path.includes("order"), order: true }
+        ];
+        const list = document.createElement("ul");
+
+        links.forEach(function (item) {
+            const listItem = document.createElement("li");
+            const link = document.createElement("a");
+            link.href = item.href;
+            link.textContent = item.label;
+            link.classList.toggle("active", item.active);
+            link.classList.toggle("nav-order-link", Boolean(item.order));
+            if (item.active) {
+                link.setAttribute("aria-current", "page");
+            }
+            listItem.appendChild(link);
+            list.appendChild(listItem);
+        });
+
+        primaryNav.className = "site-primary-nav";
+        primaryNav.id = "sitePrimaryNav";
+        primaryNav.replaceChildren(list);
+
+        const menuButton = document.createElement("button");
+        menuButton.type = "button";
+        menuButton.className = "site-menu-toggle";
+        menuButton.setAttribute("aria-controls", primaryNav.id);
+        menuButton.setAttribute("aria-expanded", "false");
+        menuButton.innerHTML = "<span aria-hidden=\"true\">☰</span> Menu";
+        headerContainer.insertBefore(menuButton, primaryNav);
+
+        menuButton.addEventListener("click", function () {
+            const open = header.classList.toggle("site-menu-open");
+            menuButton.setAttribute("aria-expanded", open.toString());
+        });
+
+        primaryNav.addEventListener("click", function (event) {
+            if (event.target.closest("a")) {
+                header.classList.remove("site-menu-open");
+                menuButton.setAttribute("aria-expanded", "false");
+            }
+        });
+
+        const categories = [
+            { label: "Fresh Produce", href: "fresh-produce.html", icon: "favicons/produce.png", page: "fresh-produce" },
+            { label: "Tea Mixes", href: "teas.html", icon: "favicons/teas.png", page: "teas" },
+            { label: "Baked Goods", href: "baked-goods.html", icon: "favicons/baked-goods.png", page: "baked-goods" },
+            { label: "Pain Rub", href: "pain-rub.html", icon: "favicons/pain-rub.png", page: "pain-rub" }
+        ];
+        const categoryNav = document.createElement("nav");
+        const categoryList = document.createElement("ul");
+        categoryNav.className = "shop-category-bar";
+        categoryNav.setAttribute("aria-label", "Shop categories");
+
+        categories.forEach(function (category) {
+            const listItem = document.createElement("li");
+            const link = document.createElement("a");
+            const icon = document.createElement("img");
+            link.href = category.href;
+            link.classList.toggle("active", path.includes(category.page));
+            icon.src = category.icon;
+            icon.alt = "";
+            icon.setAttribute("aria-hidden", "true");
+            link.append(icon, document.createTextNode(category.label));
+            listItem.appendChild(link);
+            categoryList.appendChild(listItem);
+        });
+
+        categoryNav.appendChild(categoryList);
+        headerContainer.appendChild(categoryNav);
+        document.body.classList.add("site-nav-ready");
+    }
+
+    enhancePublicNavigation();
+
     function createSearchControl(id, labelText, placeholder) {
         const container = document.createElement("div");
         const label = document.createElement("label");

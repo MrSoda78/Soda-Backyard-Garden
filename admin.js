@@ -49,6 +49,13 @@ document.addEventListener("DOMContentLoaded", function () {
     const blockedCustomerCount = document.getElementById("blockedCustomerCount");
     const blockedCustomerForm = document.getElementById("blockedCustomerForm");
     const blockedCustomerMessage = document.getElementById("blockedCustomerMessage");
+    const adminSidebar = document.getElementById("adminSidebar");
+    const adminMobileMenu = document.getElementById("adminMobileMenu");
+    const adminSidebarBackdrop = document.getElementById("adminSidebarBackdrop");
+    const adminSidebarCollapse = document.getElementById("adminSidebarCollapse");
+    const adminInventoryNav = document.getElementById("adminInventoryNav");
+    const adminInventoryHelp = document.getElementById("adminInventoryHelp");
+    const inventoryCategoryButtons = Array.from(document.querySelectorAll("[data-inventory-category]"));
     const inventorySearch = document.getElementById("adminInventorySearch");
     const inventorySearchMessage = document.getElementById("adminInventorySearchMessage");
     const salesSearch = document.getElementById("adminSalesSearch");
@@ -98,6 +105,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let publishedEffectiveTheme = "summer";
     const themeStorageKey = "sbg-theme-mode-v1";
     let activeOrderStatusFilter = "pending";
+    let activeInventoryCategory = "produce";
     const collapsedInventorySections = new Set();
     const expandedMobileInventoryProducts = new Set();
     let inventorySectionsInitialized = false;
@@ -337,6 +345,34 @@ document.addEventListener("DOMContentLoaded", function () {
     function showDashboard() {
         loginPanel.hidden = true;
         dashboard.hidden = false;
+    }
+
+    function setAdminSidebarCollapsed(collapsed) {
+        dashboard.classList.toggle("admin-sidebar-collapsed", collapsed);
+        adminSidebarCollapse.setAttribute("aria-expanded", (!collapsed).toString());
+        adminSidebarCollapse.setAttribute(
+            "aria-label",
+            collapsed ? "Expand management menu" : "Collapse management menu"
+        );
+        adminSidebarCollapse.textContent = collapsed ? "›" : "‹";
+
+        try {
+            window.localStorage.setItem("sbg-admin-sidebar-collapsed", collapsed ? "true" : "false");
+        } catch (_error) {
+            // The menu still works when browser storage is unavailable.
+        }
+    }
+
+    function openAdminSidebar() {
+        dashboard.classList.add("admin-sidebar-open");
+        adminMobileMenu.setAttribute("aria-expanded", "true");
+        adminSidebarBackdrop.hidden = false;
+    }
+
+    function closeAdminSidebar() {
+        dashboard.classList.remove("admin-sidebar-open");
+        adminMobileMenu.setAttribute("aria-expanded", "false");
+        adminSidebarBackdrop.hidden = true;
     }
 
     function createTextElement(tagName, className, text) {
@@ -595,6 +631,10 @@ document.addEventListener("DOMContentLoaded", function () {
             entry.tab.classList.toggle("active", isActive);
             entry.tab.setAttribute("aria-selected", isActive.toString());
         });
+
+        adminInventoryNav.hidden = panelName !== "inventory";
+        adminInventoryHelp.hidden = panelName !== "inventory";
+        closeAdminSidebar();
 
         if (panelName === "inventory") {
             loadInventory().catch(function (error) {
@@ -1071,6 +1111,18 @@ document.addEventListener("DOMContentLoaded", function () {
         return body;
     }
 
+    function createInventoryEditorGroup(title, open) {
+        const group = document.createElement("details");
+        const summary = document.createElement("summary");
+        const fields = document.createElement("div");
+        group.className = "inventory-editor-group";
+        group.open = open;
+        summary.textContent = title;
+        fields.className = "inventory-option-fields";
+        group.append(summary, fields);
+        return { group, fields };
+    }
+
     function createInventoryField(labelText, control, className) {
         const field = document.createElement("div");
         const label = document.createElement("span");
@@ -1096,6 +1148,35 @@ document.addEventListener("DOMContentLoaded", function () {
         if (countLabel) {
             countLabel.textContent = "(" + count + ")";
         }
+
+        updateInventoryCategoryCounts();
+    }
+
+    function updateInventoryCategoryCounts() {
+        const counts = { produce: 0, tea: 0, baked: 0, "pain-rub": 0, slots: 0 };
+
+        inventoryRows.querySelectorAll("[data-inventory-heading]").forEach(function (section) {
+            const sectionKey = section.dataset.inventoryHeading;
+            const cardCount = section.querySelectorAll(".inventory-admin-card").length;
+
+            if (sectionKey.endsWith("-slots")) {
+                counts.slots += cardCount;
+                return;
+            }
+
+            Object.keys(counts).forEach(function (category) {
+                if (category !== "slots" && sectionKey === category + "-current") {
+                    counts[category] += cardCount;
+                }
+            });
+        });
+
+        Object.entries(counts).forEach(function ([category, count]) {
+            const label = document.querySelector('[data-inventory-category-count="' + category + '"]');
+            if (label) {
+                label.textContent = count.toString();
+            }
+        });
     }
 
     function updateInventoryCardSummary(card) {
@@ -1324,10 +1405,14 @@ document.addEventListener("DOMContentLoaded", function () {
         let visibleCount = 0;
 
         inventoryRows.querySelectorAll("[data-product-id]").forEach(function (row) {
+            const sectionKey = row.dataset.inventorySection;
+            const inSelectedCategory = activeInventoryCategory === "slots"
+                ? sectionKey.endsWith("-slots")
+                : sectionKey === activeInventoryCategory + "-current";
             const liveValues = Array.from(row.querySelectorAll("input, textarea")).map(function (input) {
                 return input.value;
             }).join(" ").toLocaleLowerCase();
-            const matches = !query || (row.dataset.inventorySearch + " " + liveValues).includes(query);
+            const matches = inSelectedCategory && (!query || (row.dataset.inventorySearch + " " + liveValues).includes(query));
             row.hidden = !matches;
 
             if (matches) {
@@ -1338,10 +1423,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
         inventoryRows.querySelectorAll("[data-inventory-heading]").forEach(function (section) {
             const sectionKey = section.dataset.inventoryHeading;
+            const inSelectedCategory = activeInventoryCategory === "slots"
+                ? sectionKey.endsWith("-slots")
+                : sectionKey === activeInventoryCategory + "-current";
             const toggle = section.querySelector(".inventory-section-toggle");
             const body = section.querySelector("[data-inventory-section-body]");
             const collapsed = collapsedInventorySections.has(sectionKey);
-            section.hidden = query ? !sectionMatches.get(sectionKey) : false;
+            section.hidden = !inSelectedCategory || (query && !sectionMatches.get(sectionKey));
             body.hidden = collapsed && !query;
             toggle.setAttribute("aria-expanded", (!collapsed || Boolean(query)).toString());
             toggle.classList.toggle("is-collapsed", collapsed && !query);
@@ -1419,8 +1507,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const editorBody = document.createElement("div");
         editorBody.className = "inventory-product-editor-body";
-        const fields = document.createElement("div");
-        fields.className = "inventory-option-fields";
+        const detailsGroup = createInventoryEditorGroup("Product Details", true);
+        const stockGroup = createInventoryEditorGroup("Pricing & Quantities", false);
+        const descriptionGroup = createInventoryEditorGroup("Description or Ingredients", false);
+        const imagesGroup = createInventoryEditorGroup("Manage Images", false);
 
         const cardNameInput = createInventoryInput(
             "hidden",
@@ -1431,7 +1521,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const nameInput = createInventoryInput("text", product.name, "inventory-name");
         nameInput.maxLength = 100;
         nameInput.setAttribute("aria-label", "Full product name");
-        fields.appendChild(createInventoryField(
+        detailsGroup.fields.appendChild(createInventoryField(
             "Full Product Name (orders and emails)",
             nameInput,
             "inventory-option-field-wide"
@@ -1445,7 +1535,7 @@ document.addEventListener("DOMContentLoaded", function () {
         cardLabelInput.maxLength = 100;
         cardLabelInput.placeholder = "Optional, such as Dragon Tongue or 20 g";
         cardLabelInput.setAttribute("aria-label", product.name + " option name inside its product card");
-        fields.appendChild(createInventoryField(
+        detailsGroup.fields.appendChild(createInventoryField(
             "Option Name (shown inside this card)",
             cardLabelInput,
             "inventory-option-field-wide"
@@ -1461,7 +1551,7 @@ document.addEventListener("DOMContentLoaded", function () {
         quantityInput.step = "1";
         quantityInput.disabled = product.madeToOrder;
         quantityInput.setAttribute("aria-label", product.name + " quantity of fresh product");
-        fields.appendChild(createInventoryField("Quantity of Fresh", quantityInput));
+        stockGroup.fields.appendChild(createInventoryField("Quantity of Fresh", quantityInput));
 
         const frozenQuantityInput = createInventoryInput(
             "number",
@@ -1473,7 +1563,7 @@ document.addEventListener("DOMContentLoaded", function () {
         frozenQuantityInput.step = "1";
         frozenQuantityInput.disabled = product.frozenOption !== true;
         frozenQuantityInput.setAttribute("aria-label", product.name + " quantity of frozen product");
-        fields.appendChild(createInventoryField("Quantity of Frozen", frozenQuantityInput));
+        stockGroup.fields.appendChild(createInventoryField("Quantity of Frozen", frozenQuantityInput));
 
         const priceWrap = document.createElement("label");
         priceWrap.className = "inventory-price";
@@ -1488,12 +1578,12 @@ document.addEventListener("DOMContentLoaded", function () {
         priceInput.step = "0.01";
         priceInput.setAttribute("aria-label", product.name + " price");
         priceWrap.appendChild(priceInput);
-        fields.appendChild(createInventoryField("Price", priceWrap));
+        stockGroup.fields.appendChild(createInventoryField("Price", priceWrap));
 
         const unitInput = createInventoryInput("text", product.unit, "inventory-unit");
         unitInput.maxLength = 30;
         unitInput.setAttribute("aria-label", product.name + " selling unit");
-        fields.appendChild(createInventoryField("Selling Unit", unitInput));
+        stockGroup.fields.appendChild(createInventoryField("Selling Unit", unitInput));
 
         const orderLimitInput = createInventoryInput(
             "number",
@@ -1505,28 +1595,28 @@ document.addEventListener("DOMContentLoaded", function () {
         orderLimitInput.step = "1";
         orderLimitInput.placeholder = "No limit";
         orderLimitInput.setAttribute("aria-label", product.name + " maximum per order");
-        fields.appendChild(createInventoryField("Maximum per Order", orderLimitInput));
+        stockGroup.fields.appendChild(createInventoryField("Maximum per Order", orderLimitInput));
 
         const madeInput = document.createElement("input");
         madeInput.type = "checkbox";
         madeInput.checked = product.madeToOrder;
         madeInput.className = "inventory-made-to-order";
         madeInput.setAttribute("aria-label", product.name + " is made to order");
-        fields.appendChild(createInventoryField("Made to Order", madeInput, "inventory-option-checkbox"));
+        stockGroup.fields.appendChild(createInventoryField("Made to Order", madeInput, "inventory-option-checkbox"));
 
         const frozenOptionInput = document.createElement("input");
         frozenOptionInput.type = "checkbox";
         frozenOptionInput.checked = product.frozenOption === true;
         frozenOptionInput.className = "inventory-frozen-option";
         frozenOptionInput.setAttribute("aria-label", product.name + " offers a Fresh or Frozen choice");
-        fields.appendChild(createInventoryField("Offer Frozen Option", frozenOptionInput, "inventory-option-checkbox"));
+        stockGroup.fields.appendChild(createInventoryField("Offer Frozen Option", frozenOptionInput, "inventory-option-checkbox"));
 
         const activeInput = document.createElement("input");
         activeInput.type = "checkbox";
         activeInput.checked = product.active;
         activeInput.className = "inventory-active";
         activeInput.setAttribute("aria-label", product.name + " is available to order");
-        fields.appendChild(createInventoryField("Available to Order", activeInput, "inventory-option-checkbox"));
+        stockGroup.fields.appendChild(createInventoryField("Available to Order", activeInput, "inventory-option-checkbox"));
 
         const descriptionInput = document.createElement("textarea");
         descriptionInput.value = product.description || "";
@@ -1535,7 +1625,7 @@ document.addEventListener("DOMContentLoaded", function () {
         descriptionInput.maxLength = 500;
         descriptionInput.placeholder = "Description is optional. Begin with Ingredients: when needed.";
         descriptionInput.setAttribute("aria-label", product.name + " description");
-        fields.appendChild(createInventoryField(
+        descriptionGroup.fields.appendChild(createInventoryField(
             "Description or Ingredients (optional)",
             descriptionInput,
             "inventory-option-field-wide"
@@ -1569,7 +1659,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 product.imagePosition3
             )
         );
-        fields.appendChild(createInventoryField(
+        imagesGroup.fields.appendChild(createInventoryField(
             "Product Images (up to three)",
             imageEditor,
             "inventory-option-field-wide inventory-option-images"
@@ -1595,7 +1685,14 @@ document.addEventListener("DOMContentLoaded", function () {
             productActions.appendChild(deleteProductButton);
         }
 
-        editorBody.append(cardNameInput, fields, productActions);
+        editorBody.append(
+            cardNameInput,
+            detailsGroup.group,
+            stockGroup.group,
+            descriptionGroup.group,
+            imagesGroup.group,
+            productActions
+        );
         option.append(mobileToggle, editorBody);
         updateMobileInventorySummary(option);
         return option;
@@ -1862,6 +1959,7 @@ document.addEventListener("DOMContentLoaded", function () {
             inventorySectionsInitialized = true;
         }
 
+        updateInventoryCategoryCounts();
         filterInventoryRows();
     }
     async function loadInventory() {
@@ -2081,7 +2179,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function setAllInventoryAvailability(available) {
-        const rows = Array.from(inventoryRows.querySelectorAll("[data-product-id]"));
+        const rows = Array.from(inventoryRows.querySelectorAll("[data-product-id]")).filter(function (row) {
+            return !row.hidden && !row.closest("[data-inventory-heading]").hidden;
+        });
         let skipped = 0;
 
         rows.forEach(function (row) {
@@ -2105,13 +2205,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 : "";
             setMessage(
                 inventoryMessage,
-                "Selected all ready products." + skippedMessage + " Click Save Changes to apply.",
+                "Selected all ready products in this view." + skippedMessage + " Click Save Changes to apply.",
                 "success"
             );
         } else {
             setMessage(
                 inventoryMessage,
-                "Deselected all products. Click Save Changes to apply.",
+                "Deselected all products in this view. Click Save Changes to apply.",
                 "success"
             );
         }
@@ -3490,6 +3590,35 @@ document.addEventListener("DOMContentLoaded", function () {
         switchPanel("blocked");
     });
 
+    adminMobileMenu.addEventListener("click", function () {
+        if (dashboard.classList.contains("admin-sidebar-open")) {
+            closeAdminSidebar();
+        } else {
+            openAdminSidebar();
+        }
+    });
+
+    adminSidebarBackdrop.addEventListener("click", closeAdminSidebar);
+
+    adminSidebarCollapse.addEventListener("click", function () {
+        setAdminSidebarCollapsed(!dashboard.classList.contains("admin-sidebar-collapsed"));
+    });
+
+    inventoryCategoryButtons.forEach(function (button) {
+        button.addEventListener("click", function () {
+            activeInventoryCategory = button.dataset.inventoryCategory;
+            inventoryCategoryButtons.forEach(function (categoryButton) {
+                const active = categoryButton === button;
+                categoryButton.classList.toggle("active", active);
+                categoryButton.setAttribute("aria-pressed", active.toString());
+            });
+            inventorySearch.value = "";
+            filterInventoryRows();
+            closeAdminSidebar();
+            inventoryPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+    });
+
     themeOptions.forEach(function (option) {
         option.addEventListener("change", function () {
             if (option.checked) {
@@ -4110,6 +4239,11 @@ document.addEventListener("DOMContentLoaded", function () {
             if (expandedMobileInventoryProducts.has(productId)) {
                 expandedMobileInventoryProducts.delete(productId);
             } else {
+                inventoryRows.querySelectorAll(".inventory-product-option.inventory-mobile-expanded").forEach(function (openRow) {
+                    expandedMobileInventoryProducts.delete(openRow.dataset.productId);
+                    openRow.classList.remove("inventory-mobile-expanded");
+                    openRow.querySelector("[data-inventory-product-toggle]").setAttribute("aria-expanded", "false");
+                });
                 expandedMobileInventoryProducts.add(productId);
             }
 
@@ -4207,6 +4341,12 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     resetDonationForm();
+
+    try {
+        setAdminSidebarCollapsed(window.localStorage.getItem("sbg-admin-sidebar-collapsed") === "true");
+    } catch (_error) {
+        setAdminSidebarCollapsed(false);
+    }
 
     loadOrders().catch(function (error) {
         showLogin(error.message);

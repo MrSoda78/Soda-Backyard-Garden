@@ -3788,6 +3788,669 @@ footer a:hover {
     }
 }
 
+/* ==========================================================
+   2026-09-21 — STREAMLINED PUBLIC NAVIGATION
+========================================================== */
+
+.site-menu-toggle {
+    display: none;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 9px;
+    color: white;
+    background: rgba(0, 0, 0, 0.13);
+    font: inherit;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.site-primary-nav ul {
+    align-items: center;
+    gap: 10px 24px;
+}
+
+.site-primary-nav .nav-order-link {
+    display: inline-flex;
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.74);
+    border-radius: 999px;
+    color: var(--green-dark);
+    background: white;
+}
+
+.site-primary-nav .nav-order-link:hover,
+.site-primary-nav .nav-order-link:focus-visible,
+.site-primary-nav .nav-order-link.active {
+    border-color: white;
+    color: white;
+    background: var(--green-dark);
+}
+
+.shop-category-bar {
+    margin-top: 17px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.28);
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.shop-category-bar ul {
+    display: flex;
+    width: max-content;
+    min-width: 100%;
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: 10px;
+    padding: 2px 0 5px;
+}
+
+.shop-category-bar a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 13px;
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    border-radius: 999px;
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+    white-space: nowrap;
+}
+
+.shop-category-bar a:hover,
+.shop-category-bar a:focus-visible,
+.shop-category-bar a.active {
+    border-color: white;
+    color: var(--green-dark);
+    background: white;
+}
+
+.shop-category-bar img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
+
+.shop-categories-section {
+    padding: 64px 0;
+    background: white;
+}
+
+.shop-categories-section h2,
+.shop-categories-section .section-kicker,
+.shop-categories-section .section-lead {
+    text-align: center;
+}
+
+.shop-category-tiles {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 30px;
+}
+
+.shop-category-tile {
+    position: relative;
+    min-height: 280px;
+    overflow: hidden;
+    border: 1px solid var(--green-border);
+    border-radius: 18px;
+    color: white;
+    background: var(--green-dark);
+    box-shadow: var(--shadow);
+    text-decoration: none;
+    isolation: isolate;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.shop-category-tile:hover,
+.shop-category-tile:focus-visible {
+    transform: translateY(-4px);
+    box-shadow: 0 15px 32px rgba(20, 55, 30, 0.2);
+}
+
+.shop-category-tile img {
+    width: 100%;
+    height: 100%;
+    min-height: 280px;
+    object-fit: cover;
+    transition: transform 0.35s ease;
+}
+
+.shop-category-tile:hover img {
+    transform: scale(1.035);
+}
+
+.shop-category-tile::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(180deg, transparent 34%, rgba(10, 34, 18, 0.9));
+}
+
+.shop-category-tile span {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+    display: grid;
+    gap: 3px;
+    padding: 22px;
+}
+
+.shop-category-tile strong {
+    font-size: 1.22rem;
+}
+
+.shop-category-tile small {
+    color: rgba(255, 255, 255, 0.88);
+    line-height: 1.35;
+}
+
+@media (max-width: 900px) {
+    .shop-category-tiles {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .site-primary-nav ul {
+        flex-direction: row;
+    }
+}
+
+@media (max-width: 650px) {
+    body > header .header-top {
+        margin-bottom: 12px;
+    }
+
+    .site-menu-toggle {
+        display: inline-flex;
+        margin: 0 auto;
+    }
+
+    .site-primary-nav {
+        display: none;
+        margin-top: 12px;
+    }
+
+    .site-menu-open .site-primary-nav {
+        display: block;
+    }
+
+    .site-primary-nav ul {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 4px;
+        padding: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.12);
+    }
+
+    .site-primary-nav a {
+        display: block;
+        padding: 9px 10px;
+        border: 0;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .site-primary-nav a:hover,
+    .site-primary-nav a:focus-visible,
+    .site-primary-nav a.active {
+        border: 0;
+        color: var(--green-dark);
+        background: white;
+    }
+
+    .site-primary-nav .nav-order-link {
+        justify-content: center;
+        border-radius: 8px;
+    }
+
+    .shop-category-bar {
+        margin-top: 13px;
+        margin-inline: -5.5%;
+        padding-inline: 5.5%;
+    }
+
+    .shop-category-bar ul {
+        justify-content: flex-start;
+        gap: 8px;
+    }
+
+    .shop-category-tiles {
+        grid-template-columns: 1fr;
+    }
+
+    .shop-category-tile,
+    .shop-category-tile img {
+        min-height: 220px;
+    }
+}
+
+/* ==========================================================
+   2026-09-21 — ADMIN SIDEBAR & FOCUSED INVENTORY WORKSPACE
+========================================================== */
+
+.admin-page .admin-section > .container {
+    width: min(97%, 1580px);
+    max-width: none;
+}
+
+.admin-mobile-menu,
+.admin-sidebar-backdrop {
+    display: none;
+}
+
+.admin-shell {
+    display: grid;
+    grid-template-columns: 270px minmax(0, 1fr);
+    align-items: start;
+    gap: 26px;
+}
+
+.admin-sidebar {
+    position: sticky;
+    top: 14px;
+    z-index: 30;
+    display: flex;
+    max-height: calc(100vh - 28px);
+    flex-direction: column;
+    overflow: auto;
+    padding: 14px;
+    border: 1px solid var(--green-border);
+    border-radius: 16px;
+    background: white;
+    box-shadow: var(--shadow);
+}
+
+.admin-sidebar-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 4px 12px 8px;
+    color: var(--green-dark);
+}
+
+.admin-sidebar-collapse {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border: 1px solid var(--green-border);
+    border-radius: 9px;
+    color: var(--green-dark);
+    background: var(--green-light);
+    font: inherit;
+    font-size: 1.45rem;
+    cursor: pointer;
+}
+
+.admin-sidebar .admin-tabs {
+    display: grid;
+    gap: 6px;
+}
+
+.admin-sidebar .admin-tab {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 30px minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+    padding: 11px 12px;
+    border: 0;
+    border-radius: 10px;
+    text-align: left;
+}
+
+.admin-sidebar .admin-tab:hover,
+.admin-sidebar .admin-tab:focus-visible {
+    color: var(--green-dark);
+    background: var(--green-light);
+}
+
+.admin-sidebar .admin-tab.active {
+    color: white;
+    background: var(--green-dark);
+}
+
+.admin-tab-icon {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--green-dark);
+    font-weight: bold;
+}
+
+.admin-inventory-nav {
+    display: grid;
+    gap: 4px;
+    margin: 2px 0 7px 39px;
+    padding-left: 9px;
+    border-left: 2px solid var(--green-border);
+}
+
+.admin-inventory-nav[hidden],
+.admin-sidebar-help[hidden] {
+    display: none;
+}
+
+.admin-inventory-nav-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 8px;
+    border: 0;
+    border-radius: 7px;
+    color: var(--text-soft);
+    background: transparent;
+    font: inherit;
+    font-size: 0.86rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.admin-inventory-nav-button:hover,
+.admin-inventory-nav-button:focus-visible,
+.admin-inventory-nav-button.active {
+    color: var(--green-dark);
+    background: var(--green-light);
+    font-weight: bold;
+}
+
+.admin-inventory-nav-button span {
+    display: inline-grid;
+    min-width: 24px;
+    height: 24px;
+    place-items: center;
+    padding: 0 5px;
+    border-radius: 999px;
+    color: var(--green-dark);
+    background: white;
+    font-size: 0.75rem;
+}
+
+.admin-sidebar-help {
+    margin-top: 14px;
+    padding: 10px 11px;
+    border: 1px solid var(--green-border);
+    border-radius: 10px;
+    color: var(--text-soft);
+    background: var(--green-light);
+    font-size: 0.82rem;
+}
+
+.admin-sidebar-help summary {
+    color: var(--green-dark);
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.admin-sidebar-help p {
+    margin-top: 9px;
+}
+
+.admin-sidebar-footer {
+    display: grid;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 16px;
+}
+
+.admin-sidebar-footer .button {
+    width: 100%;
+    margin: 0;
+    padding: 9px 12px;
+    text-align: center;
+}
+
+.admin-sidebar-website {
+    color: white !important;
+    background: var(--green-main) !important;
+}
+
+.admin-workspace {
+    min-width: 0;
+}
+
+.admin-sidebar-collapsed .admin-shell {
+    grid-template-columns: 78px minmax(0, 1fr);
+}
+
+.admin-sidebar-collapsed .admin-sidebar {
+    padding-inline: 10px;
+}
+
+.admin-sidebar-collapsed .admin-sidebar-heading strong,
+.admin-sidebar-collapsed .admin-tab-label,
+.admin-sidebar-collapsed .admin-inventory-nav,
+.admin-sidebar-collapsed .admin-sidebar-help,
+.admin-sidebar-collapsed .admin-sidebar-footer {
+    display: none;
+}
+
+.admin-sidebar-collapsed .admin-sidebar-heading {
+    justify-content: center;
+    padding-inline: 0;
+}
+
+.admin-sidebar-collapsed .admin-sidebar .admin-tab {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding-inline: 8px;
+}
+
+.inventory-heading-toolbar {
+    margin-bottom: 14px;
+}
+
+.inventory-command-bar {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) auto auto;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 16px;
+    padding: 12px;
+    border: 1px solid var(--inventory-border-soft);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(8px);
+}
+
+#inventoryPanel .inventory-command-bar .admin-search-bar {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+}
+
+#inventoryPanel .inventory-command-bar .admin-search-bar label {
+    margin-bottom: 4px;
+    font-size: 0.85rem;
+}
+
+#inventoryPanel .inventory-command-bar .search-result-message {
+    min-height: 0;
+    margin: 3px 0 0;
+}
+
+.inventory-availability-tools {
+    position: relative;
+}
+
+.inventory-availability-tools summary {
+    padding: 9px 12px;
+    border: 1px solid var(--inventory-accent);
+    border-radius: 9px;
+    color: var(--inventory-accent-dark);
+    background: white;
+    font-weight: bold;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.inventory-availability-tools[open] .inventory-bulk-actions {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 20;
+    width: 220px;
+    padding: 12px;
+    border: 1px solid var(--inventory-border-soft);
+    border-radius: 10px;
+    background: white;
+    box-shadow: var(--shadow);
+}
+
+#inventoryPanel .inventory-command-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.inventory-editor-group {
+    border: 1px solid var(--inventory-border-soft);
+    border-radius: 10px;
+    background: white;
+}
+
+.inventory-editor-group > summary {
+    padding: 11px 13px;
+    color: var(--inventory-accent-dark);
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.inventory-editor-group > .inventory-option-fields {
+    padding: 2px 13px 14px;
+}
+
+@media (max-width: 1100px) {
+    .inventory-command-bar {
+        grid-template-columns: 1fr auto;
+    }
+
+    #inventoryPanel .inventory-command-actions {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 900px) {
+    .admin-page .admin-section {
+        padding-top: 24px;
+    }
+
+    .admin-mobile-menu {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 16px;
+        padding: 10px 14px;
+        border: 1px solid var(--green-border);
+        border-radius: 10px;
+        color: white;
+        background: var(--green-dark);
+        font: inherit;
+        font-weight: bold;
+    }
+
+    .admin-shell {
+        display: block;
+    }
+
+    .admin-sidebar,
+    .admin-sidebar-collapsed .admin-sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 120;
+        width: min(86vw, 310px);
+        max-height: none;
+        padding: 16px;
+        border-radius: 0 16px 16px 0;
+        transform: translateX(-105%);
+        transition: transform 0.22s ease;
+    }
+
+    .admin-sidebar-open .admin-sidebar {
+        transform: translateX(0);
+    }
+
+    .admin-sidebar-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 110;
+        display: block;
+        background: rgba(10, 25, 15, 0.55);
+    }
+
+    .admin-sidebar-backdrop[hidden] {
+        display: none;
+    }
+
+    .admin-sidebar-collapse {
+        display: none;
+    }
+
+    .admin-sidebar-collapsed .admin-sidebar-heading strong,
+    .admin-sidebar-collapsed .admin-tab-label,
+    .admin-sidebar-collapsed .admin-sidebar-footer {
+        display: initial;
+    }
+
+    .admin-sidebar-collapsed .admin-sidebar .admin-tab,
+    .admin-sidebar .admin-tab {
+        grid-template-columns: 30px minmax(0, 1fr);
+        justify-items: stretch;
+    }
+
+    .admin-sidebar-collapsed .admin-inventory-nav:not([hidden]),
+    .admin-sidebar-collapsed .admin-sidebar-help:not([hidden]) {
+        display: grid;
+    }
+}
+
+@media (max-width: 650px) {
+    .inventory-command-bar {
+        position: static;
+        grid-template-columns: 1fr;
+    }
+
+    .inventory-availability-tools,
+    .inventory-availability-tools summary {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .inventory-availability-tools[open] .inventory-bulk-actions {
+        position: static;
+        width: auto;
+        margin-top: 8px;
+    }
+
+    #inventoryPanel .inventory-command-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    #inventoryPanel .inventory-command-actions .button {
+        width: 100%;
+    }
+
+    #inventoryPanel .inventory-save-status {
+        grid-column: 1 / -1;
+    }
+}
+
 @media (max-width: 600px) {
     .form-row {
         grid-template-columns: 1fr;
@@ -4962,5 +5625,16 @@ footer a:hover {
 
     .inventory-option-images .inventory-image-preview {
         height: clamp(180px, 58vw, 260px);
+    }
+}
+
+/* Final layout overrides kept after legacy responsive rules. */
+.admin-workspace .inventory-card-grid {
+    grid-template-columns: 1fr;
+}
+
+@media (max-width: 650px) {
+    .shop-category-bar ul {
+        flex-direction: row;
     }
 }
