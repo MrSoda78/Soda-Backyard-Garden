@@ -1463,29 +1463,37 @@ document.addEventListener("DOMContentLoaded", function () {
             const productNameInput = firstOption.querySelector(".inventory-name");
             const optionNameInput = firstOption.querySelector(".inventory-card-label");
             const hiddenCardName = firstOption.querySelector(".inventory-card-name");
+            const firstTypeAlreadyEntered = productNameInput.value.trim().length > 0 &&
+                !productNameInput.value.trim().startsWith("New Product Slot");
 
-            productNameInput.value = cardName + " — New Type";
-            optionNameInput.value = "New Type";
             hiddenCardName.value = cardName;
             firstOption.classList.remove("inventory-slot-row");
             firstOption.querySelector(".inventory-own-card-button").disabled = false;
             targetCard.classList.remove("inventory-empty-card");
             button.textContent = "Add Another Type";
-            expandedMobileInventoryProducts.add(firstOption.dataset.productId);
-            firstOption.classList.add("inventory-mobile-expanded");
-            firstOption.querySelector("[data-inventory-product-toggle]").setAttribute("aria-expanded", "true");
+
+            if (!firstTypeAlreadyEntered) {
+                productNameInput.value = cardName + " — New Type";
+                optionNameInput.value = "New Type";
+                expandedMobileInventoryProducts.add(firstOption.dataset.productId);
+                firstOption.classList.add("inventory-mobile-expanded");
+                firstOption.querySelector("[data-inventory-product-toggle]").setAttribute("aria-expanded", "true");
+
+                updateMobileInventorySummary(firstOption);
+                updateInventoryCardSummary(targetCard);
+                markInventoryUnsaved();
+                setMessage(
+                    inventoryMessage,
+                    "The first type was added to " + cardName + ". Replace “New Type” with a name such as Butternut, then use Add Another Type for the remaining varieties.",
+                    "success"
+                );
+                optionNameInput.focus();
+                optionNameInput.select();
+                return;
+            }
 
             updateMobileInventorySummary(firstOption);
             updateInventoryCardSummary(targetCard);
-            markInventoryUnsaved();
-            setMessage(
-                inventoryMessage,
-                "The first type was added to " + cardName + ". Replace “New Type” with a name such as Butternut, then use Add Another Type for the remaining varieties.",
-                "success"
-            );
-            optionNameInput.focus();
-            optionNameInput.select();
-            return;
         }
 
         const slotCard = Array.from(inventoryRows.querySelectorAll(".inventory-empty-card")).find(function (card) {
@@ -3418,6 +3426,16 @@ document.addEventListener("DOMContentLoaded", function () {
         const row = event.target.closest("[data-product-id]");
 
         if (row) {
+            const card = row.closest(".inventory-admin-card");
+
+            if (card.classList.contains("inventory-empty-card")) {
+                const enteredName = row.querySelector(".inventory-name").value.trim();
+                const addTypeButton = card.querySelector('[data-inventory-card-action="add-option"]');
+                const firstTypeEntered = enteredName.length > 0 &&
+                    !enteredName.startsWith("New Product Slot");
+                addTypeButton.textContent = firstTypeEntered ? "Add Another Type" : "Add First Type";
+            }
+
             updateMobileInventorySummary(row);
             markInventoryUnsaved();
         }
