@@ -2486,14 +2486,16 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function renderOrders(orders) {
-        ordersList.replaceChildren();
-
         if (orders.length === 0) {
-            ordersList.appendChild(createTextElement("p", "admin-empty", "No orders have been submitted yet."));
+            ordersList.replaceChildren(
+                createTextElement("p", "admin-empty", "No orders have been submitted yet.")
+            );
             updateOrderStatusCounts();
             filterOrders();
             return;
         }
+
+        const orderCards = document.createDocumentFragment();
 
         orders.forEach(function (order) {
             const card = document.createElement("details");
@@ -2541,6 +2543,12 @@ document.addEventListener("DOMContentLoaded", function () {
             summary.append(headingCopy, summaryMeta, status);
             card.appendChild(summary);
 
+            function renderOrderBody() {
+                if (card.dataset.orderBodyReady === "true") {
+                    return;
+                }
+
+                card.dataset.orderBodyReady = "true";
             const body = document.createElement("div");
             body.className = "admin-order-body";
 
@@ -2734,9 +2742,17 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             card.appendChild(body);
-            ordersList.appendChild(card);
+            }
+
+            card.addEventListener("toggle", function () {
+                if (card.open) {
+                    renderOrderBody();
+                }
+            });
+            orderCards.appendChild(card);
         });
 
+        ordersList.replaceChildren(orderCards);
         updateOrderStatusCounts();
         filterOrders();
     }
@@ -2770,19 +2786,8 @@ document.addEventListener("DOMContentLoaded", function () {
         renderOrders(result.orders);
 
         if (!offlineProductsLoaded) {
-            try {
-                await loadOfflineOrderProducts();
-            } catch (error) {
-                setMessage(offlineOrderMessage, error.message, "error");
-            }
-        }
-
-        if (!themeLoaded) {
-            try {
-                await loadTheme();
-            } catch (error) {
-                setMessage(themeMessage, error.message, "error");
-            }
+            renderOfflineOrderProducts(orderAdjustmentProducts);
+            offlineProductsLoaded = true;
         }
     }
 

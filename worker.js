@@ -133,6 +133,12 @@ const SCHEMA_STATEMENTS = [
         setting_value TEXT NOT NULL,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
+    `CREATE INDEX IF NOT EXISTS idx_orders_created_at
+    ON orders(created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_orders_status_created_at
+    ON orders(status, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_order_items_order_id
+    ON order_items(order_id)`,
     `INSERT INTO site_settings (setting_key, setting_value)
     VALUES ('theme_mode', 'automatic')
     ON CONFLICT(setting_key) DO NOTHING`,
@@ -530,6 +536,7 @@ async function ensureEmptyProductSlots(db) {
 }
 
 let databaseInitialization;
+const DATABASE_SCHEMA_VERSION = "2026-09-21-admin-load-performance-v1";
 
 function jsonResponse(body, status = 200) {
     return new Response(JSON.stringify(body), {
@@ -584,6 +591,22 @@ async function getSiteTheme(db) {
 function ensureDatabase(db) {
     if (!databaseInitialization) {
         databaseInitialization = (async function () {
+            await db.prepare(`
+                CREATE TABLE IF NOT EXISTS site_migrations (
+                    id TEXT PRIMARY KEY,
+                    applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+            `).run();
+            const schemaReady = await db.prepare(`
+                SELECT id
+                FROM site_migrations
+                WHERE id = ?
+            `).bind(DATABASE_SCHEMA_VERSION).first();
+
+            if (schemaReady) {
+                return;
+            }
+
             const statements = SCHEMA_STATEMENTS.map(function (statement) {
                 return db.prepare(statement);
             });
@@ -1222,6 +1245,11 @@ function ensureDatabase(db) {
                     confirmed_at = COALESCE(confirmed_at, received_at, created_at)
                 WHERE status IS NULL OR status = ''
             `).run();
+            await db.prepare(`
+                INSERT INTO site_migrations (id)
+                VALUES (?)
+                ON CONFLICT(id) DO NOTHING
+            `).bind(DATABASE_SCHEMA_VERSION).run();
         })().catch(function (error) {
             databaseInitialization = undefined;
             throw error;

@@ -92,6 +92,15 @@ CREATE TABLE IF NOT EXISTS site_settings (
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX IF NOT EXISTS idx_orders_created_at
+ON orders(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_orders_status_created_at
+ON orders(status, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id
+ON order_items(order_id);
+
 INSERT INTO site_settings (setting_key, setting_value)
 VALUES ('theme_mode', 'automatic')
 ON CONFLICT(setting_key) DO NOTHING;
