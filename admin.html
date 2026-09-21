@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="favicons/admin.png">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <title>SBG | Admin</title>
-    <link rel="stylesheet" href="style.css?v=20260921-product-types-image-position">
+    <link rel="stylesheet" href="style.css?v=20260921-image-cropper">
 </head>
 <body class="admin-page">
     <header>
@@ -176,7 +176,7 @@
                                 <span id="inventorySaveStatus" class="inventory-save-status" role="status" aria-live="polite"></span>
                             </div>
                         </div>
-                        <p class="admin-inventory-help"><strong>Product cards:</strong> Inventory mirrors the live product pages. To create a grouped product such as Squash, name a blank card and either choose <strong>Add First Type</strong> or enter the first type's details directly. Once the first name is entered, use <strong>Add Another Type</strong> for every remaining variety—you do not need to save between types. Existing types have an <strong>Edit</strong> button where you can adjust details, move the type to its own card, or delete it. Each card can display up to three images gathered from its types. <strong>Images:</strong> Image sizing controls whether the frame is filled or the whole photo is shown; Visible area moves a filled image up, down, left, or right. Click <strong>Save Changes</strong> after adjusting the view. <strong>Quantity of Fresh and Quantity of Frozen:</strong> enter each amount separately. Frozen is offered only when <strong>Offer Frozen Option</strong> is checked and Quantity of Frozen is greater than zero. <strong>Maximum per order:</strong> enter the most one household can request in a single order, or leave it blank for no limit.</p>
+                        <p class="admin-inventory-help"><strong>Product cards:</strong> Inventory mirrors the live product pages. To create a grouped product such as Squash, name a blank card and either choose <strong>Add First Type</strong> or enter the first type's details directly. Once the first name is entered, use <strong>Add Another Type</strong> for every remaining variety—you do not need to save between types. Existing types have an <strong>Edit</strong> button where you can adjust details, move the type to its own card, or delete it. Each card can display up to three images gathered from its types. <strong>Images:</strong> Upload or Replace opens a crop editor before the photo is stored. Image sizing and Visible area can still adjust how the uploaded result appears on the website. Click <strong>Save Changes</strong> after changing those display controls. <strong>Quantity of Fresh and Quantity of Frozen:</strong> enter each amount separately. Frozen is offered only when <strong>Offer Frozen Option</strong> is checked and Quantity of Frozen is greater than zero. <strong>Maximum per order:</strong> enter the most one household can request in a single order, or leave it blank for no limit.</p>
                         <datalist id="inventoryCardNames"></datalist>
                         <div class="admin-search-bar admin-search-sticky">
                             <label for="adminInventorySearch">Search inventory</label>
@@ -210,7 +210,7 @@
                             </div>
                         </div>
 
-                        <p class="admin-inventory-help">Images are resized before upload to keep the site fast. <strong>Fill frame</strong> may crop an image; <strong>Show whole image</strong> keeps the entire photo visible. Use the focal point to keep the important part of the picture in view.</p>
+                        <p class="admin-inventory-help">A crop editor opens before each upload so you can choose the crop shape, zoom, and position. Images are also resized to keep the site fast. After uploading, <strong>Fill frame</strong>, <strong>Show whole image</strong>, and the focal point can make further display adjustments.</p>
                         <p id="carouselMessage" class="form-message" aria-live="polite"></p>
 
                         <div class="home-admin-tools">
@@ -274,7 +274,7 @@
                             </div>
                         </div>
 
-                        <p class="admin-inventory-help">Images are resized before upload to keep the site fast. <strong>Fill frame</strong> may crop an image; <strong>Show whole image</strong> keeps the entire photo visible. Use the focal point to keep the important part of the picture in view.</p>
+                        <p class="admin-inventory-help">A crop editor opens before each upload so you can choose the crop shape, zoom, and position. Images are also resized to keep the site fast. After uploading, <strong>Fill frame</strong>, <strong>Show whole image</strong>, and the focal point can make further display adjustments.</p>
                         <p id="supportImagesMessage" class="form-message" aria-live="polite"></p>
 
                         <div class="home-admin-tools">
@@ -587,6 +587,58 @@
         </section>
     </main>
 
-    <script src="admin.js?v=20260921-types-before-save"></script>
+    <dialog id="imageCropDialog" class="image-crop-dialog" aria-labelledby="imageCropTitle" aria-describedby="imageCropHelp">
+        <div class="image-crop-dialog-content">
+            <div class="image-crop-heading">
+                <div>
+                    <h2 id="imageCropTitle">Crop Image</h2>
+                    <p id="imageCropHelp">Adjust the crop before uploading. The preview shows the image that will be stored.</p>
+                </div>
+                <button type="button" class="image-crop-close" id="cancelImageCropTop" aria-label="Cancel image crop">×</button>
+            </div>
+
+            <div class="image-crop-layout">
+                <div class="image-crop-preview-wrap">
+                    <canvas id="imageCropCanvas" class="image-crop-canvas"></canvas>
+                    <p id="imageCropSummary" class="image-crop-summary" aria-live="polite"></p>
+                </div>
+
+                <div class="image-crop-controls">
+                    <div class="form-group">
+                        <label for="imageCropAspect">Crop shape</label>
+                        <select id="imageCropAspect">
+                            <option value="original">Original shape</option>
+                            <option value="product">Product / Support card — 16:9</option>
+                            <option value="standard">Standard photo — 4:3</option>
+                            <option value="square">Square — 1:1</option>
+                            <option value="carousel">Home carousel — 8:7</option>
+                        </select>
+                    </div>
+                    <div class="form-group image-crop-range">
+                        <label for="imageCropZoom">Zoom <output id="imageCropZoomValue">1.00×</output></label>
+                        <input type="range" id="imageCropZoom" min="1" max="3" value="1" step="0.01">
+                    </div>
+                    <div class="form-group image-crop-range">
+                        <label for="imageCropHorizontal">Move left or right</label>
+                        <input type="range" id="imageCropHorizontal" min="-100" max="100" value="0" step="1">
+                    </div>
+                    <div class="form-group image-crop-range">
+                        <label for="imageCropVertical">Move up or down</label>
+                        <input type="range" id="imageCropVertical" min="-100" max="100" value="0" step="1">
+                    </div>
+                    <button type="button" class="button secondary" id="resetImageCrop">Reset Crop</button>
+                    <p class="image-crop-note">Use <strong>Entire Photo</strong> if you do not want to permanently crop the file. You can still choose “Show whole image” after uploading.</p>
+                </div>
+            </div>
+
+            <div class="image-crop-actions">
+                <button type="button" class="button secondary" id="cancelImageCrop">Cancel</button>
+                <button type="button" class="button secondary" id="useEntireImage">Use Entire Photo</button>
+                <button type="button" class="button" id="applyImageCrop">Use This Crop</button>
+            </div>
+        </div>
+    </dialog>
+
+    <script src="admin.js?v=20260921-image-cropper"></script>
 </body>
 </html>

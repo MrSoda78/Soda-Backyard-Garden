@@ -73,6 +73,20 @@ document.addEventListener("DOMContentLoaded", function () {
     const themeMessage = document.getElementById("themeMessage");
     const cancelThemePreviewButton = document.getElementById("cancelThemePreview");
     const saveThemeButton = document.getElementById("saveTheme");
+    const imageCropDialog = document.getElementById("imageCropDialog");
+    const imageCropTitle = document.getElementById("imageCropTitle");
+    const imageCropCanvas = document.getElementById("imageCropCanvas");
+    const imageCropSummary = document.getElementById("imageCropSummary");
+    const imageCropAspect = document.getElementById("imageCropAspect");
+    const imageCropZoom = document.getElementById("imageCropZoom");
+    const imageCropZoomValue = document.getElementById("imageCropZoomValue");
+    const imageCropHorizontal = document.getElementById("imageCropHorizontal");
+    const imageCropVertical = document.getElementById("imageCropVertical");
+    const resetImageCropButton = document.getElementById("resetImageCrop");
+    const cancelImageCropButton = document.getElementById("cancelImageCrop");
+    const cancelImageCropTopButton = document.getElementById("cancelImageCropTop");
+    const useEntireImageButton = document.getElementById("useEntireImage");
+    const applyImageCropButton = document.getElementById("applyImageCrop");
     let offlineQuantityInputs = [];
     let offlineProductMap = new Map();
     let offlineProductsLoaded = false;
@@ -88,6 +102,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const expandedMobileInventoryProducts = new Set();
     let inventorySectionsInitialized = false;
     let inventoryBaseline = new Map();
+    let activeImageCrop = null;
 
     function formatMoney(cents) {
         return "$" + (cents / 100).toFixed(2);
@@ -844,31 +859,192 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    async function prepareImageForUpload(file) {
+    function validateImageFile(file) {
         if (!file || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
             throw new Error("Choose a JPG, PNG, or WebP image.");
         }
+    }
 
-        const image = await loadImageElement(file);
-        const maximumDimension = 1600;
-        const scale = Math.min(1, maximumDimension / Math.max(image.naturalWidth, image.naturalHeight));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-        const context = canvas.getContext("2d");
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const imageCropAspectRatios = {
+        square: 1,
+        standard: 4 / 3,
+        product: 16 / 9,
+        carousel: 8 / 7
+    };
 
-        const blob = await new Promise(function (resolve) {
-            canvas.toBlob(resolve, "image/webp", 0.84);
-        });
+    function currentImageCropRect() {
+        const image = activeImageCrop.image;
+        const selectedRatio = imageCropAspectRatios[imageCropAspect.value];
+        const aspectRatio = selectedRatio || image.naturalWidth / image.naturalHeight;
+        let cropWidth;
+        let cropHeight;
 
-        if (!blob) {
-            throw new Error("That image could not be prepared for upload.");
+        if (image.naturalWidth / image.naturalHeight > aspectRatio) {
+            cropHeight = image.naturalHeight;
+            cropWidth = cropHeight * aspectRatio;
+        } else {
+            cropWidth = image.naturalWidth;
+            cropHeight = cropWidth / aspectRatio;
         }
 
-        const baseName = file.name.replace(/\.[^.]+$/, "").slice(0, 80) || "garden-image";
-        return new File([blob], baseName + ".webp", { type: "image/webp" });
+        const zoom = Number(imageCropZoom.value);
+        cropWidth /= zoom;
+        cropHeight /= zoom;
+
+        const horizontal = (Number(imageCropHorizontal.value) + 100) / 200;
+        const vertical = (Number(imageCropVertical.value) + 100) / 200;
+
+        return {
+            x: (image.naturalWidth - cropWidth) * horizontal,
+            y: (image.naturalHeight - cropHeight) * vertical,
+            width: cropWidth,
+            height: cropHeight,
+            aspectRatio
+        };
     }
+
+    function drawImageCrop(canvas, image, cropRect, maximumDimension) {
+        const scale = Math.min(
+            1,
+            maximumDimension / Math.max(cropRect.width, cropRect.height)
+        );
+        canvas.width = Math.max(1, Math.round(cropRect.width * scale));
+        canvas.height = Math.max(1, Math.round(cropRect.height * scale));
+        const context = canvas.getContext("2d");
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(
+            image,
+            cropRect.x,
+            cropRect.y,
+            cropRect.width,
+            cropRect.height,
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+    }
+
+    function renderImageCropPreview() {
+        if (!activeImageCrop) {
+            return;
+        }
+
+        const cropRect = currentImageCropRect();
+        drawImageCrop(imageCropCanvas, activeImageCrop.image, cropRect, 900);
+        imageCropZoomValue.textContent = Number(imageCropZoom.value).toFixed(2) + "×";
+        imageCropSummary.textContent =
+            "Crop preview · " + Math.round(cropRect.width) + " × " +
+            Math.round(cropRect.height) + " source pixels";
+    }
+
+    function canvasToUploadFile(canvas, originalFile) {
+        return new Promise(function (resolve, reject) {
+            canvas.toBlob(function (blob) {
+                if (!blob) {
+                    reject(new Error("That image could not be prepared for upload."));
+                    return;
+                }
+
+                const baseName = originalFile.name.replace(/\.[^.]+$/, "").slice(0, 80) || "garden-image";
+                resolve(new File([blob], baseName + ".webp", { type: "image/webp" }));
+            }, "image/webp", 0.86);
+        });
+    }
+
+    async function createCroppedUploadFile(useEntireImage) {
+        const canvas = document.createElement("canvas");
+        const image = activeImageCrop.image;
+        const cropRect = useEntireImage
+            ? {
+                x: 0,
+                y: 0,
+                width: image.naturalWidth,
+                height: image.naturalHeight
+            }
+            : currentImageCropRect();
+        drawImageCrop(canvas, image, cropRect, 1600);
+        return canvasToUploadFile(canvas, activeImageCrop.file);
+    }
+
+    function finishImageCrop(file) {
+        if (!activeImageCrop) {
+            return;
+        }
+
+        const resolve = activeImageCrop.resolve;
+        activeImageCrop = null;
+        imageCropDialog.close();
+        resolve(file || null);
+    }
+
+    async function finishPreparedImageCrop(useEntireImage) {
+        if (!activeImageCrop) {
+            return;
+        }
+
+        applyImageCropButton.disabled = true;
+        useEntireImageButton.disabled = true;
+
+        try {
+            const preparedFile = await createCroppedUploadFile(useEntireImage);
+            finishImageCrop(preparedFile);
+        } catch (error) {
+            imageCropSummary.textContent = error.message;
+        } finally {
+            applyImageCropButton.disabled = false;
+            useEntireImageButton.disabled = false;
+        }
+    }
+
+    async function prepareImageForUpload(file, options) {
+        validateImageFile(file);
+
+        const image = await loadImageElement(file);
+        const settings = options || {};
+
+        return new Promise(function (resolve) {
+            activeImageCrop = { file, image, resolve };
+            imageCropTitle.textContent = settings.title || "Crop Image";
+            imageCropAspect.value = settings.aspect || "original";
+            imageCropZoom.value = "1";
+            imageCropHorizontal.value = "0";
+            imageCropVertical.value = "0";
+            renderImageCropPreview();
+            imageCropDialog.showModal();
+            imageCropAspect.focus();
+        });
+    }
+
+    [imageCropAspect, imageCropZoom, imageCropHorizontal, imageCropVertical].forEach(function (control) {
+        control.addEventListener("input", renderImageCropPreview);
+    });
+
+    resetImageCropButton.addEventListener("click", function () {
+        imageCropZoom.value = "1";
+        imageCropHorizontal.value = "0";
+        imageCropVertical.value = "0";
+        renderImageCropPreview();
+    });
+
+    [cancelImageCropButton, cancelImageCropTopButton].forEach(function (button) {
+        button.addEventListener("click", function () {
+            finishImageCrop(null);
+        });
+    });
+
+    imageCropDialog.addEventListener("cancel", function (event) {
+        event.preventDefault();
+        finishImageCrop(null);
+    });
+
+    useEntireImageButton.addEventListener("click", function () {
+        finishPreparedImageCrop(true);
+    });
+
+    applyImageCropButton.addEventListener("click", function () {
+        finishPreparedImageCrop(false);
+    });
 
     function isEmptyProductSlot(product) {
         return product.isSlot && product.name.trim().startsWith("New Product Slot");
@@ -1783,7 +1959,16 @@ document.addEventListener("DOMContentLoaded", function () {
         setMessage(inventoryMessage, "Preparing and uploading the product image...", "success");
 
         try {
-            const preparedImage = await prepareImageForUpload(file);
+            const preparedImage = await prepareImageForUpload(file, {
+                aspect: "product",
+                title: "Crop Product Image"
+            });
+
+            if (!preparedImage) {
+                setMessage(inventoryMessage, "Image upload cancelled.", "");
+                return;
+            }
+
             const formData = new FormData();
             formData.append("image", preparedImage, preparedImage.name);
             formData.append("imageFit", slotEditor.querySelector(".inventory-image-fit").value);
@@ -3576,7 +3761,16 @@ document.addEventListener("DOMContentLoaded", function () {
         setMessage(carouselMessage, "Preparing and uploading the carousel image...", "success");
 
         try {
-            const preparedImage = await prepareImageForUpload(file);
+            const preparedImage = await prepareImageForUpload(file, {
+                aspect: "carousel",
+                title: "Crop Home Carousel Image"
+            });
+
+            if (!preparedImage) {
+                setMessage(carouselMessage, "Image upload cancelled.", "");
+                return;
+            }
+
             const formData = new FormData(carouselUploadForm);
             formData.set("image", preparedImage, preparedImage.name);
             const response = await fetch("/api/admin/carousel/images", {
@@ -3712,7 +3906,16 @@ document.addEventListener("DOMContentLoaded", function () {
         setMessage(supportImagesMessage, "Preparing and uploading the Support page image...", "success");
 
         try {
-            const preparedImage = await prepareImageForUpload(file);
+            const preparedImage = await prepareImageForUpload(file, {
+                aspect: "product",
+                title: "Crop Support Page Image"
+            });
+
+            if (!preparedImage) {
+                setMessage(supportImagesMessage, "Image upload cancelled.", "");
+                return;
+            }
+
             const formData = new FormData(supportImageUploadForm);
             formData.set("image", preparedImage, preparedImage.name);
             const response = await fetch("/api/admin/support-images/upload", {

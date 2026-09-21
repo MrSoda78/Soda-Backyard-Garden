@@ -4753,6 +4753,176 @@ footer a:hover {
     font-weight: bold;
 }
 
+.image-crop-dialog {
+    width: min(920px, calc(100% - 30px));
+    max-width: none;
+    max-height: calc(100vh - 30px);
+    margin: auto;
+    padding: 0;
+    overflow: auto;
+    border: 0;
+    border-radius: 18px;
+    color: var(--text-main);
+    background: white;
+    box-shadow: 0 24px 70px rgba(18, 45, 25, 0.35);
+}
+
+.image-crop-dialog::backdrop {
+    background: rgba(13, 35, 19, 0.72);
+}
+
+.image-crop-dialog-content {
+    padding: 24px;
+}
+
+.image-crop-heading {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.image-crop-heading h2 {
+    margin-bottom: 6px;
+    color: var(--green-dark);
+}
+
+.image-crop-heading p,
+.image-crop-note,
+.image-crop-summary {
+    color: var(--text-soft);
+}
+
+.image-crop-close {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border: 2px solid var(--green-main);
+    border-radius: 50%;
+    color: var(--green-dark);
+    background: white;
+    font: inherit;
+    font-size: 1.65rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.image-crop-close:hover,
+.image-crop-close:focus-visible {
+    color: white;
+    background: var(--green-dark);
+}
+
+.image-crop-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(240px, 0.75fr);
+    align-items: start;
+    gap: 22px;
+}
+
+.image-crop-preview-wrap {
+    min-width: 0;
+}
+
+.image-crop-canvas {
+    display: block;
+    width: 100%;
+    max-height: 540px;
+    object-fit: contain;
+    border: 3px solid var(--green-dark);
+    border-radius: 12px;
+    background-color: #edf3ee;
+    background-image:
+        linear-gradient(45deg, #dce6de 25%, transparent 25%),
+        linear-gradient(-45deg, #dce6de 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #dce6de 75%),
+        linear-gradient(-45deg, transparent 75%, #dce6de 75%);
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    background-size: 20px 20px;
+    box-sizing: border-box;
+}
+
+.image-crop-summary {
+    min-height: 1.4em;
+    margin: 9px 0 0;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.image-crop-controls {
+    display: grid;
+    gap: 14px;
+}
+
+.image-crop-controls .form-group {
+    margin: 0;
+}
+
+.image-crop-controls select,
+.image-crop-controls input[type="range"] {
+    width: 100%;
+}
+
+.image-crop-range label {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.image-crop-range output {
+    color: var(--green-dark);
+    font-weight: bold;
+}
+
+.image-crop-range input[type="range"] {
+    accent-color: var(--green-dark);
+}
+
+.image-crop-note {
+    margin: 0;
+    padding: 11px 12px;
+    border-radius: 9px;
+    background: var(--green-light);
+    font-size: 0.88rem;
+}
+
+.image-crop-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.image-crop-actions .button,
+.image-crop-controls .button {
+    margin: 0;
+}
+
+@media (max-width: 720px) {
+    .image-crop-dialog-content {
+        padding: 18px;
+    }
+
+    .image-crop-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .image-crop-canvas {
+        max-height: 44vh;
+    }
+
+    .image-crop-actions {
+        align-items: stretch;
+        flex-direction: column-reverse;
+    }
+
+    .image-crop-actions .button {
+        width: 100%;
+    }
+}
+
 @media (max-width: 950px) {
     .inventory-card-grid {
         grid-template-columns: 1fr;
