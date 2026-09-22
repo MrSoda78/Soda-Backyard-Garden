@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const offlineOrderTotal = document.getElementById("offlineOrderTotal");
     const offlineOrderMessage = document.getElementById("offlineOrderMessage");
     const logoutButton = document.getElementById("adminLogout");
+    const overviewTab = document.getElementById("overviewTab");
     const ordersTab = document.getElementById("ordersTab");
     const inventoryTab = document.getElementById("inventoryTab");
     const homeTab = document.getElementById("homeTab");
@@ -19,6 +20,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const themeTab = document.getElementById("themeTab");
     const salesTab = document.getElementById("salesTab");
     const blockedTab = document.getElementById("blockedTab");
+    const overviewPanel = document.getElementById("overviewPanel");
     const ordersPanel = document.getElementById("ordersPanel");
     const inventoryPanel = document.getElementById("inventoryPanel");
     const homePanel = document.getElementById("homePanel");
@@ -26,7 +28,17 @@ document.addEventListener("DOMContentLoaded", function () {
     const themePanel = document.getElementById("themePanel");
     const salesPanel = document.getElementById("salesPanel");
     const blockedPanel = document.getElementById("blockedPanel");
+    const overviewMessage = document.getElementById("overviewMessage");
+    const refreshOverviewButton = document.getElementById("refreshOverview");
+    const overviewPendingOrders = document.getElementById("overviewPendingOrders");
+    const overviewConfirmedOrders = document.getElementById("overviewConfirmedOrders");
+    const overviewLowStock = document.getElementById("overviewLowStock");
+    const overviewMonthSales = document.getElementById("overviewMonthSales");
+    const overviewAttentionList = document.getElementById("overviewAttentionList");
+    const overviewRecentOrders = document.getElementById("overviewRecentOrders");
     const inventoryRows = document.getElementById("inventoryRows");
+    const inventoryProductList = document.getElementById("inventoryProductList");
+    const inventoryDirectoryCount = document.getElementById("inventoryDirectoryCount");
     const inventoryCardNames = document.getElementById("inventoryCardNames");
     const inventoryMessage = document.getElementById("inventoryMessage");
     const refreshInventoryButton = document.getElementById("refreshInventory");
@@ -111,9 +123,166 @@ document.addEventListener("DOMContentLoaded", function () {
     let inventorySectionsInitialized = false;
     let inventoryBaseline = new Map();
     let activeImageCrop = null;
+    let overviewOrders = [];
+    let overviewInventory = [];
+    let overviewSalesSummary = null;
 
     function formatMoney(cents) {
         return "$" + (cents / 100).toFixed(2);
+    }
+
+    function inventoryStockTotal(product) {
+        if (!product || product.madeToOrder) {
+            return Number.POSITIVE_INFINITY;
+        }
+
+        const freshQuantity = Number(product.quantity) || 0;
+        const frozenQuantity = supportsFrozenOption(product)
+            ? Number(product.frozenQuantity) || 0
+            : 0;
+        return freshQuantity + frozenQuantity;
+    }
+
+    function createOverviewLink(title, detail, panelName, tone) {
+        const button = document.createElement("button");
+        const copy = document.createElement("span");
+        const heading = document.createElement("strong");
+        const description = document.createElement("small");
+        const arrow = document.createElement("span");
+
+        button.type = "button";
+        button.className = "admin-overview-list-item" + (tone ? " " + tone : "");
+        button.dataset.adminPanelTarget = panelName;
+        heading.textContent = title;
+        description.textContent = detail;
+        arrow.className = "admin-overview-list-arrow";
+        arrow.textContent = "›";
+        arrow.setAttribute("aria-hidden", "true");
+        copy.append(heading, description);
+        button.append(copy, arrow);
+        return button;
+    }
+
+    function renderOverview() {
+        const pendingOrders = overviewOrders.filter(function (order) {
+            return order.status === "pending";
+        });
+        const confirmedOrders = overviewOrders.filter(function (order) {
+            return order.status === "confirmed";
+        });
+        const lowStockProducts = overviewInventory.filter(function (product) {
+            return product.category !== "retired" &&
+                !isEmptyProductSlot(product) &&
+                product.active &&
+                Number(product.priceCents) > 0 &&
+                inventoryStockTotal(product) <= 3;
+        });
+
+        overviewPendingOrders.textContent = pendingOrders.length.toString();
+        overviewConfirmedOrders.textContent = confirmedOrders.length.toString();
+        overviewLowStock.textContent = lowStockProducts.length.toString();
+        overviewMonthSales.textContent = overviewSalesSummary
+            ? formatMoney(overviewSalesSummary.monthCents)
+            : "—";
+
+        overviewAttentionList.replaceChildren();
+
+        if (pendingOrders.length > 0) {
+            overviewAttentionList.appendChild(createOverviewLink(
+                pendingOrders.length + " order" + (pendingOrders.length === 1 ? " is" : "s are") + " waiting",
+                "Review new requests and confirm payment when received.",
+                "orders",
+                "is-priority"
+            ));
+        }
+
+        if (confirmedOrders.length > 0) {
+            overviewAttentionList.appendChild(createOverviewLink(
+                confirmedOrders.length + " confirmed order" + (confirmedOrders.length === 1 ? "" : "s"),
+                "These orders are paid and still need to be completed.",
+                "orders",
+                "is-ready"
+            ));
+        }
+
+        if (lowStockProducts.length > 0) {
+            const names = lowStockProducts.slice(0, 3).map(function (product) {
+                return product.cardLabel || product.name;
+            }).join(", ");
+            overviewAttentionList.appendChild(createOverviewLink(
+                lowStockProducts.length + " low-stock product" + (lowStockProducts.length === 1 ? "" : "s"),
+                names + (lowStockProducts.length > 3 ? " and more" : "") + ".",
+                "inventory",
+                "is-stock"
+            ));
+        }
+
+        if (overviewAttentionList.children.length === 0) {
+            overviewAttentionList.appendChild(createTextElement(
+                "p",
+                overviewInventory.length > 0 || overviewSalesSummary
+                    ? "admin-overview-all-clear"
+                    : "admin-empty",
+                overviewInventory.length > 0 || overviewSalesSummary
+                    ? "Nothing urgent right now. Your orders and stock are up to date."
+                    : "Your management summary will appear here once the dashboard finishes loading."
+            ));
+        }
+
+        overviewRecentOrders.replaceChildren();
+        const recentOrders = overviewOrders.slice(0, 5);
+
+        if (recentOrders.length === 0) {
+            overviewRecentOrders.appendChild(createTextElement(
+                "p",
+                "admin-empty",
+                "No orders have been submitted yet."
+            ));
+            return;
+        }
+
+        recentOrders.forEach(function (order) {
+            const submitted = new Date(order.createdAt.replace(" ", "T") + "Z");
+            const item = document.createElement("button");
+            const copy = document.createElement("span");
+            const heading = document.createElement("strong");
+            const detail = document.createElement("small");
+            const meta = document.createElement("span");
+            const amount = document.createElement("strong");
+            const status = document.createElement("small");
+
+            item.type = "button";
+            item.className = "admin-overview-order";
+            item.dataset.adminPanelTarget = "orders";
+            heading.textContent = order.customerName || "Customer";
+            detail.textContent = order.orderNumber + " • " + submitted.toLocaleDateString();
+            amount.textContent = formatMoney(order.totalCents);
+            status.textContent = order.status.charAt(0).toUpperCase() + order.status.slice(1);
+            status.className = "admin-overview-order-status status-" + order.status;
+            copy.append(heading, detail);
+            meta.append(amount, status);
+            item.append(copy, meta);
+            overviewRecentOrders.appendChild(item);
+        });
+    }
+
+    async function loadOverview() {
+        refreshOverviewButton.disabled = true;
+        setMessage(overviewMessage, "Refreshing your management overview...", "success");
+
+        try {
+            const authenticated = await loadOrders();
+
+            if (authenticated === false) {
+                return;
+            }
+
+            await Promise.all([loadInventory(), loadSales()]);
+            renderOverview();
+            setMessage(overviewMessage, "", "");
+        } finally {
+            refreshOverviewButton.disabled = false;
+        }
     }
 
     function supportsFrozenOption(product) {
@@ -616,6 +785,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function switchPanel(panelName) {
         const panels = {
+            overview: { tab: overviewTab, panel: overviewPanel },
             orders: { tab: ordersTab, panel: ordersPanel },
             inventory: { tab: inventoryTab, panel: inventoryPanel },
             home: { tab: homeTab, panel: homePanel },
@@ -636,7 +806,9 @@ document.addEventListener("DOMContentLoaded", function () {
         adminInventoryHelp.hidden = panelName !== "inventory";
         closeAdminSidebar();
 
-        if (panelName === "inventory") {
+        if (panelName === "overview") {
+            renderOverview();
+        } else if (panelName === "inventory") {
             loadInventory().catch(function (error) {
                 setMessage(inventoryMessage, error.message, "error");
             });
@@ -1445,6 +1617,66 @@ document.addEventListener("DOMContentLoaded", function () {
         inventorySearchMessage.textContent = query
             ? (visibleCount === 0 ? "No matching inventory products found." : visibleCount + " matching product" + (visibleCount === 1 ? "" : "s") + ".")
             : "";
+
+        renderInventoryDirectory();
+    }
+
+    function renderInventoryDirectory() {
+        const previousSelection = inventoryProductList.querySelector(
+            ".inventory-directory-button.active"
+        )?.dataset.inventoryDirectoryTarget;
+        const visibleCards = Array.from(inventoryRows.querySelectorAll(".inventory-admin-card")).filter(function (card) {
+            const section = card.closest("[data-inventory-heading]");
+            return !card.hidden && section && !section.hidden;
+        });
+
+        inventoryProductList.replaceChildren();
+        inventoryDirectoryCount.textContent = visibleCards.length.toString();
+
+        if (visibleCards.length === 0) {
+            inventoryProductList.appendChild(createTextElement(
+                "p",
+                "inventory-directory-empty",
+                "No product cards match this view."
+            ));
+            return;
+        }
+
+        visibleCards.forEach(function (card) {
+            const products = Array.from(card.querySelectorAll("[data-product-id]")).filter(function (row) {
+                return !row.hidden;
+            });
+            const firstProduct = products[0] || card.querySelector("[data-product-id]");
+
+            if (!firstProduct) {
+                return;
+            }
+
+            const button = document.createElement("button");
+            const copy = document.createElement("span");
+            const name = document.createElement("strong");
+            const detail = document.createElement("small");
+            const cardName = card.querySelector(".inventory-group-card-name")?.value.trim() ||
+                firstProduct.querySelector(".inventory-name")?.value.trim() ||
+                "New product card";
+            const availableCount = products.filter(function (row) {
+                return row.querySelector(".inventory-active")?.checked;
+            }).length;
+
+            button.type = "button";
+            button.className = "inventory-directory-button";
+            button.dataset.inventoryDirectoryTarget = firstProduct.dataset.productId;
+            button.classList.toggle(
+                "active",
+                firstProduct.dataset.productId === previousSelection
+            );
+            name.textContent = cardName;
+            detail.textContent = products.length + " type" + (products.length === 1 ? "" : "s") +
+                " • " + availableCount + " available";
+            copy.append(name, detail);
+            button.append(copy, createTextElement("span", "inventory-directory-arrow", "›"));
+            inventoryProductList.appendChild(button);
+        });
     }
 
     function createInventoryProductEditor(product, sectionKey) {
@@ -1980,11 +2212,13 @@ document.addEventListener("DOMContentLoaded", function () {
             throw new Error(result.error || "Inventory could not be loaded.");
         }
 
+        overviewInventory = Array.isArray(result.products) ? result.products : [];
         renderInventory(result.products);
         inventoryBaseline = new Map(collectInventory().map(function (product) {
             return [product.id, JSON.stringify(product)];
         }));
         setMessage(inventoryMessage, "", "");
+        renderOverview();
     }
 
     function collectInventory() {
@@ -2716,8 +2950,10 @@ document.addEventListener("DOMContentLoaded", function () {
             throw new Error(result.error || "Sales could not be loaded.");
         }
 
+        overviewSalesSummary = result.summary || null;
         renderSales(result);
         setMessage(salesMessage, "", "");
+        renderOverview();
     }
 
     async function exportSalesWorkbook() {
@@ -3103,7 +3339,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (response.status === 401) {
             showLogin();
-            return;
+            return false;
         }
 
         const result = await response.json();
@@ -3117,15 +3353,19 @@ document.addEventListener("DOMContentLoaded", function () {
         orderAdjustmentProducts = Array.isArray(result.adjustmentProducts)
             ? result.adjustmentProducts
             : [];
+        overviewOrders = Array.isArray(result.orders) ? result.orders : [];
         renderBlockedCustomers(Array.isArray(result.blockedCustomers)
             ? result.blockedCustomers
             : []);
         renderOrders(result.orders);
+        renderOverview();
 
         if (!offlineProductsLoaded) {
             renderOfflineOrderProducts(orderAdjustmentProducts);
             offlineProductsLoaded = true;
         }
+
+        return true;
     }
 
     loginForm.addEventListener("submit", async function (event) {
@@ -3151,7 +3391,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             loginForm.reset();
             offlineProductsLoaded = false;
-            await loadOrders();
+            await loadOverview();
         } catch (error) {
             setMessage(loginMessage, error.message, "error");
         } finally {
@@ -3562,6 +3802,10 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
+    overviewTab.addEventListener("click", function () {
+        switchPanel("overview");
+    });
+
     ordersTab.addEventListener("click", function () {
         switchPanel("orders");
     });
@@ -3588,6 +3832,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
     blockedTab.addEventListener("click", function () {
         switchPanel("blocked");
+    });
+
+    dashboard.addEventListener("click", function (event) {
+        const target = event.target.closest("[data-admin-panel-target]");
+
+        if (!target) {
+            return;
+        }
+
+        switchPanel(target.dataset.adminPanelTarget);
+    });
+
+    refreshOverviewButton.addEventListener("click", function () {
+        offlineProductsLoaded = false;
+        loadOverview().catch(function (error) {
+            setMessage(overviewMessage, error.message, "error");
+        });
     });
 
     adminMobileMenu.addEventListener("click", function () {
@@ -3617,6 +3878,43 @@ document.addEventListener("DOMContentLoaded", function () {
             closeAdminSidebar();
             inventoryPanel.scrollIntoView({ behavior: "smooth", block: "start" });
         });
+    });
+
+    inventoryProductList.addEventListener("click", function (event) {
+        const button = event.target.closest("[data-inventory-directory-target]");
+
+        if (!button) {
+            return;
+        }
+
+        const row = inventoryRows.querySelector(
+            '[data-product-id="' + CSS.escape(button.dataset.inventoryDirectoryTarget) + '"]'
+        );
+
+        if (!row) {
+            return;
+        }
+
+        const card = row.closest(".inventory-admin-card");
+        const section = card.closest("[data-inventory-heading]");
+        const body = section.querySelector("[data-inventory-section-body]");
+        const toggle = section.querySelector(".inventory-section-toggle");
+
+        collapsedInventorySections.delete(section.dataset.inventoryHeading);
+        body.hidden = false;
+        toggle.classList.remove("is-collapsed");
+        toggle.setAttribute("aria-expanded", "true");
+
+        if (!card.querySelector(".inventory-mobile-expanded")) {
+            expandedMobileInventoryProducts.add(row.dataset.productId);
+            row.classList.add("inventory-mobile-expanded");
+            row.querySelector("[data-inventory-product-toggle]")?.setAttribute("aria-expanded", "true");
+        }
+
+        inventoryProductList.querySelectorAll(".inventory-directory-button").forEach(function (directoryButton) {
+            directoryButton.classList.toggle("active", directoryButton === button);
+        });
+        card.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
     themeOptions.forEach(function (option) {
@@ -3725,6 +4023,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         updateMobileInventorySummary(row);
+        renderInventoryDirectory();
     });
 
     inventoryRows.addEventListener("input", function (event) {
@@ -3734,6 +4033,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 input.value = event.target.value;
             });
             markInventoryUnsaved();
+            renderInventoryDirectory();
             return;
         }
 
@@ -3752,6 +4052,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             updateMobileInventorySummary(row);
             markInventoryUnsaved();
+            renderInventoryDirectory();
         }
     });
 
@@ -3779,6 +4080,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (button.dataset.inventoryCardAction === "add-option") {
             addInventoryCardOption(button);
+            renderInventoryDirectory();
             return;
         }
 
@@ -3793,6 +4095,8 @@ document.addEventListener("DOMContentLoaded", function () {
         } else if (button.dataset.inventoryImageAction === "remove") {
             removeInventoryImage(row, button);
         }
+
+        renderInventoryDirectory();
     });
 
     selectAllInventoryButton.addEventListener("click", function () {
@@ -4348,7 +4652,7 @@ document.addEventListener("DOMContentLoaded", function () {
         setAdminSidebarCollapsed(false);
     }
 
-    loadOrders().catch(function (error) {
+    loadOverview().catch(function (error) {
         showLogin(error.message);
     });
 });

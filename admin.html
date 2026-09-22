@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="favicons/admin.png">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <title>SBG | Admin</title>
-    <link rel="stylesheet" href="style.css?v=20260921-admin-panel-consistency">
+    <link rel="stylesheet" href="style.css?v=20260921-admin-management-hub">
 </head>
 <body class="admin-page">
     <header>
@@ -48,8 +48,10 @@
                                 <button type="button" class="admin-sidebar-collapse" id="adminSidebarCollapse" aria-label="Collapse management menu" aria-expanded="true">‹</button>
                             </div>
                             <div class="admin-tabs" role="tablist" aria-label="Garden management">
-                                <button type="button" class="admin-tab active" id="ordersTab" role="tab" aria-selected="true" aria-controls="ordersPanel"><span class="admin-tab-icon" aria-hidden="true">▤</span><span class="admin-tab-label">Customer Orders</span></button>
-                                <button type="button" class="admin-tab" id="inventoryTab" role="tab" aria-selected="false" aria-controls="inventoryPanel"><span class="admin-tab-icon" aria-hidden="true">▦</span><span class="admin-tab-label">Inventory</span></button>
+                                <button type="button" class="admin-tab active" id="overviewTab" role="tab" aria-selected="true" aria-controls="overviewPanel"><span class="admin-tab-icon" aria-hidden="true">⌂</span><span class="admin-tab-label">Overview</span></button>
+                                <p class="admin-nav-group-label">Operations</p>
+                                <button type="button" class="admin-tab" id="ordersTab" role="tab" aria-selected="false" aria-controls="ordersPanel"><span class="admin-tab-icon" aria-hidden="true">▤</span><span class="admin-tab-label">Orders</span></button>
+                                <button type="button" class="admin-tab" id="inventoryTab" role="tab" aria-selected="false" aria-controls="inventoryPanel"><span class="admin-tab-icon" aria-hidden="true">▦</span><span class="admin-tab-label">Products &amp; Inventory</span></button>
                                 <div class="admin-inventory-nav" id="adminInventoryNav" hidden>
                                     <button type="button" class="admin-inventory-nav-button active" data-inventory-category="produce" aria-pressed="true">Fresh Produce <span data-inventory-category-count="produce">0</span></button>
                                     <button type="button" class="admin-inventory-nav-button" data-inventory-category="tea" aria-pressed="false">Tea Mixes <span data-inventory-category-count="tea">0</span></button>
@@ -57,10 +59,13 @@
                                     <button type="button" class="admin-inventory-nav-button" data-inventory-category="pain-rub" aria-pressed="false">Pain Rub <span data-inventory-category-count="pain-rub">0</span></button>
                                     <button type="button" class="admin-inventory-nav-button" data-inventory-category="slots" aria-pressed="false">New Product Cards <span data-inventory-category-count="slots">0</span></button>
                                 </div>
+                                <p class="admin-nav-group-label">Website</p>
                                 <button type="button" class="admin-tab" id="homeTab" role="tab" aria-selected="false" aria-controls="homePanel"><span class="admin-tab-icon" aria-hidden="true">▣</span><span class="admin-tab-label">Home Carousel</span></button>
                                 <button type="button" class="admin-tab" id="supportTab" role="tab" aria-selected="false" aria-controls="supportPanel"><span class="admin-tab-icon" aria-hidden="true">♥</span><span class="admin-tab-label">Support Page</span></button>
                                 <button type="button" class="admin-tab" id="themeTab" role="tab" aria-selected="false" aria-controls="themePanel"><span class="admin-tab-icon" aria-hidden="true">◐</span><span class="admin-tab-label">Website Theme</span></button>
+                                <p class="admin-nav-group-label">Business</p>
                                 <button type="button" class="admin-tab" id="salesTab" role="tab" aria-selected="false" aria-controls="salesPanel"><span class="admin-tab-icon" aria-hidden="true">$</span><span class="admin-tab-label">Sales</span></button>
+                                <p class="admin-nav-group-label">Customers</p>
                                 <button type="button" class="admin-tab" id="blockedTab" role="tab" aria-selected="false" aria-controls="blockedPanel"><span class="admin-tab-icon" aria-hidden="true">⊘</span><span class="admin-tab-label">Blocked Customers</span></button>
                             </div>
                             <details class="admin-sidebar-help" id="adminInventoryHelp" hidden>
@@ -76,10 +81,89 @@
 
                         <div class="admin-workspace">
 
-                    <section id="ordersPanel" class="admin-panel" role="tabpanel" aria-labelledby="ordersTab">
+                    <section id="overviewPanel" class="admin-panel" role="tabpanel" aria-labelledby="overviewTab">
+                        <div class="admin-toolbar admin-panel-header overview-panel-header">
+                            <div>
+                                <p class="admin-panel-kicker">Garden Management</p>
+                                <h2>Overview</h2>
+                                <p>See what needs attention, check today's activity, and jump directly to the task you want to complete.</p>
+                            </div>
+                            <div class="admin-toolbar-actions">
+                                <button type="button" class="button secondary" id="refreshOverview">Refresh Overview</button>
+                            </div>
+                        </div>
+                        <p id="overviewMessage" class="form-message" aria-live="polite"></p>
+
+                        <div class="admin-overview-stats" aria-label="Garden management summary">
+                            <button type="button" class="admin-overview-stat" data-admin-panel-target="orders">
+                                <span class="admin-overview-stat-label">Orders waiting</span>
+                                <strong id="overviewPendingOrders">—</strong>
+                                <small>Review pending requests</small>
+                            </button>
+                            <button type="button" class="admin-overview-stat" data-admin-panel-target="orders">
+                                <span class="admin-overview-stat-label">Confirmed orders</span>
+                                <strong id="overviewConfirmedOrders">—</strong>
+                                <small>Paid and being prepared</small>
+                            </button>
+                            <button type="button" class="admin-overview-stat" data-admin-panel-target="inventory">
+                                <span class="admin-overview-stat-label">Low-stock products</span>
+                                <strong id="overviewLowStock">—</strong>
+                                <small>Three or fewer remaining</small>
+                            </button>
+                            <button type="button" class="admin-overview-stat" data-admin-panel-target="sales">
+                                <span class="admin-overview-stat-label">Sales this month</span>
+                                <strong id="overviewMonthSales">—</strong>
+                                <small>Confirmed payments</small>
+                            </button>
+                        </div>
+
+                        <div class="admin-overview-grid">
+                            <section class="admin-overview-card admin-overview-attention">
+                                <div class="admin-overview-card-heading">
+                                    <div>
+                                        <p class="admin-panel-kicker">Priorities</p>
+                                        <h3>Needs Attention</h3>
+                                    </div>
+                                </div>
+                                <div id="overviewAttentionList" class="admin-overview-list" aria-live="polite">
+                                    <p class="admin-empty">Loading your garden summary...</p>
+                                </div>
+                            </section>
+
+                            <section class="admin-overview-card">
+                                <div class="admin-overview-card-heading">
+                                    <div>
+                                        <p class="admin-panel-kicker">Shortcuts</p>
+                                        <h3>Quick Actions</h3>
+                                    </div>
+                                </div>
+                                <div class="admin-quick-actions">
+                                    <button type="button" class="admin-quick-action" data-admin-panel-target="orders"><span aria-hidden="true">▤</span><strong>Review Orders</strong><small>Confirm, adjust, complete, or cancel</small></button>
+                                    <button type="button" class="admin-quick-action" data-admin-panel-target="inventory"><span aria-hidden="true">▦</span><strong>Update Products</strong><small>Prices, quantities, descriptions, and images</small></button>
+                                    <button type="button" class="admin-quick-action" data-admin-panel-target="home"><span aria-hidden="true">▣</span><strong>Change Homepage</strong><small>Manage the rolling carousel photos</small></button>
+                                    <button type="button" class="admin-quick-action" data-admin-panel-target="sales"><span aria-hidden="true">$</span><strong>View Sales</strong><small>Payments, donations, and exports</small></button>
+                                </div>
+                            </section>
+
+                            <section class="admin-overview-card admin-overview-recent">
+                                <div class="admin-overview-card-heading">
+                                    <div>
+                                        <p class="admin-panel-kicker">Latest Activity</p>
+                                        <h3>Recent Orders</h3>
+                                    </div>
+                                    <button type="button" class="admin-text-button" data-admin-panel-target="orders">View all orders</button>
+                                </div>
+                                <div id="overviewRecentOrders" class="admin-overview-list" aria-live="polite">
+                                    <p class="admin-empty">Loading recent orders...</p>
+                                </div>
+                            </section>
+                        </div>
+                    </section>
+
+                    <section id="ordersPanel" class="admin-panel" role="tabpanel" aria-labelledby="ordersTab" hidden>
                         <div class="admin-toolbar admin-panel-header">
                             <div>
-                                <p class="admin-panel-kicker">Orders &amp; Fulfilment</p>
+                                <p class="admin-panel-kicker">Orders &amp; Fulfillment</p>
                                 <h2>Customer Orders</h2>
                                 <p>Select an order to expand its items, customer details, and actions. Confirm paid orders, refuse orders, cancel and return stock, or mark deliveries complete.</p>
                             </div>
@@ -221,8 +305,20 @@
                             </div>
                         </div>
                         <p id="inventoryMessage" class="form-message"></p>
-                        <div class="admin-inventory-wrap" role="region" aria-label="Inventory product cards" tabindex="0">
-                            <div id="inventoryRows" class="admin-inventory-cards"></div>
+                        <div class="admin-inventory-layout">
+                            <aside class="inventory-product-directory" aria-label="Products in this inventory view">
+                                <div class="inventory-directory-heading">
+                                    <div>
+                                        <p class="admin-panel-kicker">Products</p>
+                                        <h3>Choose a Card</h3>
+                                    </div>
+                                    <span id="inventoryDirectoryCount" class="inventory-directory-count">0</span>
+                                </div>
+                                <div id="inventoryProductList" class="inventory-product-list"></div>
+                            </aside>
+                            <div class="admin-inventory-wrap" role="region" aria-label="Inventory product cards" tabindex="0">
+                                <div id="inventoryRows" class="admin-inventory-cards"></div>
+                            </div>
                         </div>
                     </section>
 
@@ -674,6 +770,6 @@
         </div>
     </dialog>
 
-    <script src="admin.js?v=20260921-admin-panel-consistency"></script>
+    <script src="admin.js?v=20260921-admin-management-hub"></script>
 </body>
 </html>
