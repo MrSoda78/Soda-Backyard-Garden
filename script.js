@@ -294,17 +294,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
     async function loadPublishedTheme() {
         try {
-            const response = await fetch("/api/theme", {
-                headers: { "Accept": "application/json" },
-                cache: "no-store"
-            });
+            let theme;
 
-            if (!response.ok) {
-                throw new Error("Website theme could not be loaded.");
+            if (window.sbgPublishedThemePromise) {
+                theme = await window.sbgPublishedThemePromise;
+            } else {
+                const response = await fetch("/api/theme", {
+                    headers: { "Accept": "application/json" },
+                    cache: "no-store"
+                });
+
+                if (!response.ok) {
+                    throw new Error("Website theme could not be loaded.");
+                }
+
+                const result = await response.json();
+                theme = result.theme || {};
             }
 
-            const result = await response.json();
-            const theme = result.theme || {};
             applySiteTheme(theme.mode, theme.effectiveTheme, true);
         } catch (_error) {
             if (!document.documentElement.dataset.siteTheme) {

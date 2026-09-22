@@ -13,6 +13,7 @@
 ========================================================== */
 
 :root {
+    color-scheme: only light;
     --green-bright: #21ed65;
     --green-main: #2f9e44;
     --green-dark: #14532d;
