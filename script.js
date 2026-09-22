@@ -587,6 +587,42 @@ document.addEventListener("DOMContentLoaded", function () {
 
     loadHomeCarousel();
 
+    async function loadShopCategoryImages() {
+        const categoryTiles = Array.from(document.querySelectorAll("[data-shop-category]"));
+
+        if (categoryTiles.length === 0) {
+            return;
+        }
+
+        try {
+            const result = await fetchSiteContent();
+
+            if (!Array.isArray(result.categoryImages)) {
+                return;
+            }
+
+            result.categoryImages.forEach(function (category) {
+                const tile = categoryTiles.find(function (candidate) {
+                    return candidate.dataset.shopCategory === category.id;
+                });
+                const image = tile && tile.querySelector("img");
+
+                if (!image || !category.imageUrl) {
+                    return;
+                }
+
+                image.src = category.imageUrl;
+                image.alt = category.altText;
+                image.style.objectFit = category.imageFit;
+                image.style.objectPosition = category.imagePosition;
+            });
+        } catch (_error) {
+            // Keep the built-in category images if the content service is unavailable.
+        }
+    }
+
+    loadShopCategoryImages();
+
     async function loadSupportImages() {
         if (!supportImagesContainer) {
             return;

@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="favicons/admin.png">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <title>SBG | Admin</title>
-    <link rel="stylesheet" href="style.css?v=20260921-admin-management-hub">
+    <link rel="stylesheet" href="style.css?v=20260922-admin-image-controls">
 </head>
 <body class="admin-page">
     <header>
@@ -60,7 +60,7 @@
                                     <button type="button" class="admin-inventory-nav-button" data-inventory-category="slots" aria-pressed="false">New Product Cards <span data-inventory-category-count="slots">0</span></button>
                                 </div>
                                 <p class="admin-nav-group-label">Website</p>
-                                <button type="button" class="admin-tab" id="homeTab" role="tab" aria-selected="false" aria-controls="homePanel"><span class="admin-tab-icon" aria-hidden="true">▣</span><span class="admin-tab-label">Home Carousel</span></button>
+                                <button type="button" class="admin-tab" id="homeTab" role="tab" aria-selected="false" aria-controls="homePanel"><span class="admin-tab-icon" aria-hidden="true">▣</span><span class="admin-tab-label">Homepage Images</span></button>
                                 <button type="button" class="admin-tab" id="supportTab" role="tab" aria-selected="false" aria-controls="supportPanel"><span class="admin-tab-icon" aria-hidden="true">♥</span><span class="admin-tab-label">Support Page</span></button>
                                 <button type="button" class="admin-tab" id="themeTab" role="tab" aria-selected="false" aria-controls="themePanel"><span class="admin-tab-icon" aria-hidden="true">◐</span><span class="admin-tab-label">Website Theme</span></button>
                                 <p class="admin-nav-group-label">Business</p>
@@ -326,8 +326,8 @@
                         <div class="admin-toolbar admin-panel-header">
                             <div>
                                 <p class="admin-panel-kicker">Homepage Media</p>
-                                <h2>Home Carousel</h2>
-                                <p>Add or remove rotating garden photos, change their order, hide individual slides, and choose how each image is framed.</p>
+                                <h2>Homepage Images</h2>
+                                <p>Manage the rolling carousel and the four Shop by Category images from one place.</p>
                             </div>
                             <div class="admin-toolbar-actions">
                                 <button type="button" class="button secondary" id="refreshCarousel">Discard Changes</button>
@@ -335,6 +335,11 @@
                             </div>
                         </div>
 
+                        <div class="home-admin-subheading">
+                            <p class="admin-panel-kicker">Rolling Images</p>
+                            <h3>Home Carousel</h3>
+                            <p>Add or remove rotating garden photos, change their order, hide slides, and choose how each image is framed.</p>
+                        </div>
                         <p class="admin-inventory-help">A crop editor opens before each upload so you can choose the crop shape, zoom, and position. Images are also resized to keep the site fast. After uploading, <strong>Fill frame</strong>, <strong>Show whole image</strong>, and the focal point can make further display adjustments.</p>
                         <p id="carouselMessage" class="form-message" aria-live="polite"></p>
 
@@ -385,6 +390,19 @@
                         </div>
 
                         <div id="carouselItems" class="admin-carousel-list" aria-live="polite"></div>
+
+                        <section class="home-category-images-admin" aria-labelledby="categoryImagesTitle">
+                            <div class="home-category-images-heading">
+                                <div>
+                                    <p class="admin-panel-kicker">Homepage Categories</p>
+                                    <h3 id="categoryImagesTitle">Shop by Category Images</h3>
+                                    <p>Upload a replacement, adjust its framing, and save. All four previews use the same dimensions.</p>
+                                </div>
+                                <button type="button" class="button" id="saveCategoryImages">Save Category Images</button>
+                            </div>
+                            <p id="categoryImagesMessage" class="form-message" aria-live="polite"></p>
+                            <div id="categoryImageItems" class="admin-category-image-list" aria-live="polite"></div>
+                        </section>
                     </section>
 
                     <section id="supportPanel" class="admin-panel" role="tabpanel" aria-labelledby="supportTab" hidden>
@@ -770,6 +788,6 @@
         </div>
     </dialog>
 
-    <script src="admin.js?v=20260921-admin-management-hub"></script>
+    <script src="admin.js?v=20260922-admin-image-controls"></script>
 </body>
 </html>

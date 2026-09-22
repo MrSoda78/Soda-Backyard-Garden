@@ -550,6 +550,32 @@ function jsonResponse(body, status = 200) {
 }
 
 const THEME_MODES = new Set(["automatic", "spring", "summer", "autumn", "winter"]);
+const SHOP_CATEGORY_DEFAULTS = [
+    {
+        id: "produce",
+        label: "Fresh Produce",
+        staticPath: "images/Freshly Picked.jpg",
+        altText: "A fresh backyard garden harvest"
+    },
+    {
+        id: "tea",
+        label: "Tea Mixes",
+        staticPath: "images/Cold and Flu.jpg",
+        altText: "A prepared herbal tea blend"
+    },
+    {
+        id: "baked",
+        label: "Baked Goods",
+        staticPath: "images/Hardo Bread.jpg",
+        altText: "Freshly baked hardo bread"
+    },
+    {
+        id: "pain-rub",
+        label: "Pain Rub",
+        staticPath: "images/2 oz Bottle.jpg",
+        altText: "A bottle of garden pain rub oil"
+    }
+];
 
 function normalizeThemeMode(value) {
     const mode = String(value || "").trim().toLowerCase();
@@ -586,6 +612,73 @@ async function getSiteTheme(db) {
         mode,
         effectiveTheme: mode === "automatic" ? automaticThemeForDate() : mode
     };
+}
+
+function normalizeShopCategoryImages(value) {
+    let stored = [];
+
+    try {
+        stored = Array.isArray(value) ? value : JSON.parse(value || "[]");
+    } catch (_error) {
+        stored = [];
+    }
+
+    return SHOP_CATEGORY_DEFAULTS.map(function (defaults) {
+        const saved = stored.find(function (item) {
+            return item && item.id === defaults.id;
+        }) || {};
+        const imageKey = cleanText(saved.imageKey, 500);
+
+        return {
+            id: defaults.id,
+            label: defaults.label,
+            imageKey,
+            staticPath: imageKey
+                ? ""
+                : (cleanText(saved.staticPath, 500) || defaults.staticPath),
+            altText: cleanText(saved.altText, 160) || defaults.altText,
+            imageFit: normalizeImageFit(saved.imageFit),
+            imagePosition: normalizeImagePosition(saved.imagePosition)
+        };
+    });
+}
+
+async function getShopCategoryImages(db) {
+    const setting = await db.prepare(`
+        SELECT setting_value
+        FROM site_settings
+        WHERE setting_key = 'shop_category_images'
+    `).first();
+
+    return normalizeShopCategoryImages(setting && setting.setting_value).map(function (category) {
+        return {
+            ...category,
+            imageUrl: category.imageKey
+                ? mediaUrlForKey(category.imageKey)
+                : category.staticPath
+        };
+    });
+}
+
+async function saveShopCategoryImages(db, categoryImages) {
+    const storedImages = categoryImages.map(function (category) {
+        return {
+            id: category.id,
+            imageKey: category.imageKey || "",
+            staticPath: category.staticPath || "",
+            altText: category.altText,
+            imageFit: category.imageFit,
+            imagePosition: category.imagePosition
+        };
+    });
+
+    await db.prepare(`
+        INSERT INTO site_settings (setting_key, setting_value, updated_at)
+        VALUES ('shop_category_images', ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(setting_key) DO UPDATE SET
+            setting_value = excluded.setting_value,
+            updated_at = CURRENT_TIMESTAMP
+    `).bind(JSON.stringify(storedImages)).run();
 }
 
 function ensureDatabase(db) {
@@ -1504,12 +1597,13 @@ async function getSupportImages(db, includeInactive = false) {
 }
 
 async function handleSiteContent(db) {
-    const [carousel, supportImages, theme] = await Promise.all([
+    const [carousel, supportImages, categoryImages, theme] = await Promise.all([
         getCarouselSlides(db),
         getSupportImages(db),
+        getShopCategoryImages(db),
         getSiteTheme(db)
     ]);
-    return jsonResponse({ carousel, supportImages, theme });
+    return jsonResponse({ carousel, supportImages, categoryImages, theme });
 }
 
 async function handlePublicTheme(db) {
@@ -1548,6 +1642,118 @@ async function handleAdminThemeUpdate(request, db) {
         message: "Website theme published.",
         theme: await getSiteTheme(db)
     });
+}
+
+async function handleAdminCategoryImages(db) {
+    return jsonResponse({ categoryImages: await getShopCategoryImages(db) });
+}
+
+async function handleAdminCategoryImagesUpdate(request, db) {
+    let body;
+
+    try {
+        body = await request.json();
+    } catch (_error) {
+        return jsonResponse({ error: "The Shop by Category image changes were not valid." }, 400);
+    }
+
+    if (!Array.isArray(body.categoryImages)) {
+        return jsonResponse({ error: "The Shop by Category image changes were not valid." }, 400);
+    }
+
+    const currentImages = await getShopCategoryImages(db);
+    const updates = new Map(body.categoryImages.map(function (category) {
+        return [cleanText(category.id, 50), category];
+    }));
+    const invalidCategory = currentImages.find(function (current) {
+        const update = updates.get(current.id);
+        return update && cleanText(update.altText, 160).length < 2;
+    });
+
+    if (invalidCategory) {
+        return jsonResponse({
+            error: "Add a short image description for " + invalidCategory.label + "."
+        }, 400);
+    }
+
+    const nextImages = currentImages.map(function (current) {
+        const update = updates.get(current.id);
+
+        if (!update) {
+            return current;
+        }
+
+        const altText = cleanText(update.altText, 160);
+
+        return {
+            ...current,
+            altText,
+            imageFit: normalizeImageFit(update.imageFit),
+            imagePosition: normalizeImagePosition(update.imagePosition)
+        };
+    });
+
+    await saveShopCategoryImages(db, nextImages);
+
+    return jsonResponse({
+        success: true,
+        message: "Shop by Category images saved.",
+        categoryImages: await getShopCategoryImages(db)
+    });
+}
+
+async function handleAdminCategoryImageUpload(request, db, bucket, categoryId) {
+    if (!bucket) {
+        return imageStorageUnavailable();
+    }
+
+    const currentImages = await getShopCategoryImages(db);
+    const current = currentImages.find(function (category) {
+        return category.id === categoryId;
+    });
+
+    if (!current) {
+        return jsonResponse({ error: "That Shop by Category card was not recognized." }, 404);
+    }
+
+    let stored;
+
+    try {
+        stored = await storeUploadedImage(request, bucket, "categories");
+    } catch (error) {
+        return jsonResponse({ error: error.message || "The category image could not be uploaded." }, 400);
+    }
+
+    const altText = cleanText(stored.formData.get("altText"), 160) || current.altText;
+    const nextImages = currentImages.map(function (category) {
+        return category.id === categoryId
+            ? {
+                ...category,
+                imageKey: stored.key,
+                staticPath: "",
+                altText,
+                imageFit: normalizeImageFit(stored.formData.get("imageFit")),
+                imagePosition: normalizeImagePosition(stored.formData.get("imagePosition"))
+            }
+            : category;
+    });
+
+    try {
+        await saveShopCategoryImages(db, nextImages);
+    } catch (error) {
+        await bucket.delete(stored.key);
+        throw error;
+    }
+
+    if (current.imageKey && current.imageKey !== stored.key) {
+        await bucket.delete(current.imageKey);
+    }
+
+    return jsonResponse({
+        success: true,
+        message: current.label + " category image updated.",
+        categoryImages: await getShopCategoryImages(db)
+    }, 201);
 }
 
 async function sendBrevoOrderReceipt(env, order) {
@@ -3975,6 +4181,27 @@ export default {
 
                 if (url.pathname === "/api/admin/carousel/product-image" && request.method === "POST") {
                     return handleAdminCarouselProductImage(request, env.DB);
+                }
+
+                if (url.pathname === "/api/admin/category-images" && request.method === "GET") {
+                    return handleAdminCategoryImages(env.DB);
+                }
+
+                if (url.pathname === "/api/admin/category-images" && request.method === "PUT") {
+                    return handleAdminCategoryImagesUpdate(request, env.DB);
+                }
+
+                const categoryImageMatch = url.pathname.match(
+                    /^\/api\/admin\/category-images\/([^/]+)\/upload$/
+                );
+
+                if (categoryImageMatch && request.method === "POST") {
+                    return handleAdminCategoryImageUpload(
+                        request,
+                        env.DB,
+                        env.MEDIA_BUCKET,
+                        decodeURIComponent(categoryImageMatch[1])
+                    );
                 }
 
                 const carouselMatch = url.pathname.match(/^\/api\/admin\/carousel\/([^/]+)$/);

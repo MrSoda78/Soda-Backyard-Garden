@@ -79,6 +79,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const carouselProductImage = document.getElementById("carouselProductImage");
     const refreshCarouselButton = document.getElementById("refreshCarousel");
     const saveCarouselButton = document.getElementById("saveCarousel");
+    const categoryImagesMessage = document.getElementById("categoryImagesMessage");
+    const categoryImageItems = document.getElementById("categoryImageItems");
+    const saveCategoryImagesButton = document.getElementById("saveCategoryImages");
     const supportImagesMessage = document.getElementById("supportImagesMessage");
     const supportImageItems = document.getElementById("supportImageItems");
     const supportImageUploadForm = document.getElementById("supportImageUploadForm");
@@ -111,6 +114,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let offlineProductsLoaded = false;
     let orderAdjustmentProducts = [];
     let carouselLoaded = false;
+    let categoryImagesLoaded = false;
     let supportImagesLoaded = false;
     let themeLoaded = false;
     let publishedThemeMode = "automatic";
@@ -813,8 +817,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 setMessage(inventoryMessage, error.message, "error");
             });
         } else if (panelName === "home") {
-            loadCarousel().catch(function (error) {
+            Promise.all([loadCarousel(), loadCategoryImages()]).catch(function (error) {
                 setMessage(carouselMessage, error.message, "error");
+                setMessage(categoryImagesMessage, error.message, "error");
             });
         } else if (panelName === "support") {
             loadSupportImages().catch(function (error) {
@@ -1391,6 +1396,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         gallery.replaceChildren();
         gallery.classList.toggle("inventory-admin-card-gallery-empty", cardImages.length === 0);
+        gallery.classList.toggle("inventory-admin-card-gallery-multiple", cardImages.length > 1);
+        gallery.removeAttribute("tabindex");
+        gallery.removeAttribute("aria-label");
 
         if (cardImages.length === 0) {
             gallery.textContent = "No card image yet";
@@ -1403,8 +1411,22 @@ document.addEventListener("DOMContentLoaded", function () {
             image.alt = "Card image " + (index + 1);
             image.style.objectFit = cardImage.fit;
             image.style.objectPosition = cardImage.position;
+            image.loading = "lazy";
             gallery.appendChild(image);
         });
+
+        if (cardImages.length > 1) {
+            gallery.tabIndex = 0;
+            gallery.setAttribute(
+                "aria-label",
+                cardImages.length + " product images. Scroll horizontally to review them."
+            );
+            gallery.appendChild(createTextElement(
+                "span",
+                "inventory-gallery-count",
+                cardImages.length + " images"
+            ));
+        }
     }
 
     function createInventoryCardShell(cardName, sectionKey, category, isEmptyCard) {
@@ -1948,6 +1970,35 @@ document.addEventListener("DOMContentLoaded", function () {
         return shell.card;
     }
 
+    function revealNewInventoryOption(option, focusInput) {
+        const card = option.closest(".inventory-admin-card");
+
+        card.querySelectorAll(".inventory-product-option").forEach(function (candidate) {
+            const isNewOption = candidate === option;
+            candidate.classList.toggle("inventory-mobile-expanded", isNewOption);
+            candidate.querySelector("[data-inventory-product-toggle]")?.setAttribute(
+                "aria-expanded",
+                isNewOption.toString()
+            );
+
+            if (isNewOption) {
+                expandedMobileInventoryProducts.add(candidate.dataset.productId);
+            } else {
+                expandedMobileInventoryProducts.delete(candidate.dataset.productId);
+            }
+        });
+
+        option.classList.add("inventory-new-option");
+        window.requestAnimationFrame(function () {
+            option.scrollIntoView({ behavior: "auto", block: "center" });
+            focusInput.focus({ preventScroll: true });
+            focusInput.select();
+        });
+        window.setTimeout(function () {
+            option.classList.remove("inventory-new-option");
+        }, 3500);
+    }
+
     function addInventoryCardOption(button) {
         const targetCard = button.closest(".inventory-admin-card");
         const cardNameInput = targetCard.querySelector(".inventory-group-card-name");
@@ -1980,20 +2031,15 @@ document.addEventListener("DOMContentLoaded", function () {
             if (!firstTypeAlreadyEntered) {
                 productNameInput.value = cardName + " — New Type";
                 optionNameInput.value = "New Type";
-                expandedMobileInventoryProducts.add(firstOption.dataset.productId);
-                firstOption.classList.add("inventory-mobile-expanded");
-                firstOption.querySelector("[data-inventory-product-toggle]").setAttribute("aria-expanded", "true");
-
                 updateMobileInventorySummary(firstOption);
                 updateInventoryCardSummary(targetCard);
+                revealNewInventoryOption(firstOption, optionNameInput);
                 markInventoryUnsaved();
                 setMessage(
                     inventoryMessage,
-                    "The first type was added to " + cardName + ". Replace “New Type” with a name such as Butternut, then use Add Another Type for the remaining varieties.",
+                    "The first type was added and opened below. Replace “New Type” with a name such as Butternut, complete its details, and save.",
                     "success"
                 );
-                optionNameInput.focus();
-                optionNameInput.select();
                 return;
             }
 
@@ -2024,25 +2070,22 @@ document.addEventListener("DOMContentLoaded", function () {
         optionNameInput.value = "New Type";
         hiddenCardName.value = cardName;
         option.dataset.inventorySection = targetSectionKey;
+        option.hidden = false;
         option.classList.remove("inventory-slot-row");
         option.querySelector(".inventory-own-card-button").disabled = false;
-        expandedMobileInventoryProducts.add(option.dataset.productId);
-        option.classList.add("inventory-mobile-expanded");
-        option.querySelector("[data-inventory-product-toggle]").setAttribute("aria-expanded", "true");
-        targetOptions.appendChild(option);
+        targetOptions.prepend(option);
         slotCard.remove();
 
         updateMobileInventorySummary(option);
         updateInventoryCardSummary(targetCard);
         updateInventorySectionCount(oldSection);
+        revealNewInventoryOption(option, optionNameInput);
         markInventoryUnsaved();
         setMessage(
             inventoryMessage,
-            "Another type was added to " + cardName + ". Replace “New Type” with its variety name and complete its details, then save.",
+            "A new type was added to " + cardName + " and opened below. Replace “New Type” with the variety name, complete its details, and save.",
             "success"
         );
-        optionNameInput.focus();
-        optionNameInput.select();
     }
 
     function moveInventoryOptionToOwnCard(option) {
@@ -2589,6 +2632,118 @@ document.addEventListener("DOMContentLoaded", function () {
                 imageFit: card.querySelector(".carousel-image-fit").value,
                 imagePosition: card.querySelector(".carousel-image-position").value,
                 active: card.querySelector(".carousel-active").checked
+            };
+        });
+    }
+
+    function renderCategoryImages(categoryImages) {
+        categoryImageItems.replaceChildren();
+
+        categoryImages.forEach(function (category) {
+            const form = document.createElement("form");
+            form.className = "admin-category-image-card";
+            form.dataset.categoryImageId = category.id;
+
+            const heading = createTextElement("h4", "", category.label);
+            const preview = document.createElement("img");
+            preview.className = "admin-category-image-preview";
+            preview.src = category.imageUrl;
+            preview.alt = category.altText;
+            preview.style.objectFit = category.imageFit;
+            preview.style.objectPosition = category.imagePosition;
+
+            const fields = document.createElement("div");
+            fields.className = "admin-category-image-fields";
+
+            const fileGroup = document.createElement("div");
+            fileGroup.className = "form-group";
+            const fileLabel = document.createElement("label");
+            fileLabel.textContent = "Replace image";
+            const fileInput = document.createElement("input");
+            fileInput.type = "file";
+            fileInput.name = "image";
+            fileInput.accept = "image/jpeg,image/png,image/webp";
+            fileInput.required = true;
+            fileGroup.append(fileLabel, fileInput);
+
+            const altGroup = document.createElement("div");
+            altGroup.className = "form-group";
+            const altLabel = document.createElement("label");
+            altLabel.textContent = "Image description";
+            const altInput = createInventoryInput("text", category.altText, "category-image-alt-text");
+            altInput.name = "altText";
+            altInput.maxLength = 160;
+            altInput.required = true;
+            altGroup.append(altLabel, altInput);
+
+            const displayOptions = document.createElement("div");
+            displayOptions.className = "image-display-options";
+            const fitGroup = document.createElement("div");
+            fitGroup.className = "form-group";
+            const fitLabel = document.createElement("label");
+            fitLabel.textContent = "Display";
+            const fitSelect = createImageSelect(
+                "category-image-fit",
+                category.imageFit,
+                imageFitOptions,
+                "Display for " + category.label
+            );
+            fitSelect.name = "imageFit";
+            fitGroup.append(fitLabel, fitSelect);
+            const positionGroup = document.createElement("div");
+            positionGroup.className = "form-group";
+            const positionLabel = document.createElement("label");
+            positionLabel.textContent = "Focal point";
+            const positionSelect = createImageSelect(
+                "category-image-position",
+                category.imagePosition,
+                imagePositionOptions,
+                "Focal point for " + category.label
+            );
+            positionSelect.name = "imagePosition";
+            positionGroup.append(positionLabel, positionSelect);
+            displayOptions.append(fitGroup, positionGroup);
+
+            const uploadButton = document.createElement("button");
+            uploadButton.type = "submit";
+            uploadButton.className = "button secondary";
+            uploadButton.textContent = "Upload Replacement";
+            fields.append(fileGroup, altGroup, displayOptions, uploadButton);
+            form.append(heading, preview, fields);
+            categoryImageItems.appendChild(form);
+        });
+    }
+
+    async function loadCategoryImages() {
+        setMessage(categoryImagesMessage, "Loading Shop by Category images...", "success");
+        const response = await fetch("/api/admin/category-images", {
+            headers: { "Accept": "application/json" },
+            cache: "no-store"
+        });
+
+        if (response.status === 401) {
+            showLogin();
+            return;
+        }
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || "Shop by Category images could not be loaded.");
+        }
+
+        renderCategoryImages(result.categoryImages);
+        categoryImagesLoaded = true;
+        setMessage(categoryImagesMessage, "", "");
+    }
+
+    function collectCategoryImages() {
+        return Array.from(categoryImageItems.querySelectorAll("[data-category-image-id]")).map(function (card) {
+            return {
+                id: card.dataset.categoryImageId,
+                altText: card.querySelector(".category-image-alt-text").value,
+                imageFit: card.querySelector(".category-image-fit").value,
+                imagePosition: card.querySelector(".category-image-position").value
             };
         });
     }
@@ -4253,6 +4408,104 @@ document.addEventListener("DOMContentLoaded", function () {
             setMessage(carouselMessage, result.message, "success");
         } catch (error) {
             setMessage(carouselMessage, error.message, "error");
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+
+    saveCategoryImagesButton.addEventListener("click", async function () {
+        saveCategoryImagesButton.disabled = true;
+        setMessage(categoryImagesMessage, "Saving Shop by Category images...", "success");
+
+        try {
+            const response = await fetch("/api/admin/category-images", {
+                method: "PUT",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ categoryImages: collectCategoryImages() })
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The Shop by Category images could not be saved.");
+            }
+
+            renderCategoryImages(result.categoryImages);
+            setMessage(categoryImagesMessage, result.message, "success");
+        } catch (error) {
+            setMessage(categoryImagesMessage, error.message, "error");
+        } finally {
+            saveCategoryImagesButton.disabled = false;
+        }
+    });
+
+    categoryImageItems.addEventListener("change", function (event) {
+        if (
+            !event.target.classList.contains("category-image-fit") &&
+            !event.target.classList.contains("category-image-position")
+        ) {
+            return;
+        }
+
+        const card = event.target.closest("[data-category-image-id]");
+        const preview = card.querySelector(".admin-category-image-preview");
+        preview.style.objectFit = card.querySelector(".category-image-fit").value;
+        preview.style.objectPosition = card.querySelector(".category-image-position").value;
+        setMessage(
+            categoryImagesMessage,
+            "Preview updated. Click Save Category Images to publish the framing change.",
+            "success"
+        );
+    });
+
+    categoryImageItems.addEventListener("submit", async function (event) {
+        const form = event.target.closest("[data-category-image-id]");
+
+        if (!form) {
+            return;
+        }
+
+        event.preventDefault();
+        const submitButton = form.querySelector('button[type="submit"]');
+        const file = form.elements.image.files[0];
+        submitButton.disabled = true;
+        setMessage(categoryImagesMessage, "Preparing and uploading the category image...", "success");
+
+        try {
+            const preparedImage = await prepareImageForUpload(file, {
+                aspect: "square",
+                title: "Crop Shop by Category Image"
+            });
+
+            if (!preparedImage) {
+                setMessage(categoryImagesMessage, "Image upload cancelled.", "");
+                return;
+            }
+
+            const formData = new FormData(form);
+            formData.set("image", preparedImage, preparedImage.name);
+            const response = await fetch(
+                "/api/admin/category-images/" +
+                    encodeURIComponent(form.dataset.categoryImageId) +
+                    "/upload",
+                {
+                    method: "POST",
+                    headers: { "Accept": "application/json" },
+                    body: formData
+                }
+            );
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "The category image could not be uploaded.");
+            }
+
+            renderCategoryImages(result.categoryImages);
+            setMessage(categoryImagesMessage, result.message, "success");
+        } catch (error) {
+            setMessage(categoryImagesMessage, error.message, "error");
         } finally {
             submitButton.disabled = false;
         }
