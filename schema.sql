@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS products (
     frozen_option INTEGER NOT NULL DEFAULT 0 CHECK (frozen_option IN (0, 1)),
     frozen_quantity INTEGER NOT NULL DEFAULT 0 CHECK (frozen_quantity >= 0),
     card_name TEXT NOT NULL DEFAULT '',
-    card_label TEXT NOT NULL DEFAULT ''
+    card_label TEXT NOT NULL DEFAULT '',
+    card_key TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -596,3 +597,10 @@ INSERT INTO products (
     ('slot-pain-rub-4', 'New Product Slot 4', 'each', 0, 0, 0, 1304, 0, '', 'pain-rub', 1),
     ('slot-pain-rub-5', 'New Product Slot 5', 'each', 0, 0, 0, 1305, 0, '', 'pain-rub', 1)
 ON CONFLICT(id) DO NOTHING;
+
+UPDATE products
+SET card_key = CASE
+        WHEN name LIKE 'New Product Slot%' THEN id
+        ELSE LOWER(category || '|' || COALESCE(NULLIF(TRIM(card_name), ''), name))
+    END
+WHERE TRIM(card_key) = '';

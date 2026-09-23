@@ -1314,6 +1314,10 @@ document.addEventListener("DOMContentLoaded", function () {
         return (product.cardName || product.name || "").trim();
     }
 
+    function inventoryCardKey(product) {
+        return (product.cardKey || product.id || inventoryCardName(product)).trim();
+    }
+
     function updateInventorySectionCount(section) {
         if (!section) {
             return;
@@ -1429,7 +1433,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    function createInventoryCardShell(cardName, sectionKey, category, isEmptyCard) {
+    function createInventoryCardShell(cardName, cardKey, sectionKey, category, isEmptyCard) {
         const card = document.createElement("article");
         const header = document.createElement("header");
         const gallery = document.createElement("div");
@@ -1445,6 +1449,7 @@ document.addEventListener("DOMContentLoaded", function () {
         card.classList.toggle("inventory-empty-card", isEmptyCard);
         card.dataset.inventorySection = sectionKey;
         card.dataset.inventoryCategory = category;
+        card.dataset.inventoryCardKey = cardKey;
         header.className = "inventory-admin-card-header";
         gallery.className = "inventory-admin-card-gallery";
         heading.className = "inventory-admin-card-heading";
@@ -1954,8 +1959,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function appendInventoryCard(body, products, sectionKey, category, isEmptyCard) {
         const cardName = isEmptyCard ? "" : inventoryCardName(products[0]);
+        const cardKey = inventoryCardKey(products[0]);
         const shell = createInventoryCardShell(
             cardName,
+            cardKey,
             sectionKey,
             category,
             isEmptyCard
@@ -2101,6 +2108,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (currentCard.querySelectorAll("[data-product-id]").length === 1) {
             currentCard.querySelector(".inventory-group-card-name").value = productName;
+            currentCard.dataset.inventoryCardKey = option.dataset.productId;
             option.querySelector(".inventory-card-name").value = productName;
             option.querySelector(".inventory-card-label").value = "";
             updateMobileInventorySummary(option);
@@ -2112,7 +2120,13 @@ document.addEventListener("DOMContentLoaded", function () {
         const sectionKey = currentCard.dataset.inventorySection;
         const category = currentCard.dataset.inventoryCategory;
         const body = currentCard.parentElement;
-        const shell = createInventoryCardShell(productName, sectionKey, category, false);
+        const shell = createInventoryCardShell(
+            productName,
+            option.dataset.productId,
+            sectionKey,
+            category,
+            false
+        );
 
         option.querySelector(".inventory-card-name").value = productName;
         option.querySelector(".inventory-card-label").value = "";
@@ -2135,7 +2149,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         products.forEach(function (product) {
             const name = inventoryCardName(product) || product.name;
-            const key = name.toLocaleLowerCase();
+            const key = inventoryCardKey(product) || name.toLocaleLowerCase();
 
             if (!groups.has(key)) {
                 groups.set(key, []);
@@ -2274,6 +2288,7 @@ document.addEventListener("DOMContentLoaded", function () {
             return {
                 id: row.dataset.productId,
                 name: row.querySelector(".inventory-name").value,
+                cardKey: row.closest(".inventory-admin-card").dataset.inventoryCardKey,
                 cardName: row.querySelector(".inventory-card-name").value,
                 cardLabel: row.querySelector(".inventory-card-label").value,
                 description: row.querySelector(".inventory-description").value,

@@ -1491,6 +1491,10 @@ document.addEventListener("DOMContentLoaded", function () {
         return (product.cardName || product.name).trim() || product.name;
     }
 
+    function productCardKey(product) {
+        return (product.cardKey || (product.category + "|" + productCardName(product))).trim().toLocaleLowerCase();
+    }
+
     function productCardLabel(product, grouped) {
         return (product.cardLabel || "").trim() || (grouped ? product.name : "");
     }
@@ -1731,16 +1735,20 @@ document.addEventListener("DOMContentLoaded", function () {
             const groups = new Map();
             visibleProducts.forEach(function (product) {
                 const cardName = productCardName(product);
+                const cardKey = productCardKey(product);
 
-                if (!groups.has(cardName)) {
-                    groups.set(cardName, []);
+                if (!groups.has(cardKey)) {
+                    groups.set(cardKey, {
+                        cardName,
+                        products: []
+                    });
                 }
 
-                groups.get(cardName).push(product);
+                groups.get(cardKey).products.push(product);
             });
 
-            groups.forEach(function (cardProducts, cardName) {
-                grid.appendChild(createManagedProductCard(cardName, cardProducts));
+            groups.forEach(function (cardGroup) {
+                grid.appendChild(createManagedProductCard(cardGroup.cardName, cardGroup.products));
             });
 
             const section = document.querySelector(

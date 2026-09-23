@@ -38,7 +38,8 @@ const SCHEMA_STATEMENTS = [
         frozen_option INTEGER NOT NULL DEFAULT 0 CHECK (frozen_option IN (0, 1)),
         frozen_quantity INTEGER NOT NULL DEFAULT 0 CHECK (frozen_quantity >= 0),
         card_name TEXT NOT NULL DEFAULT '',
-        card_label TEXT NOT NULL DEFAULT ''
+        card_label TEXT NOT NULL DEFAULT '',
+        card_key TEXT NOT NULL DEFAULT ''
     )`,
     `CREATE TABLE IF NOT EXISTS carousel_images (
         id TEXT PRIMARY KEY,
@@ -514,8 +515,8 @@ async function ensureEmptyProductSlots(db) {
                 db.prepare(`
                     INSERT OR IGNORE INTO products (
                         id, name, unit, price_cents, quantity, made_to_order,
-                        sort_order, active, description, category, is_slot
-                    ) VALUES (?, ?, ?, 0, ?, ?, ?, 0, '', ?, 1)
+                        sort_order, active, description, category, is_slot, card_key
+                    ) VALUES (?, ?, ?, 0, ?, ?, ?, 0, '', ?, 1, ?)
                 `).bind(
                     id,
                     name,
@@ -523,7 +524,8 @@ async function ensureEmptyProductSlots(db) {
                     settings.madeToOrder ? null : 0,
                     settings.madeToOrder ? 1 : 0,
                     settings.sortBase + nextNumber,
-                    settings.category
+                    settings.category,
+                    id
                 )
             );
             nextNumber += 1;
@@ -536,7 +538,7 @@ async function ensureEmptyProductSlots(db) {
 }
 
 let databaseInitialization;
-const DATABASE_SCHEMA_VERSION = "2026-09-21-admin-load-performance-v1";
+const DATABASE_SCHEMA_VERSION = "2026-09-23-stable-product-card-identity-v1";
 
 function jsonResponse(body, status = 200) {
     return new Response(JSON.stringify(body), {
@@ -803,7 +805,8 @@ function ensureDatabase(db) {
                 ["frozen_option", "ALTER TABLE products ADD COLUMN frozen_option INTEGER NOT NULL DEFAULT 0"],
                 ["frozen_quantity", "ALTER TABLE products ADD COLUMN frozen_quantity INTEGER NOT NULL DEFAULT 0"],
                 ["card_name", "ALTER TABLE products ADD COLUMN card_name TEXT NOT NULL DEFAULT ''"],
-                ["card_label", "ALTER TABLE products ADD COLUMN card_label TEXT NOT NULL DEFAULT ''"]
+                ["card_label", "ALTER TABLE products ADD COLUMN card_label TEXT NOT NULL DEFAULT ''"],
+                ["card_key", "ALTER TABLE products ADD COLUMN card_key TEXT NOT NULL DEFAULT ''"]
             ];
 
             for (const [columnName, migration] of productMigrations) {
@@ -1287,6 +1290,14 @@ function ensureDatabase(db) {
             await ensureEmptyProductSlots(db);
             await db.prepare(`
                 UPDATE products
+                SET card_key = CASE
+                    WHEN name LIKE 'New Product Slot%' THEN id
+                    ELSE LOWER(category || '|' || COALESCE(NULLIF(TRIM(card_name), ''), name))
+                END
+                WHERE TRIM(card_key) = ''
+            `).run();
+            await db.prepare(`
+                UPDATE products
                 SET order_limit = COALESCE(order_limit, 2),
                     category = 'baked'
                 WHERE id = 'hardo-bread'
@@ -1505,7 +1516,7 @@ async function getProducts(db, includeInactive = false) {
         SELECT
             id, name, unit, price_cents, quantity, made_to_order, active,
             description, category, is_slot, order_limit, frozen_option, frozen_quantity,
-            card_name, card_label,
+            card_name, card_label, card_key,
             image_key, image_fit, image_position,
             image_key_2, image_fit_2, image_position_2,
             image_key_3, image_fit_3, image_position_3
@@ -1531,6 +1542,7 @@ async function getProducts(db, includeInactive = false) {
             frozenQuantity: product.frozen_quantity,
             cardName: product.card_name || product.name,
             cardLabel: product.card_label || "",
+            cardKey: product.card_key || product.id,
             imageUrl: mediaUrlForKey(product.image_key),
             imageFit: normalizeImageFit(product.image_fit),
             imagePosition: normalizeImagePosition(product.image_position),
@@ -2501,7 +2513,7 @@ async function handleAdminInventory(db) {
         SELECT
             id, name, unit, price_cents, quantity, made_to_order, sort_order, active,
             description, category, is_slot, order_limit, frozen_option, frozen_quantity,
-            card_name, card_label,
+            card_name, card_label, card_key,
             image_key, image_fit, image_position,
             image_key_2, image_fit_2, image_position_2,
             image_key_3, image_fit_3, image_position_3
@@ -2527,6 +2539,7 @@ async function handleAdminInventory(db) {
                 frozenQuantity: product.frozen_quantity,
                 cardName: product.card_name || product.name,
                 cardLabel: product.card_label || "",
+                cardKey: product.card_key || product.id,
                 imageUrl: mediaUrlForKey(product.image_key),
                 imageFit: normalizeImageFit(product.image_fit),
                 imagePosition: normalizeImagePosition(product.image_position),
@@ -2841,7 +2854,7 @@ async function handleAdminInventoryUpdate(request, db) {
     }
 
     const existingResult = await db.prepare(`
-        SELECT id, is_slot, card_name, card_label
+        SELECT id, is_slot, card_name, card_label, card_key
         FROM products
     `).all();
     const existingProducts = new Map(existingResult.results.map(function (product) {
@@ -2884,6 +2897,10 @@ async function handleAdminInventoryUpdate(request, db) {
         const cardLabel = Object.prototype.hasOwnProperty.call(submitted, "cardLabel")
             ? cleanText(submitted.cardLabel, 100)
             : cleanText(existingProduct.card_label, 100);
+        const submittedCardKey = Object.prototype.hasOwnProperty.call(submitted, "cardKey")
+            ? cleanText(submitted.cardKey, 150)
+            : cleanText(existingProduct.card_key, 150);
+        const cardKey = submittedCardKey || id;
 
         if (name.length < 2 || unit.length < 1) {
             return jsonResponse({ error: "Every product needs a name and selling unit." }, 400);
@@ -2931,7 +2948,7 @@ async function handleAdminInventoryUpdate(request, db) {
                 SET name = ?, unit = ?, price_cents = ?, quantity = ?,
                     made_to_order = ?, active = ?, description = ?, order_limit = ?,
                     frozen_option = ?, frozen_quantity = ?,
-                    card_name = ?, card_label = ?,
+                    card_name = ?, card_label = ?, card_key = ?,
                     image_fit = ?, image_position = ?,
                     image_fit_2 = ?, image_position_2 = ?,
                     image_fit_3 = ?, image_position_3 = ?
@@ -2949,6 +2966,7 @@ async function handleAdminInventoryUpdate(request, db) {
                 frozenQuantity,
                 cardName,
                 cardLabel,
+                cardKey,
                 imageFit,
                 imagePosition,
                 imageFit2,
