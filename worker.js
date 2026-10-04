@@ -562,9 +562,9 @@ const SHOP_CATEGORY_DEFAULTS = [
     },
     {
         id: "pantry",
-        label: "Garden Pantry",
+        label: "Pantry",
         staticPath: "images/Pasta Sause.jpg",
-        altText: "Homemade garden pantry products"
+        altText: "Homemade pantry products"
     },
     {
         id: "tea",

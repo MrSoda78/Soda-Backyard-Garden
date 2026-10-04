@@ -385,7 +385,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const categories = [
             { label: "Fresh Produce", href: "fresh-produce.html", icon: "favicons/produce.png", page: "fresh-produce" },
-            { label: "Garden Pantry", href: "garden-pantry.html", icon: "favicons/pantry.png", page: "garden-pantry" },
+            { label: "Pantry", href: "garden-pantry.html", icon: "favicons/pantry.png", page: "garden-pantry" },
             { label: "Tea Mixes", href: "teas.html", icon: "favicons/teas.png", page: "teas" },
             { label: "Baked Goods", href: "baked-goods.html", icon: "favicons/baked-goods.png", page: "baked-goods" },
             { label: "Pain Rub", href: "pain-rub.html", icon: "favicons/pain-rub.png", page: "pain-rub" }

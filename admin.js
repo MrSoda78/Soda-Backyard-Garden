@@ -664,7 +664,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function renderOfflineOrderProducts(products) {
         const categoryLabels = {
             produce: "Fresh Produce",
-            pantry: "Garden Pantry",
+            pantry: "Pantry",
             tea: "Tea Mixes",
             baked: "Baked Goods",
             "pain-rub": "Pain Rub"
@@ -2193,7 +2193,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const categories = [
             { id: "produce", label: "Fresh Produce" },
-            { id: "pantry", label: "Garden Pantry" },
+            { id: "pantry", label: "Pantry" },
             { id: "tea", label: "Tea Mixes" },
             { id: "baked", label: "Baked Goods" },
             { id: "pain-rub", label: "Pain Rub" }
