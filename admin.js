@@ -664,11 +664,12 @@ document.addEventListener("DOMContentLoaded", function () {
     function renderOfflineOrderProducts(products) {
         const categoryLabels = {
             produce: "Fresh Produce",
+            pantry: "Garden Pantry",
             tea: "Tea Mixes",
             baked: "Baked Goods",
             "pain-rub": "Pain Rub"
         };
-        const categoryOrder = ["produce", "tea", "baked", "pain-rub"];
+        const categoryOrder = ["produce", "pantry", "tea", "baked", "pain-rub"];
         const availableProducts = products.filter(function (product) {
             return product.active && product.priceCents > 0 && productHasStock(product);
         });
@@ -1334,7 +1335,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function updateInventoryCategoryCounts() {
-        const counts = { produce: 0, tea: 0, baked: 0, "pain-rub": 0, slots: 0 };
+        const counts = { produce: 0, pantry: 0, tea: 0, baked: 0, "pain-rub": 0, slots: 0 };
 
         inventoryRows.querySelectorAll("[data-inventory-heading]").forEach(function (section) {
             const sectionKey = section.dataset.inventoryHeading;
@@ -2177,6 +2178,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const categories = [
             { id: "produce", label: "Fresh Produce" },
+            { id: "pantry", label: "Garden Pantry" },
             { id: "tea", label: "Tea Mixes" },
             { id: "baked", label: "Baked Goods" },
             { id: "pain-rub", label: "Pain Rub" }

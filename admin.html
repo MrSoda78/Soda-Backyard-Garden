@@ -54,6 +54,7 @@
                                 <button type="button" class="admin-tab" id="inventoryTab" role="tab" aria-selected="false" aria-controls="inventoryPanel"><span class="admin-tab-icon" aria-hidden="true">▦</span><span class="admin-tab-label">Products &amp; Inventory</span></button>
                                 <div class="admin-inventory-nav" id="adminInventoryNav" hidden>
                                     <button type="button" class="admin-inventory-nav-button active" data-inventory-category="produce" aria-pressed="true">Fresh Produce <span data-inventory-category-count="produce">0</span></button>
+                                    <button type="button" class="admin-inventory-nav-button" data-inventory-category="pantry" aria-pressed="false">Garden Pantry <span data-inventory-category-count="pantry">0</span></button>
                                     <button type="button" class="admin-inventory-nav-button" data-inventory-category="tea" aria-pressed="false">Tea Mixes <span data-inventory-category-count="tea">0</span></button>
                                     <button type="button" class="admin-inventory-nav-button" data-inventory-category="baked" aria-pressed="false">Baked Goods <span data-inventory-category-count="baked">0</span></button>
                                     <button type="button" class="admin-inventory-nav-button" data-inventory-category="pain-rub" aria-pressed="false">Pain Rub <span data-inventory-category-count="pain-rub">0</span></button>
@@ -327,7 +328,7 @@
                             <div>
                                 <p class="admin-panel-kicker">Homepage Media</p>
                                 <h2>Homepage Images</h2>
-                                <p>Manage the rolling carousel and the four Shop by Category images from one place.</p>
+                                <p>Manage the rolling carousel and all Shop by Category images from one place.</p>
                             </div>
                             <div class="admin-toolbar-actions">
                                 <button type="button" class="button secondary" id="refreshCarousel">Discard Changes</button>
@@ -396,7 +397,7 @@
                                 <div>
                                     <p class="admin-panel-kicker">Homepage Categories</p>
                                     <h3 id="categoryImagesTitle">Shop by Category Images</h3>
-                                    <p>Upload a replacement, adjust its framing, and save. All four previews use the same dimensions.</p>
+                                    <p>Upload a replacement, adjust its framing, and save. Every preview uses the same dimensions.</p>
                                 </div>
                                 <button type="button" class="button" id="saveCategoryImages">Save Category Images</button>
                             </div>
@@ -788,6 +789,6 @@
         </div>
     </dialog>
 
-    <script src="admin.js?v=20260923-card-identity"></script>
+    <script src="admin.js?v=20261004-garden-pantry"></script>
 </body>
 </html>

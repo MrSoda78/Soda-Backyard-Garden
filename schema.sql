@@ -595,8 +595,34 @@ INSERT INTO products (
     ('slot-pain-rub-2', 'New Product Slot 2', 'each', 0, 0, 0, 1302, 0, '', 'pain-rub', 1),
     ('slot-pain-rub-3', 'New Product Slot 3', 'each', 0, 0, 0, 1303, 0, '', 'pain-rub', 1),
     ('slot-pain-rub-4', 'New Product Slot 4', 'each', 0, 0, 0, 1304, 0, '', 'pain-rub', 1),
-    ('slot-pain-rub-5', 'New Product Slot 5', 'each', 0, 0, 0, 1305, 0, '', 'pain-rub', 1)
+    ('slot-pain-rub-5', 'New Product Slot 5', 'each', 0, 0, 0, 1305, 0, '', 'pain-rub', 1),
+    ('slot-pantry-1', 'New Product Slot 1', 'each', 0, 0, 0, 1401, 0, '', 'pantry', 1),
+    ('slot-pantry-2', 'New Product Slot 2', 'each', 0, 0, 0, 1402, 0, '', 'pantry', 1),
+    ('slot-pantry-3', 'New Product Slot 3', 'each', 0, 0, 0, 1403, 0, '', 'pantry', 1),
+    ('slot-pantry-4', 'New Product Slot 4', 'each', 0, 0, 0, 1404, 0, '', 'pantry', 1),
+    ('slot-pantry-5', 'New Product Slot 5', 'each', 0, 0, 0, 1405, 0, '', 'pantry', 1)
 ON CONFLICT(id) DO NOTHING;
+
+UPDATE products
+SET category = 'pantry'
+WHERE id IN (
+    'honey-1kg', 'honey-3kg',
+    'pasta-sauce-1l', 'pasta-sauce-750ml',
+    'hot-sauce-250ml'
+)
+   OR (
+       is_slot = 1
+       AND (
+           LOWER(TRIM(card_name)) IN (
+               'elderberry syrup',
+               'strawberry rhubarb jam'
+           )
+           OR LOWER(TRIM(name)) IN (
+               'elderberry syrup',
+               'strawberry rhubarb jam'
+           )
+       )
+   );
 
 UPDATE products
 SET card_key = CASE

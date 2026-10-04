@@ -475,7 +475,8 @@ const PRODUCT_SLOT_SETTINGS = [
     { category: "produce", unit: "each", madeToOrder: false, sortBase: 1000 },
     { category: "tea", unit: "mix", madeToOrder: true, sortBase: 1100 },
     { category: "baked", unit: "each", madeToOrder: false, sortBase: 1200 },
-    { category: "pain-rub", unit: "each", madeToOrder: false, sortBase: 1300 }
+    { category: "pain-rub", unit: "each", madeToOrder: false, sortBase: 1300 },
+    { category: "pantry", unit: "each", madeToOrder: false, sortBase: 1400 }
 ];
 const EMPTY_PRODUCT_SLOTS_PER_CATEGORY = 5;
 
@@ -538,7 +539,7 @@ async function ensureEmptyProductSlots(db) {
 }
 
 let databaseInitialization;
-const DATABASE_SCHEMA_VERSION = "2026-09-23-stable-product-card-identity-v1";
+const DATABASE_SCHEMA_VERSION = "2026-10-04-garden-pantry-v1";
 
 function jsonResponse(body, status = 200) {
     return new Response(JSON.stringify(body), {
@@ -558,6 +559,12 @@ const SHOP_CATEGORY_DEFAULTS = [
         label: "Fresh Produce",
         staticPath: "images/Freshly Picked.jpg",
         altText: "A fresh backyard garden harvest"
+    },
+    {
+        id: "pantry",
+        label: "Garden Pantry",
+        staticPath: "images/Pasta Sause.jpg",
+        altText: "Homemade garden pantry products"
     },
     {
         id: "tea",
@@ -1287,6 +1294,29 @@ function ensureDatabase(db) {
             }
 
             await db.prepare(PRODUCT_SLOT_INSERT).run();
+            await ensureEmptyProductSlots(db);
+            await db.prepare(`
+                UPDATE products
+                SET category = 'pantry'
+                WHERE id IN (
+                    'honey-1kg', 'honey-3kg',
+                    'pasta-sauce-1l', 'pasta-sauce-750ml',
+                    'hot-sauce-250ml'
+                )
+                   OR (
+                       is_slot = 1
+                       AND (
+                           LOWER(TRIM(card_name)) IN (
+                               'elderberry syrup',
+                               'strawberry rhubarb jam'
+                           )
+                           OR LOWER(TRIM(name)) IN (
+                               'elderberry syrup',
+                               'strawberry rhubarb jam'
+                           )
+                       )
+                   )
+            `).run();
             await ensureEmptyProductSlots(db);
             await db.prepare(`
                 UPDATE products
