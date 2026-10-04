@@ -539,7 +539,7 @@ async function ensureEmptyProductSlots(db) {
 }
 
 let databaseInitialization;
-const DATABASE_SCHEMA_VERSION = "2026-10-04-garden-pantry-v1";
+const DATABASE_SCHEMA_VERSION = "2026-10-04-garden-pantry-v2";
 
 function jsonResponse(body, status = 200) {
     return new Response(JSON.stringify(body), {
@@ -1316,6 +1316,28 @@ function ensureDatabase(db) {
                            )
                        )
                    )
+            `).run();
+            await db.prepare(`
+                UPDATE products
+                SET card_key = LOWER(
+                    'pantry|' || COALESCE(NULLIF(TRIM(card_name), ''), name)
+                )
+                WHERE category = 'pantry'
+                  AND (
+                      id IN (
+                          'honey-1kg', 'honey-3kg',
+                          'pasta-sauce-1l', 'pasta-sauce-750ml',
+                          'hot-sauce-250ml'
+                      )
+                      OR LOWER(TRIM(card_name)) IN (
+                          'elderberry syrup',
+                          'strawberry rhubarb jam'
+                      )
+                      OR LOWER(TRIM(name)) IN (
+                          'elderberry syrup',
+                          'strawberry rhubarb jam'
+                      )
+                  )
             `).run();
             await ensureEmptyProductSlots(db);
             await db.prepare(`

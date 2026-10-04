@@ -625,6 +625,27 @@ WHERE id IN (
    );
 
 UPDATE products
+SET card_key = LOWER(
+        'pantry|' || COALESCE(NULLIF(TRIM(card_name), ''), name)
+    )
+WHERE category = 'pantry'
+  AND (
+      id IN (
+          'honey-1kg', 'honey-3kg',
+          'pasta-sauce-1l', 'pasta-sauce-750ml',
+          'hot-sauce-250ml'
+      )
+      OR LOWER(TRIM(card_name)) IN (
+          'elderberry syrup',
+          'strawberry rhubarb jam'
+      )
+      OR LOWER(TRIM(name)) IN (
+          'elderberry syrup',
+          'strawberry rhubarb jam'
+      )
+  );
+
+UPDATE products
 SET card_key = CASE
         WHEN name LIKE 'New Product Slot%' THEN id
         ELSE LOWER(category || '|' || COALESCE(NULLIF(TRIM(card_name), ''), name))
