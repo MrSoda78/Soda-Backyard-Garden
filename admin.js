@@ -2159,7 +2159,22 @@ document.addEventListener("DOMContentLoaded", function () {
             groups.get(key).push(product);
         });
 
-        return Array.from(groups.values());
+        return Array.from(groups.values()).map(function (group) {
+            return group.sort(function (left, right) {
+                const leftLabel = (left.cardLabel || left.name || "").trim();
+                const rightLabel = (right.cardLabel || right.name || "").trim();
+                return leftLabel.localeCompare(rightLabel, undefined, {
+                    sensitivity: "base",
+                    numeric: true
+                });
+            });
+        }).sort(function (left, right) {
+            return inventoryCardName(left[0]).localeCompare(
+                inventoryCardName(right[0]),
+                undefined,
+                { sensitivity: "base", numeric: true }
+            );
+        });
     }
 
     function renderInventory(products) {

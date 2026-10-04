@@ -1748,7 +1748,20 @@ document.addEventListener("DOMContentLoaded", function () {
                 groups.get(cardKey).products.push(product);
             });
 
-            groups.forEach(function (cardGroup) {
+            Array.from(groups.values()).sort(function (left, right) {
+                return left.cardName.localeCompare(right.cardName, undefined, {
+                    sensitivity: "base",
+                    numeric: true
+                });
+            }).forEach(function (cardGroup) {
+                cardGroup.products.sort(function (left, right) {
+                    const leftLabel = (left.cardLabel || left.name || "").trim();
+                    const rightLabel = (right.cardLabel || right.name || "").trim();
+                    return leftLabel.localeCompare(rightLabel, undefined, {
+                        sensitivity: "base",
+                        numeric: true
+                    });
+                });
                 grid.appendChild(createManagedProductCard(cardGroup.cardName, cardGroup.products));
             });
 
@@ -1779,6 +1792,13 @@ document.addEventListener("DOMContentLoaded", function () {
                     product.active &&
                     product.priceCents > 0
                 );
+            }).sort(function (left, right) {
+                const leftName = productCardName(left) + " " + (left.cardLabel || left.name || "");
+                const rightName = productCardName(right) + " " + (right.cardLabel || right.name || "");
+                return leftName.localeCompare(rightName, undefined, {
+                    sensitivity: "base",
+                    numeric: true
+                });
             });
             const group = document.querySelector(
                 '[data-dynamic-order-group="' + category + '"]'
