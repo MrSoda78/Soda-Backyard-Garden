@@ -644,7 +644,7 @@ textarea:focus-visible {
 
 .product-card img {
     width: 100%;
-    height: 180px;
+    height: 220px;
     object-fit: cover;
 }
 
@@ -667,7 +667,7 @@ textarea:focus-visible {
 }
 
 .product-photo-strip img {
-    height: 180px;
+    height: 220px;
     border-right: 2px solid var(--white);
 }
 
@@ -1040,7 +1040,7 @@ body.has-basket-review {
 }
 
 .product-grid-featured .product-card > img {
-    height: 180px;
+    height: 220px;
     object-position: center center;
 }
 
@@ -1050,7 +1050,7 @@ body.has-basket-review {
 
 .product-image-placeholder {
     display: grid;
-    height: 180px;
+    height: 220px;
     place-items: center;
     padding: 20px;
     color: var(--green-dark);
@@ -6423,5 +6423,84 @@ footer a:hover {
 
     .admin-overview-card-heading {
         align-items: flex-start;
+    }
+}
+
+/* ==========================================================
+   ADMIN INVENTORY — LIVE PRODUCT CARD IMAGE PREVIEW
+========================================================== */
+
+#inventoryPanel .inventory-admin-card-header {
+    height: auto;
+    min-height: 220px;
+    grid-template-columns: minmax(260px, 360px) minmax(220px, 1fr);
+}
+
+#inventoryPanel .inventory-admin-card-gallery {
+    position: relative;
+    display: grid;
+    width: 100%;
+    height: 220px;
+    min-height: 220px;
+    max-height: 220px;
+    grid-template-columns: repeat(
+        var(--inventory-preview-image-count, 1),
+        minmax(0, 1fr)
+    );
+    align-items: stretch;
+    overflow: hidden;
+}
+
+#inventoryPanel .inventory-admin-card-gallery img {
+    width: 100%;
+    min-width: 0;
+    height: 220px;
+    min-height: 220px;
+    max-height: 220px;
+    border-right: 2px solid white;
+}
+
+#inventoryPanel .inventory-admin-card-gallery img:last-of-type {
+    border-right: 0;
+}
+
+#inventoryPanel .inventory-gallery-count {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1;
+    margin: 0;
+}
+
+.garden-pantry-page .product-card img,
+.garden-pantry-page .product-photo-strip img,
+.garden-pantry-page .product-image-placeholder {
+    height: 260px;
+}
+
+#inventoryPanel .inventory-admin-card[data-inventory-category="pantry"] .inventory-admin-card-gallery,
+#inventoryPanel .inventory-admin-card[data-inventory-category="pantry"] .inventory-admin-card-gallery img {
+    height: 260px;
+    min-height: 260px;
+    max-height: 260px;
+}
+
+@media (max-width: 700px) {
+    #inventoryPanel .inventory-admin-card-header {
+        grid-template-columns: 1fr;
+    }
+
+    #inventoryPanel .inventory-admin-card-gallery,
+    #inventoryPanel .inventory-admin-card-gallery img {
+        height: 220px;
+        min-height: 220px;
+        max-height: 220px;
+    }
+
+    #inventoryPanel .inventory-admin-card[data-inventory-category="pantry"] .inventory-admin-card-gallery,
+    #inventoryPanel .inventory-admin-card[data-inventory-category="pantry"] .inventory-admin-card-gallery img {
+        height: 260px;
+        min-height: 260px;
+        max-height: 260px;
     }
 }

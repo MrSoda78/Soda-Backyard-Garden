@@ -1402,6 +1402,10 @@ document.addEventListener("DOMContentLoaded", function () {
         gallery.replaceChildren();
         gallery.classList.toggle("inventory-admin-card-gallery-empty", cardImages.length === 0);
         gallery.classList.toggle("inventory-admin-card-gallery-multiple", cardImages.length > 1);
+        gallery.style.setProperty(
+            "--inventory-preview-image-count",
+            Math.max(cardImages.length, 1).toString()
+        );
         gallery.removeAttribute("tabindex");
         gallery.removeAttribute("aria-label");
 
@@ -1421,10 +1425,9 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         if (cardImages.length > 1) {
-            gallery.tabIndex = 0;
             gallery.setAttribute(
                 "aria-label",
-                cardImages.length + " product images. Scroll horizontally to review them."
+                "Live card preview showing " + cardImages.length + " images side by side."
             );
             gallery.appendChild(createTextElement(
                 "span",
