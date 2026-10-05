@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" sizes="64x64" href="favicons/admin-dashboard.png?v=20260922">
     <link rel="apple-touch-icon" href="favicons/admin-dashboard-touch.png?v=20260922">
     <title>SBG | Admin</title>
-    <link rel="stylesheet" href="style.css?v=20261005-better-image-cropper">
+    <link rel="stylesheet" href="style.css?v=20261005-post-upload-crop">
 </head>
 <body class="admin-page">
     <header>
@@ -71,7 +71,7 @@
                             </div>
                             <details class="admin-sidebar-help" id="adminInventoryHelp" hidden>
                                 <summary>How to Use Inventory</summary>
-                                <p>Name a blank card, add its product types, and save. Product descriptions are optional. Use <strong>Ingredients:</strong> at the start when the text belongs in an Ingredients section. Images can be cropped before upload, and each card can display up to three.</p>
+                                <p>Name a blank card, add its product types, and save. Product descriptions are optional. Use <strong>Ingredients:</strong> at the start when the text belongs in an Ingredients section. Images can be cropped before or after upload, and each card can display up to three.</p>
                                 <p>Fresh and frozen quantities are separate. A frozen choice appears only when <strong>Offer Frozen Option</strong> is selected and frozen quantity is above zero.</p>
                             </details>
                             <div class="admin-sidebar-footer">
@@ -341,7 +341,7 @@
                             <h3>Home Carousel</h3>
                             <p>Add or remove rotating garden photos, change their order, hide slides, and choose how each image is framed.</p>
                         </div>
-                        <p class="admin-inventory-help">A crop editor opens before each upload with the correct live-card shape. Drag the preview, zoom up to 6×, or use the arrow controls for precise positioning. Images are resized to keep the site fast. After uploading, <strong>Fill frame</strong>, <strong>Show whole image</strong>, and the focal point can make further display adjustments.</p>
+                        <p class="admin-inventory-help">A crop editor opens before each upload with the correct live-card shape. Use <strong>Edit Crop</strong> later to reopen an uploaded image. Drag the preview, zoom up to 6×, or use the arrow controls for precise positioning. Images are resized to keep the site fast. <strong>Fill frame</strong>, <strong>Show whole image</strong>, and the focal point provide further display adjustments.</p>
                         <p id="carouselMessage" class="form-message" aria-live="polite"></p>
 
                         <div class="home-admin-tools">
@@ -757,7 +757,7 @@
                     <div class="form-group">
                         <label for="imageCropAspect">Crop shape</label>
                         <select id="imageCropAspect">
-                            <option value="original">Original shape</option>
+                            <option value="original">Whole photo — show everything in card</option>
                             <option value="product">Product card — 18:11</option>
                             <option value="product2">Product card — two-image panel</option>
                             <option value="product3">Product card — three-image panel</option>
@@ -796,7 +796,7 @@
                         </div>
                     </div>
                     <button type="button" class="button secondary" id="resetImageCrop">Reset Crop</button>
-                    <p class="image-crop-note"><strong>Tip:</strong> drag directly on the preview. Use <strong>Entire Photo</strong> if you do not want to permanently crop the file. You can still choose “Show whole image” after uploading.</p>
+                    <p class="image-crop-note"><strong>Tip:</strong> choose <strong>Whole photo</strong> for tall jars and bottles. It automatically uses “Show whole image” so the live card does not crop the picture again.</p>
                 </div>
             </div>
 
@@ -808,6 +808,6 @@
         </div>
     </dialog>
 
-    <script src="admin.js?v=20261005-better-image-cropper"></script>
+    <script src="admin.js?v=20261005-post-upload-crop"></script>
 </body>
 </html>

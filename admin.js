@@ -131,6 +131,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let inventoryBaseline = new Map();
     let activeImageCrop = null;
     let activeImageCropDrag = null;
+    let lastImageCropResult = null;
     let overviewOrders = [];
     let overviewInventory = [];
     let overviewSalesSummary = null;
@@ -1045,6 +1046,13 @@ document.addEventListener("DOMContentLoaded", function () {
         uploadImageButton.dataset.inventoryImageAction = "upload";
         uploadImageButton.dataset.imageSlot = imageSlot.toString();
         uploadImageButton.textContent = currentImageUrl ? "Replace" : "Upload";
+        const editCropButton = document.createElement("button");
+        editCropButton.type = "button";
+        editCropButton.className = "button secondary inventory-image-edit-crop";
+        editCropButton.dataset.inventoryImageAction = "edit-crop";
+        editCropButton.dataset.imageSlot = imageSlot.toString();
+        editCropButton.textContent = "Edit Crop";
+        editCropButton.hidden = !managedImageUrl;
         const removeImageButton = document.createElement("button");
         removeImageButton.type = "button";
         removeImageButton.className = "button secondary inventory-image-remove";
@@ -1052,7 +1060,7 @@ document.addEventListener("DOMContentLoaded", function () {
         removeImageButton.dataset.imageSlot = imageSlot.toString();
         removeImageButton.textContent = "Remove";
         removeImageButton.hidden = !managedImageUrl;
-        imageActions.append(uploadImageButton, removeImageButton);
+        imageActions.append(uploadImageButton, editCropButton, removeImageButton);
 
         slotEditor.append(
             slotLabel,
@@ -1157,12 +1165,30 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
+        const useWholePhoto = imageCropAspect.value === "original";
+
+        if (useWholePhoto) {
+            imageCropZoom.value = "1";
+            imageCropHorizontal.value = "0";
+            imageCropVertical.value = "0";
+        }
+
+        imageCropZoom.disabled = useWholePhoto;
+        imageCropZoomOutButton.disabled = useWholePhoto;
+        imageCropZoomInButton.disabled = useWholePhoto;
+        imageCropHorizontal.disabled = useWholePhoto;
+        imageCropVertical.disabled = useWholePhoto;
+        imageCropNudgeButtons.forEach(function (button) {
+            button.disabled = useWholePhoto;
+        });
+        imageCropCanvas.classList.toggle("is-whole-photo", useWholePhoto);
         const cropRect = currentImageCropRect();
         drawImageCrop(imageCropCanvas, activeImageCrop.image, cropRect, 900);
         imageCropZoomValue.textContent = Number(imageCropZoom.value).toFixed(2) + "×";
-        imageCropSummary.textContent =
-            "Drag to reposition · " + Math.round(cropRect.width) + " × " +
-            Math.round(cropRect.height) + " source pixels";
+        imageCropSummary.textContent = useWholePhoto
+            ? "Whole photo selected · the live card will show the complete image"
+            : "Drag to reposition · " + Math.round(cropRect.width) + " × " +
+                Math.round(cropRect.height) + " source pixels";
     }
 
     function clampImageCropControl(control, value) {
@@ -1218,7 +1244,7 @@ document.addEventListener("DOMContentLoaded", function () {
     async function createCroppedUploadFile(useEntireImage) {
         const canvas = document.createElement("canvas");
         const image = activeImageCrop.image;
-        const cropRect = useEntireImage
+        const cropRect = useEntireImage || imageCropAspect.value === "original"
             ? {
                 x: 0,
                 y: 0,
@@ -1252,7 +1278,12 @@ document.addEventListener("DOMContentLoaded", function () {
         useEntireImageButton.disabled = true;
 
         try {
-            const preparedFile = await createCroppedUploadFile(useEntireImage);
+            const useWholePhoto = useEntireImage || imageCropAspect.value === "original";
+            const preparedFile = await createCroppedUploadFile(useWholePhoto);
+            lastImageCropResult = {
+                aspect: imageCropAspect.value,
+                useWholePhoto
+            };
             finishImageCrop(preparedFile);
         } catch (error) {
             imageCropSummary.textContent = error.message;
@@ -1269,6 +1300,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const settings = options || {};
 
         return new Promise(function (resolve) {
+            lastImageCropResult = null;
             activeImageCrop = { file, image, resolve };
             imageCropTitle.textContent = settings.title || "Crop Image";
             imageCropAspect.value = settings.aspect || "original";
@@ -1310,7 +1342,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     imageCropCanvas.addEventListener("pointerdown", function (event) {
-        if (!activeImageCrop || event.button > 0) {
+        if (!activeImageCrop || imageCropAspect.value === "original" || event.button > 0) {
             return;
         }
 
@@ -1365,7 +1397,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     imageCropCanvas.addEventListener("wheel", function (event) {
-        if (!activeImageCrop) {
+        if (!activeImageCrop || imageCropAspect.value === "original") {
             return;
         }
 
@@ -1374,6 +1406,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }, { passive: false });
 
     imageCropCanvas.addEventListener("keydown", function (event) {
+        if (imageCropAspect.value === "original") {
+            return;
+        }
+
         const keyActions = {
             ArrowLeft: [-2, 0],
             ArrowRight: [2, 0],
@@ -2494,6 +2530,7 @@ document.addEventListener("DOMContentLoaded", function () {
         );
         const preview = slotEditor.querySelector(".inventory-image-preview");
         const removeButton = slotEditor.querySelector(".inventory-image-remove");
+        const editCropButton = slotEditor.querySelector(".inventory-image-edit-crop");
         const uploadButton = slotEditor.querySelector(".inventory-image-upload");
         const fallbackImageUrl = imageSlot === 3
             ? row.dataset.fallbackImageUrl3
@@ -2507,8 +2544,62 @@ document.addEventListener("DOMContentLoaded", function () {
             slotEditor.querySelector(".inventory-image-position").value
         );
         removeButton.hidden = !imageUrl;
+        editCropButton.hidden = !imageUrl;
         uploadButton.textContent = currentImageUrl ? "Replace" : "Upload";
         updateInventoryCardSummary(row.closest(".inventory-admin-card"));
+    }
+
+    function inventoryImageCropSettings(row, slotEditor, imageWillBeAdded) {
+        const productCard = row.closest(".inventory-admin-card");
+        const productCategory = productCard?.dataset.inventoryCategory;
+        const existingCardImages = new Set(
+            Array.from(productCard?.querySelectorAll(".inventory-image-preview img") || [])
+                .map(function (image) { return image.getAttribute("src"); })
+                .filter(Boolean)
+        );
+        const previewImageCount = Math.min(
+            3,
+            Math.max(1, existingCardImages.size + (imageWillBeAdded ? 1 : 0))
+        );
+        const cropAspectPrefix = productCategory === "pantry" ? "pantry" : "product";
+
+        return {
+            aspect: cropAspectPrefix + (previewImageCount === 1 ? "" : previewImageCount),
+            title: productCategory === "pantry"
+                ? "Crop Pantry Product Image"
+                : "Crop Product Image"
+        };
+    }
+
+    async function savePreparedInventoryImage(row, slotEditor, imageSlot, preparedImage) {
+        const formData = new FormData();
+        formData.append("image", preparedImage, preparedImage.name);
+        formData.append("imageFit", slotEditor.querySelector(".inventory-image-fit").value);
+        formData.append("imagePosition", slotEditor.querySelector(".inventory-image-position").value);
+        const response = await fetch(
+            "/api/admin/products/" + encodeURIComponent(row.dataset.productId) +
+                "/image" + (imageSlot === 1 ? "" : "/" + imageSlot),
+            { method: "POST", headers: { "Accept": "application/json" }, body: formData }
+        );
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || "The product image could not be uploaded.");
+        }
+
+        updateInventoryImagePreview(row, result.imageUrl, imageSlot);
+        carouselLoaded = false;
+        supportImagesLoaded = false;
+        return result;
+    }
+
+    function applyInventoryImageCropDisplayMode(slotEditor) {
+        if (!lastImageCropResult?.useWholePhoto) {
+            return;
+        }
+
+        slotEditor.querySelector(".inventory-image-fit").value = "contain";
+        slotEditor.querySelector(".inventory-image-position").value = "center";
     }
 
     async function uploadInventoryImage(row, button) {
@@ -2527,54 +2618,93 @@ document.addEventListener("DOMContentLoaded", function () {
         setMessage(inventoryMessage, "Preparing and uploading the product image...", "success");
 
         try {
-            const productCard = row.closest(".inventory-admin-card");
-            const productCategory = productCard?.dataset.inventoryCategory;
             const targetPreviewHasImage = Boolean(
                 slotEditor.querySelector(".inventory-image-preview img")
             );
-            const existingCardImages = new Set(
-                Array.from(productCard?.querySelectorAll(".inventory-image-preview img") || [])
-                    .map(function (image) { return image.getAttribute("src"); })
-                    .filter(Boolean)
+            const preparedImage = await prepareImageForUpload(
+                file,
+                inventoryImageCropSettings(row, slotEditor, !targetPreviewHasImage)
             );
-            const previewImageCount = Math.min(
-                3,
-                Math.max(1, existingCardImages.size + (targetPreviewHasImage ? 0 : 1))
-            );
-            const cropAspectPrefix = productCategory === "pantry" ? "pantry" : "product";
-            const cropAspect = cropAspectPrefix + (previewImageCount === 1 ? "" : previewImageCount);
-            const preparedImage = await prepareImageForUpload(file, {
-                aspect: cropAspect,
-                title: productCategory === "pantry"
-                    ? "Crop Pantry Product Image"
-                    : "Crop Product Image"
-            });
 
             if (!preparedImage) {
                 setMessage(inventoryMessage, "Image upload cancelled.", "");
                 return;
             }
 
-            const formData = new FormData();
-            formData.append("image", preparedImage, preparedImage.name);
-            formData.append("imageFit", slotEditor.querySelector(".inventory-image-fit").value);
-            formData.append("imagePosition", slotEditor.querySelector(".inventory-image-position").value);
-            const response = await fetch(
-                "/api/admin/products/" + encodeURIComponent(row.dataset.productId) +
-                    "/image" + (imageSlot === 1 ? "" : "/" + imageSlot),
-                { method: "POST", headers: { "Accept": "application/json" }, body: formData }
+            applyInventoryImageCropDisplayMode(slotEditor);
+            const result = await savePreparedInventoryImage(
+                row,
+                slotEditor,
+                imageSlot,
+                preparedImage
             );
-            const result = await response.json();
+            fileInput.value = "";
+            setMessage(inventoryMessage, result.message, "success");
+        } catch (error) {
+            setMessage(inventoryMessage, error.message, "error");
+        } finally {
+            button.disabled = false;
+        }
+    }
 
-            if (!response.ok) {
-                throw new Error(result.error || "The product image could not be uploaded.");
+    async function editInventoryImageCrop(row, button) {
+        const imageSlot = Number(button.dataset.imageSlot) || 1;
+        const slotEditor = button.closest(".inventory-image-slot");
+        const currentImage = slotEditor.querySelector(".inventory-image-preview img");
+
+        if (!currentImage) {
+            setMessage(inventoryMessage, "Upload an image before editing its crop.", "error");
+            return;
+        }
+
+        button.disabled = true;
+        setMessage(inventoryMessage, "Opening the current image in the crop editor...", "success");
+
+        try {
+            const imageResponse = await fetch(currentImage.currentSrc || currentImage.src, {
+                cache: "no-store"
+            });
+
+            if (!imageResponse.ok) {
+                throw new Error("The current image could not be opened for editing.");
             }
 
-            fileInput.value = "";
-            updateInventoryImagePreview(row, result.imageUrl, imageSlot);
-            carouselLoaded = false;
-            supportImagesLoaded = false;
-            setMessage(inventoryMessage, result.message, "success");
+            const imageBlob = await imageResponse.blob();
+            const imageType = ["image/jpeg", "image/png", "image/webp"].includes(imageBlob.type)
+                ? imageBlob.type
+                : "image/webp";
+            const extension = imageType === "image/jpeg"
+                ? "jpg"
+                : (imageType === "image/png" ? "png" : "webp");
+            const productName = row.querySelector(".inventory-name").value.trim() || "product";
+            const currentFile = new File(
+                [imageBlob],
+                productName.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") +
+                    "-image-" + imageSlot + "." + extension,
+                { type: imageType }
+            );
+            const preparedImage = await prepareImageForUpload(
+                currentFile,
+                inventoryImageCropSettings(row, slotEditor, false)
+            );
+
+            if (!preparedImage) {
+                setMessage(inventoryMessage, "Crop editing cancelled.", "");
+                return;
+            }
+
+            applyInventoryImageCropDisplayMode(slotEditor);
+            const result = await savePreparedInventoryImage(
+                row,
+                slotEditor,
+                imageSlot,
+                preparedImage
+            );
+            setMessage(
+                inventoryMessage,
+                "Updated the crop for " + productName + " image " + imageSlot + ".",
+                "success"
+            );
         } catch (error) {
             setMessage(inventoryMessage, error.message, "error");
         } finally {
@@ -4458,6 +4588,8 @@ document.addEventListener("DOMContentLoaded", function () {
             deleteInventoryProduct(row, button);
         } else if (button.dataset.inventoryImageAction === "upload") {
             uploadInventoryImage(row, button);
+        } else if (button.dataset.inventoryImageAction === "edit-crop") {
+            editInventoryImageCrop(row, button);
         } else if (button.dataset.inventoryImageAction === "remove") {
             removeInventoryImage(row, button);
         }

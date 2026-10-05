@@ -3291,11 +3291,12 @@ footer a:hover {
 
 .inventory-image-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 7px;
 }
 
 .inventory-image-actions .button {
-    flex: 1;
+    flex: 1 1 90px;
     padding: 8px 10px;
     font-size: 0.78rem;
 }
@@ -5514,6 +5515,10 @@ footer a:hover {
     cursor: grabbing;
 }
 
+.image-crop-canvas.is-whole-photo {
+    cursor: default;
+}
+
 .image-crop-canvas:focus-visible {
     outline: 4px solid var(--green-main);
     outline-offset: 3px;
@@ -5585,6 +5590,18 @@ footer a:hover {
 .image-crop-nudge:focus-visible {
     color: white;
     background: var(--green-dark);
+}
+
+.image-crop-step:disabled,
+.image-crop-nudge:disabled {
+    cursor: not-allowed;
+    opacity: 0.42;
+}
+
+.image-crop-step:disabled:hover,
+.image-crop-nudge:disabled:hover {
+    color: var(--green-dark);
+    background: white;
 }
 
 .image-crop-nudge-group {
