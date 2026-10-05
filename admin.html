@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" sizes="64x64" href="favicons/admin-dashboard.png?v=20260922">
     <link rel="apple-touch-icon" href="favicons/admin-dashboard-touch.png?v=20260922">
     <title>SBG | Admin</title>
-    <link rel="stylesheet" href="style.css?v=20261005-larger-product-images">
+    <link rel="stylesheet" href="style.css?v=20261005-better-image-cropper">
 </head>
 <body class="admin-page">
     <header>
@@ -341,7 +341,7 @@
                             <h3>Home Carousel</h3>
                             <p>Add or remove rotating garden photos, change their order, hide slides, and choose how each image is framed.</p>
                         </div>
-                        <p class="admin-inventory-help">A crop editor opens before each upload so you can choose the crop shape, zoom, and position. Images are also resized to keep the site fast. After uploading, <strong>Fill frame</strong>, <strong>Show whole image</strong>, and the focal point can make further display adjustments.</p>
+                        <p class="admin-inventory-help">A crop editor opens before each upload with the correct live-card shape. Drag the preview, zoom up to 6×, or use the arrow controls for precise positioning. Images are resized to keep the site fast. After uploading, <strong>Fill frame</strong>, <strong>Show whole image</strong>, and the focal point can make further display adjustments.</p>
                         <p id="carouselMessage" class="form-message" aria-live="polite"></p>
 
                         <div class="home-admin-tools">
@@ -419,7 +419,7 @@
                             </div>
                         </div>
 
-                        <p class="admin-inventory-help">A crop editor opens before each upload so you can choose the crop shape, zoom, and position. Images are also resized to keep the site fast. After uploading, <strong>Fill frame</strong>, <strong>Show whole image</strong>, and the focal point can make further display adjustments.</p>
+                        <p class="admin-inventory-help">A crop editor opens before each upload. Drag the preview, zoom up to 6×, or use the arrow controls for precise positioning. Images are resized to keep the site fast. After uploading, <strong>Fill frame</strong>, <strong>Show whole image</strong>, and the focal point can make further display adjustments.</p>
                         <p id="supportImagesMessage" class="form-message" aria-live="polite"></p>
 
                         <div class="home-admin-tools">
@@ -742,14 +742,14 @@
             <div class="image-crop-heading">
                 <div>
                     <h2 id="imageCropTitle">Crop Image</h2>
-                    <p id="imageCropHelp">Adjust the crop before uploading. The preview shows the image that will be stored.</p>
+                    <p id="imageCropHelp">Drag the preview to position the image. Zoom with the slider, buttons, mouse wheel, or keyboard.</p>
                 </div>
                 <button type="button" class="image-crop-close" id="cancelImageCropTop" aria-label="Cancel image crop">×</button>
             </div>
 
             <div class="image-crop-layout">
                 <div class="image-crop-preview-wrap">
-                    <canvas id="imageCropCanvas" class="image-crop-canvas"></canvas>
+                    <canvas id="imageCropCanvas" class="image-crop-canvas" tabindex="0" aria-label="Crop preview. Drag to reposition; use arrow keys for fine adjustments and plus or minus to zoom."></canvas>
                     <p id="imageCropSummary" class="image-crop-summary" aria-live="polite"></p>
                 </div>
 
@@ -758,7 +758,12 @@
                         <label for="imageCropAspect">Crop shape</label>
                         <select id="imageCropAspect">
                             <option value="original">Original shape</option>
-                            <option value="product">Product / Support card — 16:9</option>
+                            <option value="product">Product card — 18:11</option>
+                            <option value="product2">Product card — two-image panel</option>
+                            <option value="product3">Product card — three-image panel</option>
+                            <option value="pantry">Pantry card — 18:13 for jars and bottles</option>
+                            <option value="pantry2">Pantry card — two-image panel</option>
+                            <option value="pantry3">Pantry card — three-image panel</option>
                             <option value="standard">Standard photo — 4:3</option>
                             <option value="square">Square — 1:1</option>
                             <option value="carousel">Home carousel — 8:7</option>
@@ -766,7 +771,11 @@
                     </div>
                     <div class="form-group image-crop-range">
                         <label for="imageCropZoom">Zoom <output id="imageCropZoomValue">1.00×</output></label>
-                        <input type="range" id="imageCropZoom" min="1" max="3" value="1" step="0.01">
+                        <div class="image-crop-zoom-row">
+                            <button type="button" class="image-crop-step" id="imageCropZoomOut" aria-label="Zoom out">−</button>
+                            <input type="range" id="imageCropZoom" min="1" max="6" value="1" step="0.01">
+                            <button type="button" class="image-crop-step" id="imageCropZoomIn" aria-label="Zoom in">+</button>
+                        </div>
                     </div>
                     <div class="form-group image-crop-range">
                         <label for="imageCropHorizontal">Move left or right</label>
@@ -776,8 +785,18 @@
                         <label for="imageCropVertical">Move up or down</label>
                         <input type="range" id="imageCropVertical" min="-100" max="100" value="0" step="1">
                     </div>
+                    <div class="form-group image-crop-nudge-group">
+                        <span>Fine position</span>
+                        <div class="image-crop-nudge-grid" aria-label="Fine crop position controls">
+                            <button type="button" class="image-crop-nudge" data-crop-nudge-y="-5" aria-label="Move crop up">↑</button>
+                            <button type="button" class="image-crop-nudge" data-crop-nudge-x="-5" aria-label="Move crop left">←</button>
+                            <button type="button" class="image-crop-nudge image-crop-centre" data-crop-centre aria-label="Centre crop">●</button>
+                            <button type="button" class="image-crop-nudge" data-crop-nudge-x="5" aria-label="Move crop right">→</button>
+                            <button type="button" class="image-crop-nudge" data-crop-nudge-y="5" aria-label="Move crop down">↓</button>
+                        </div>
+                    </div>
                     <button type="button" class="button secondary" id="resetImageCrop">Reset Crop</button>
-                    <p class="image-crop-note">Use <strong>Entire Photo</strong> if you do not want to permanently crop the file. You can still choose “Show whole image” after uploading.</p>
+                    <p class="image-crop-note"><strong>Tip:</strong> drag directly on the preview. Use <strong>Entire Photo</strong> if you do not want to permanently crop the file. You can still choose “Show whole image” after uploading.</p>
                 </div>
             </div>
 
@@ -789,6 +808,6 @@
         </div>
     </dialog>
 
-    <script src="admin.js?v=20261005-live-image-preview"></script>
+    <script src="admin.js?v=20261005-better-image-cropper"></script>
 </body>
 </html>

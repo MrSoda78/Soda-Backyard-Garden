@@ -5505,6 +5505,18 @@ footer a:hover {
     background-position: 0 0, 0 10px, 10px -10px, -10px 0;
     background-size: 20px 20px;
     box-sizing: border-box;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+.image-crop-canvas.is-dragging {
+    cursor: grabbing;
+}
+
+.image-crop-canvas:focus-visible {
+    outline: 4px solid var(--green-main);
+    outline-offset: 3px;
 }
 
 .image-crop-summary {
@@ -5541,6 +5553,85 @@ footer a:hover {
 
 .image-crop-range input[type="range"] {
     accent-color: var(--green-dark);
+}
+
+.image-crop-zoom-row {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) 42px;
+    align-items: center;
+    gap: 8px;
+}
+
+.image-crop-step,
+.image-crop-nudge {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    padding: 0;
+    border: 2px solid var(--green-main);
+    border-radius: 9px;
+    color: var(--green-dark);
+    background: white;
+    font: inherit;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.image-crop-step:hover,
+.image-crop-step:focus-visible,
+.image-crop-nudge:hover,
+.image-crop-nudge:focus-visible {
+    color: white;
+    background: var(--green-dark);
+}
+
+.image-crop-nudge-group {
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+}
+
+.image-crop-nudge-group > span {
+    justify-self: start;
+    font-weight: bold;
+}
+
+.image-crop-nudge-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 42px);
+    grid-template-rows: repeat(3, 42px);
+    gap: 4px;
+}
+
+.image-crop-nudge-grid .image-crop-nudge:nth-child(1) {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.image-crop-nudge-grid .image-crop-nudge:nth-child(2) {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.image-crop-nudge-grid .image-crop-nudge:nth-child(3) {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+.image-crop-nudge-grid .image-crop-nudge:nth-child(4) {
+    grid-column: 3;
+    grid-row: 2;
+}
+
+.image-crop-nudge-grid .image-crop-nudge:nth-child(5) {
+    grid-column: 2;
+    grid-row: 3;
+}
+
+.image-crop-centre {
+    font-size: 0.8rem;
 }
 
 .image-crop-note {

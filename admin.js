@@ -102,8 +102,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const imageCropAspect = document.getElementById("imageCropAspect");
     const imageCropZoom = document.getElementById("imageCropZoom");
     const imageCropZoomValue = document.getElementById("imageCropZoomValue");
+    const imageCropZoomOutButton = document.getElementById("imageCropZoomOut");
+    const imageCropZoomInButton = document.getElementById("imageCropZoomIn");
     const imageCropHorizontal = document.getElementById("imageCropHorizontal");
     const imageCropVertical = document.getElementById("imageCropVertical");
+    const imageCropNudgeButtons = Array.from(document.querySelectorAll("[data-crop-nudge-x], [data-crop-nudge-y], [data-crop-centre]"));
     const resetImageCropButton = document.getElementById("resetImageCrop");
     const cancelImageCropButton = document.getElementById("cancelImageCrop");
     const cancelImageCropTopButton = document.getElementById("cancelImageCropTop");
@@ -127,6 +130,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let inventorySectionsInitialized = false;
     let inventoryBaseline = new Map();
     let activeImageCrop = null;
+    let activeImageCropDrag = null;
     let overviewOrders = [];
     let overviewInventory = [];
     let overviewSalesSummary = null;
@@ -1086,7 +1090,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const imageCropAspectRatios = {
         square: 1,
         standard: 4 / 3,
-        product: 16 / 9,
+        product: 18 / 11,
+        product2: 9 / 11,
+        product3: 6 / 11,
+        pantry: 18 / 13,
+        pantry2: 9 / 13,
+        pantry3: 6 / 13,
         carousel: 8 / 7
     };
 
@@ -1152,8 +1161,44 @@ document.addEventListener("DOMContentLoaded", function () {
         drawImageCrop(imageCropCanvas, activeImageCrop.image, cropRect, 900);
         imageCropZoomValue.textContent = Number(imageCropZoom.value).toFixed(2) + "×";
         imageCropSummary.textContent =
-            "Crop preview · " + Math.round(cropRect.width) + " × " +
+            "Drag to reposition · " + Math.round(cropRect.width) + " × " +
             Math.round(cropRect.height) + " source pixels";
+    }
+
+    function clampImageCropControl(control, value) {
+        const minimum = Number(control.min);
+        const maximum = Number(control.max);
+        return Math.min(maximum, Math.max(minimum, value));
+    }
+
+    function setImageCropZoom(value) {
+        imageCropZoom.value = clampImageCropControl(imageCropZoom, value).toString();
+        renderImageCropPreview();
+    }
+
+    function nudgeImageCrop(horizontalAmount, verticalAmount) {
+        imageCropHorizontal.value = clampImageCropControl(
+            imageCropHorizontal,
+            Number(imageCropHorizontal.value) + horizontalAmount
+        ).toString();
+        imageCropVertical.value = clampImageCropControl(
+            imageCropVertical,
+            Number(imageCropVertical.value) + verticalAmount
+        ).toString();
+        renderImageCropPreview();
+    }
+
+    function finishImageCropDrag(event) {
+        if (!activeImageCropDrag || event.pointerId !== activeImageCropDrag.pointerId) {
+            return;
+        }
+
+        if (imageCropCanvas.hasPointerCapture(event.pointerId)) {
+            imageCropCanvas.releasePointerCapture(event.pointerId);
+        }
+
+        activeImageCropDrag = null;
+        imageCropCanvas.classList.remove("is-dragging");
     }
 
     function canvasToUploadFile(canvas, originalFile) {
@@ -1192,6 +1237,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const resolve = activeImageCrop.resolve;
         activeImageCrop = null;
+        activeImageCropDrag = null;
+        imageCropCanvas.classList.remove("is-dragging");
         imageCropDialog.close();
         resolve(file || null);
     }
@@ -1236,6 +1283,117 @@ document.addEventListener("DOMContentLoaded", function () {
 
     [imageCropAspect, imageCropZoom, imageCropHorizontal, imageCropVertical].forEach(function (control) {
         control.addEventListener("input", renderImageCropPreview);
+    });
+
+    imageCropZoomOutButton.addEventListener("click", function () {
+        setImageCropZoom(Number(imageCropZoom.value) - 0.1);
+    });
+
+    imageCropZoomInButton.addEventListener("click", function () {
+        setImageCropZoom(Number(imageCropZoom.value) + 0.1);
+    });
+
+    imageCropNudgeButtons.forEach(function (button) {
+        button.addEventListener("click", function () {
+            if (button.hasAttribute("data-crop-centre")) {
+                imageCropHorizontal.value = "0";
+                imageCropVertical.value = "0";
+                renderImageCropPreview();
+                return;
+            }
+
+            nudgeImageCrop(
+                Number(button.dataset.cropNudgeX || 0),
+                Number(button.dataset.cropNudgeY || 0)
+            );
+        });
+    });
+
+    imageCropCanvas.addEventListener("pointerdown", function (event) {
+        if (!activeImageCrop || event.button > 0) {
+            return;
+        }
+
+        activeImageCropDrag = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            horizontal: Number(imageCropHorizontal.value),
+            vertical: Number(imageCropVertical.value),
+            cropRect: currentImageCropRect()
+        };
+        imageCropCanvas.setPointerCapture(event.pointerId);
+        imageCropCanvas.classList.add("is-dragging");
+        event.preventDefault();
+    });
+
+    imageCropCanvas.addEventListener("pointermove", function (event) {
+        if (!activeImageCrop || !activeImageCropDrag || event.pointerId !== activeImageCropDrag.pointerId) {
+            return;
+        }
+
+        const cropRect = activeImageCropDrag.cropRect;
+        const availableWidth = activeImageCrop.image.naturalWidth - cropRect.width;
+        const availableHeight = activeImageCrop.image.naturalHeight - cropRect.height;
+        const displayedWidth = Math.max(1, imageCropCanvas.clientWidth);
+        const displayedHeight = Math.max(1, imageCropCanvas.clientHeight);
+
+        if (availableWidth > 0) {
+            const sourceDeltaX = (event.clientX - activeImageCropDrag.startX) *
+                cropRect.width / displayedWidth;
+            imageCropHorizontal.value = clampImageCropControl(
+                imageCropHorizontal,
+                activeImageCropDrag.horizontal - sourceDeltaX / availableWidth * 200
+            ).toString();
+        }
+
+        if (availableHeight > 0) {
+            const sourceDeltaY = (event.clientY - activeImageCropDrag.startY) *
+                cropRect.height / displayedHeight;
+            imageCropVertical.value = clampImageCropControl(
+                imageCropVertical,
+                activeImageCropDrag.vertical - sourceDeltaY / availableHeight * 200
+            ).toString();
+        }
+
+        renderImageCropPreview();
+        event.preventDefault();
+    });
+
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(function (eventName) {
+        imageCropCanvas.addEventListener(eventName, finishImageCropDrag);
+    });
+
+    imageCropCanvas.addEventListener("wheel", function (event) {
+        if (!activeImageCrop) {
+            return;
+        }
+
+        setImageCropZoom(Number(imageCropZoom.value) + (event.deltaY < 0 ? 0.1 : -0.1));
+        event.preventDefault();
+    }, { passive: false });
+
+    imageCropCanvas.addEventListener("keydown", function (event) {
+        const keyActions = {
+            ArrowLeft: [-2, 0],
+            ArrowRight: [2, 0],
+            ArrowUp: [0, -2],
+            ArrowDown: [0, 2]
+        };
+
+        if (keyActions[event.key]) {
+            nudgeImageCrop(keyActions[event.key][0], keyActions[event.key][1]);
+            event.preventDefault();
+            return;
+        }
+
+        if (["+", "="].includes(event.key)) {
+            setImageCropZoom(Number(imageCropZoom.value) + 0.1);
+            event.preventDefault();
+        } else if (["-", "_"].includes(event.key)) {
+            setImageCropZoom(Number(imageCropZoom.value) - 0.1);
+            event.preventDefault();
+        }
     });
 
     resetImageCropButton.addEventListener("click", function () {
@@ -2369,9 +2527,27 @@ document.addEventListener("DOMContentLoaded", function () {
         setMessage(inventoryMessage, "Preparing and uploading the product image...", "success");
 
         try {
+            const productCard = row.closest(".inventory-admin-card");
+            const productCategory = productCard?.dataset.inventoryCategory;
+            const targetPreviewHasImage = Boolean(
+                slotEditor.querySelector(".inventory-image-preview img")
+            );
+            const existingCardImages = new Set(
+                Array.from(productCard?.querySelectorAll(".inventory-image-preview img") || [])
+                    .map(function (image) { return image.getAttribute("src"); })
+                    .filter(Boolean)
+            );
+            const previewImageCount = Math.min(
+                3,
+                Math.max(1, existingCardImages.size + (targetPreviewHasImage ? 0 : 1))
+            );
+            const cropAspectPrefix = productCategory === "pantry" ? "pantry" : "product";
+            const cropAspect = cropAspectPrefix + (previewImageCount === 1 ? "" : previewImageCount);
             const preparedImage = await prepareImageForUpload(file, {
-                aspect: "product",
-                title: "Crop Product Image"
+                aspect: cropAspect,
+                title: productCategory === "pantry"
+                    ? "Crop Pantry Product Image"
+                    : "Crop Product Image"
             });
 
             if (!preparedImage) {
