@@ -1121,6 +1121,219 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let productDetailsSequence = 0;
 
+    let productInformationDialog;
+    let productInformationReturnFocus;
+
+    function ensureProductInformationDialog() {
+        if (productInformationDialog) {
+            return productInformationDialog;
+        }
+
+        const dialog = document.createElement("dialog");
+        const panel = document.createElement("article");
+        const header = document.createElement("header");
+        const titleWrap = document.createElement("div");
+        const eyebrow = document.createElement("p");
+        const title = document.createElement("h2");
+        const closeButton = document.createElement("button");
+        const content = document.createElement("div");
+
+        dialog.className = "product-information-dialog";
+        dialog.setAttribute("aria-labelledby", "productInformationTitle");
+        panel.className = "product-information-panel";
+        header.className = "product-information-header";
+        eyebrow.className = "product-information-eyebrow";
+        eyebrow.textContent = "Soda Backyard Garden";
+        title.id = "productInformationTitle";
+        closeButton.type = "button";
+        closeButton.className = "product-information-close";
+        closeButton.setAttribute("aria-label", "Close product information");
+        closeButton.textContent = "×";
+        content.className = "product-information-content";
+        content.dataset.productInformationContent = "true";
+
+        titleWrap.append(eyebrow, title);
+        header.append(titleWrap, closeButton);
+        panel.append(header, content);
+        dialog.appendChild(panel);
+        document.body.appendChild(dialog);
+
+        closeButton.addEventListener("click", function () {
+            dialog.close();
+        });
+        dialog.addEventListener("click", function (event) {
+            if (event.target === dialog) {
+                dialog.close();
+            }
+        });
+        dialog.addEventListener("close", function () {
+            document.body.classList.remove("product-information-open");
+            if (productInformationReturnFocus) {
+                productInformationReturnFocus.focus();
+            }
+            productInformationReturnFocus = null;
+        });
+
+        productInformationDialog = dialog;
+        return dialog;
+    }
+
+    function productInformationValues(products, property) {
+        const values = [];
+
+        products.forEach(function (product) {
+            const value = String(product[property] || "").trim();
+
+            if (!value || values.some(function (entry) { return entry.value === value; })) {
+                return;
+            }
+
+            values.push({
+                value,
+                label: productCardLabel(product, products.length > 1)
+            });
+        });
+
+        return values;
+    }
+
+    function appendProductInformationSection(container, headingText, values, className) {
+        if (values.length === 0) {
+            return;
+        }
+
+        const section = document.createElement("section");
+        const heading = document.createElement("h3");
+        section.className = "product-information-section" + (className ? " " + className : "");
+        heading.textContent = headingText;
+        section.appendChild(heading);
+
+        values.forEach(function (entry) {
+            const paragraph = document.createElement("p");
+
+            if (values.length > 1 && entry.label) {
+                const label = document.createElement("strong");
+                label.textContent = entry.label + ": ";
+                paragraph.appendChild(label);
+            }
+
+            paragraph.appendChild(document.createTextNode(entry.value));
+            section.appendChild(paragraph);
+        });
+        container.appendChild(section);
+    }
+
+    function openProductInformation(cardName, products, trigger) {
+        const dialog = ensureProductInformationDialog();
+        const title = dialog.querySelector("#productInformationTitle");
+        const content = dialog.querySelector("[data-product-information-content]");
+        const isTea = products.every(function (product) { return product.category === "tea"; });
+        const descriptions = productInformationValues(products, "description");
+        const ingredientValues = [];
+        const descriptionValues = [];
+
+        descriptions.forEach(function (entry) {
+            if (/^ingredients\s*:/i.test(entry.value)) {
+                ingredientValues.push({
+                    label: entry.label,
+                    value: entry.value.replace(/^ingredients\s*:\s*/i, "")
+                });
+            } else {
+                descriptionValues.push(entry);
+            }
+        });
+
+        title.textContent = "About " + cardName;
+        content.replaceChildren();
+        appendProductInformationSection(
+            content,
+            isTea ? "About This Blend" : "About This Product",
+            productInformationValues(products, "aboutText")
+        );
+        appendProductInformationSection(content, "Description", descriptionValues);
+        appendProductInformationSection(content, "Ingredients", ingredientValues);
+        appendProductInformationSection(
+            content,
+            isTea ? "Flavour & Occasion" : "Ways to Enjoy",
+            productInformationValues(products, "servingSuggestions")
+        );
+        appendProductInformationSection(
+            content,
+            "Preparation",
+            productInformationValues(products, "preparationInstructions")
+        );
+        appendProductInformationSection(
+            content,
+            "Storage",
+            productInformationValues(products, "storageInstructions")
+        );
+        appendProductInformationSection(
+            content,
+            "Important Information",
+            productInformationValues(products, "importantInformation"),
+            "product-information-important"
+        );
+
+        productInformationReturnFocus = trigger;
+        document.body.classList.add("product-information-open");
+        dialog.showModal();
+    }
+
+    function renderProductInformationActions(productMap) {
+        document.querySelectorAll("[data-product-information-action]").forEach(function (button) {
+            button.remove();
+        });
+
+        document.querySelectorAll("main .product-card").forEach(function (card) {
+            const products = productIdsForCard(card).map(function (productId) {
+                return productMap.get(productId);
+            }).filter(function (product) {
+                return product && ["pantry", "tea"].includes(product.category);
+            });
+
+            if (products.length === 0) {
+                return;
+            }
+
+            const hasInformation = products.some(function (product) {
+                return [
+                    product.description,
+                    product.aboutText,
+                    product.servingSuggestions,
+                    product.preparationInstructions,
+                    product.storageInstructions,
+                    product.importantInformation
+                ].some(function (value) { return String(value || "").trim().length > 0; });
+            });
+
+            if (!hasInformation) {
+                return;
+            }
+
+            const content = card.querySelector(":scope > .product-card-content");
+            const heading = content && content.querySelector(":scope > h3");
+
+            if (!content || !heading) {
+                return;
+            }
+
+            const button = document.createElement("button");
+            const cardName = heading.textContent.trim();
+            const isTea = products.every(function (product) { return product.category === "tea"; });
+            button.type = "button";
+            button.className = "product-information-button";
+            button.dataset.productInformationAction = "true";
+            button.textContent = isTea ? "About This Blend" : "About This Product";
+            button.setAttribute("aria-label", button.textContent + ": " + cardName);
+            button.addEventListener("click", function () {
+                openProductInformation(cardName, products, button);
+            });
+
+            const detailsToggle = content.querySelector(":scope > .product-details-toggle");
+            content.insertBefore(button, detailsToggle || content.firstChild.nextSibling);
+        });
+    }
+
     function enhanceProductCards(root = document) {
         root.querySelectorAll(".product-card:not([data-details-toggle-ready])").forEach(function (card) {
             const content = card.querySelector(":scope > .product-card-content");
@@ -2039,6 +2252,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         renderProductDescriptions(productMap);
         renderManagedProductImages(productMap);
+        renderProductInformationActions(productMap);
 
         document.querySelectorAll("[data-stock]").forEach(function (element) {
             const product = productMap.get(element.dataset.stock);

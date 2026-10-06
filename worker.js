@@ -23,6 +23,11 @@ const SCHEMA_STATEMENTS = [
         sort_order INTEGER NOT NULL DEFAULT 0,
         active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
         description TEXT NOT NULL DEFAULT '',
+        about_text TEXT NOT NULL DEFAULT '',
+        serving_suggestions TEXT NOT NULL DEFAULT '',
+        preparation_instructions TEXT NOT NULL DEFAULT '',
+        storage_instructions TEXT NOT NULL DEFAULT '',
+        important_information TEXT NOT NULL DEFAULT '',
         category TEXT NOT NULL DEFAULT '',
         is_slot INTEGER NOT NULL DEFAULT 0 CHECK (is_slot IN (0, 1)),
         order_limit INTEGER CHECK (order_limit IS NULL OR order_limit > 0),
@@ -539,7 +544,7 @@ async function ensureEmptyProductSlots(db) {
 }
 
 let databaseInitialization;
-const DATABASE_SCHEMA_VERSION = "2026-10-04-garden-pantry-v2";
+const DATABASE_SCHEMA_VERSION = "2026-10-06-product-information-popup-v1";
 
 function jsonResponse(body, status = 200) {
     return new Response(JSON.stringify(body), {
@@ -797,6 +802,11 @@ function ensureDatabase(db) {
             }));
             const productMigrations = [
                 ["description", "ALTER TABLE products ADD COLUMN description TEXT NOT NULL DEFAULT ''"],
+                ["about_text", "ALTER TABLE products ADD COLUMN about_text TEXT NOT NULL DEFAULT ''"],
+                ["serving_suggestions", "ALTER TABLE products ADD COLUMN serving_suggestions TEXT NOT NULL DEFAULT ''"],
+                ["preparation_instructions", "ALTER TABLE products ADD COLUMN preparation_instructions TEXT NOT NULL DEFAULT ''"],
+                ["storage_instructions", "ALTER TABLE products ADD COLUMN storage_instructions TEXT NOT NULL DEFAULT ''"],
+                ["important_information", "ALTER TABLE products ADD COLUMN important_information TEXT NOT NULL DEFAULT ''"],
                 ["category", "ALTER TABLE products ADD COLUMN category TEXT NOT NULL DEFAULT ''"],
                 ["is_slot", "ALTER TABLE products ADD COLUMN is_slot INTEGER NOT NULL DEFAULT 0"],
                 ["order_limit", "ALTER TABLE products ADD COLUMN order_limit INTEGER"],
@@ -821,6 +831,73 @@ function ensureDatabase(db) {
                     await db.prepare(migration).run();
                 }
             }
+
+            await db.batch([
+                db.prepare(`
+                    UPDATE products
+                    SET about_text = CASE id
+                            WHEN 'cold-flu-tea' THEN 'A bright, herbaceous blend with tart hibiscus, warming ginger, and refreshing mint notes.'
+                            WHEN 'menopause-tea' THEN 'A floral, herbaceous blend with hibiscus, red clover, raspberry leaf, and gentle lavender notes.'
+                            WHEN 'mullein-tea' THEN 'A simple herbal infusion with a mild, earthy character.'
+                            WHEN 'red-raspberry-leaf-tea' THEN 'A single-herb infusion with a mild, earthy flavour.'
+                            WHEN 'bloating-tea' THEN 'A mint-forward blend with warming spice and gentle anise notes.'
+                            WHEN 'sleep-tea' THEN 'A floral, minty herbal blend suited to quiet evening sipping.'
+                            ELSE about_text
+                        END,
+                        serving_suggestions = CASE id
+                            WHEN 'cold-flu-tea' THEN 'A comforting choice for cool days and seasonal sipping.'
+                            WHEN 'menopause-tea' THEN 'Enjoy as part of a quiet daily tea ritual.'
+                            WHEN 'mullein-tea' THEN 'Enjoy on its own or with a little honey to taste.'
+                            WHEN 'red-raspberry-leaf-tea' THEN 'Enjoy warm or chilled to suit your preference.'
+                            WHEN 'bloating-tea' THEN 'Enjoy after a meal or whenever you would like a minty, spiced cup.'
+                            WHEN 'sleep-tea' THEN 'Best suited to a calm evening tea ritual.'
+                            ELSE serving_suggestions
+                        END,
+                        preparation_instructions = CASE
+                            WHEN preparation_instructions = '' THEN 'Add the desired amount to a tea strainer, pour over freshly boiled water, and steep to your preferred strength.'
+                            ELSE preparation_instructions
+                        END,
+                        storage_instructions = CASE
+                            WHEN storage_instructions = '' THEN 'Keep in a cool, dark place to help maintain quality and integrity.'
+                            ELSE storage_instructions
+                        END,
+                        important_information = CASE
+                            WHEN important_information = '' THEN 'If you are pregnant, breastfeeding, taking medication, or managing a health condition, ask a qualified healthcare professional whether this blend is right for you.'
+                            ELSE important_information
+                        END
+                    WHERE category = 'tea'
+                      AND id IN (
+                          'cold-flu-tea', 'menopause-tea', 'mullein-tea',
+                          'red-raspberry-leaf-tea', 'bloating-tea', 'sleep-tea'
+                      )
+                `),
+                db.prepare(`
+                    UPDATE products
+                    SET about_text = CASE
+                            WHEN about_text = '' THEN 'Sweet honey infused with a warming chili flavour.'
+                            ELSE about_text
+                        END,
+                        serving_suggestions = CASE
+                            WHEN serving_suggestions = '' THEN 'Drizzle over pizza, chicken, biscuits, cheese, roasted vegetables, or ice cream.'
+                            ELSE serving_suggestions
+                        END,
+                        storage_instructions = CASE
+                            WHEN storage_instructions = '' THEN 'Store in a cool, dry place.'
+                            ELSE storage_instructions
+                        END,
+                        important_information = CASE
+                            WHEN important_information = '' THEN 'Honey is not suitable for children under one year of age.'
+                            ELSE important_information
+                        END
+                    WHERE category = 'pantry'
+                      AND (
+                          LOWER(TRIM(card_name)) = 'hot honey'
+                          OR LOWER(TRIM(name)) = 'hot honey'
+                          OR LOWER(TRIM(name)) LIKE 'hot honey -%'
+                          OR LOWER(TRIM(name)) LIKE 'hot honey —%'
+                      )
+                `)
+            ]);
 
             const orderItemColumns = await db.prepare("PRAGMA table_info(order_items)").all();
             const hasPreparation = orderItemColumns.results.some(function (column) {
@@ -1567,7 +1644,9 @@ async function getProducts(db, includeInactive = false) {
     const result = await db.prepare(`
         SELECT
             id, name, unit, price_cents, quantity, made_to_order, active,
-            description, category, is_slot, order_limit, frozen_option, frozen_quantity,
+            description, about_text, serving_suggestions, preparation_instructions,
+            storage_instructions, important_information,
+            category, is_slot, order_limit, frozen_option, frozen_quantity,
             card_name, card_label, card_key,
             image_key, image_fit, image_position,
             image_key_2, image_fit_2, image_position_2,
@@ -1587,6 +1666,11 @@ async function getProducts(db, includeInactive = false) {
             madeToOrder: product.made_to_order === 1,
             active: product.active === 1,
             description: product.description || "",
+            aboutText: product.about_text || "",
+            servingSuggestions: product.serving_suggestions || "",
+            preparationInstructions: product.preparation_instructions || "",
+            storageInstructions: product.storage_instructions || "",
+            importantInformation: product.important_information || "",
             category: product.category || "",
             isSlot: product.is_slot === 1,
             orderLimit: product.order_limit,
@@ -2564,7 +2648,9 @@ async function handleAdminInventory(db) {
     const result = await db.prepare(`
         SELECT
             id, name, unit, price_cents, quantity, made_to_order, sort_order, active,
-            description, category, is_slot, order_limit, frozen_option, frozen_quantity,
+            description, about_text, serving_suggestions, preparation_instructions,
+            storage_instructions, important_information,
+            category, is_slot, order_limit, frozen_option, frozen_quantity,
             card_name, card_label, card_key,
             image_key, image_fit, image_position,
             image_key_2, image_fit_2, image_position_2,
@@ -2584,6 +2670,11 @@ async function handleAdminInventory(db) {
                 madeToOrder: product.made_to_order === 1,
                 active: product.active === 1,
                 description: product.description || "",
+                aboutText: product.about_text || "",
+                servingSuggestions: product.serving_suggestions || "",
+                preparationInstructions: product.preparation_instructions || "",
+                storageInstructions: product.storage_instructions || "",
+                importantInformation: product.important_information || "",
                 category: product.category || "",
                 isSlot: product.is_slot === 1,
                 orderLimit: product.order_limit,
@@ -2919,6 +3010,11 @@ async function handleAdminInventoryUpdate(request, db) {
         const id = cleanText(submitted.id, 100);
         const name = cleanText(submitted.name, 100);
         const description = cleanText(submitted.description, 500);
+        const aboutText = cleanText(submitted.aboutText, 700);
+        const servingSuggestions = cleanText(submitted.servingSuggestions, 700);
+        const preparationInstructions = cleanText(submitted.preparationInstructions, 700);
+        const storageInstructions = cleanText(submitted.storageInstructions, 700);
+        const importantInformation = cleanText(submitted.importantInformation, 700);
         const unit = cleanText(submitted.unit, 30).toLowerCase();
         const priceCents = Number(submitted.priceCents);
         const madeToOrder = submitted.madeToOrder === true;
@@ -2998,7 +3094,9 @@ async function handleAdminInventoryUpdate(request, db) {
             db.prepare(`
                 UPDATE products
                 SET name = ?, unit = ?, price_cents = ?, quantity = ?,
-                    made_to_order = ?, active = ?, description = ?, order_limit = ?,
+                    made_to_order = ?, active = ?, description = ?,
+                    about_text = ?, serving_suggestions = ?, preparation_instructions = ?,
+                    storage_instructions = ?, important_information = ?, order_limit = ?,
                     frozen_option = ?, frozen_quantity = ?,
                     card_name = ?, card_label = ?, card_key = ?,
                     image_fit = ?, image_position = ?,
@@ -3013,6 +3111,11 @@ async function handleAdminInventoryUpdate(request, db) {
                 madeToOrder ? 1 : 0,
                 active ? 1 : 0,
                 description,
+                aboutText,
+                servingSuggestions,
+                preparationInstructions,
+                storageInstructions,
+                importantInformation,
                 orderLimit,
                 frozenOption ? 1 : 0,
                 frozenQuantity,

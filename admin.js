@@ -1925,6 +1925,11 @@ document.addEventListener("DOMContentLoaded", function () {
             product.cardName,
             product.cardLabel,
             product.description,
+            product.aboutText,
+            product.servingSuggestions,
+            product.preparationInstructions,
+            product.storageInstructions,
+            product.importantInformation,
             product.unit,
             product.category,
             product.active ? "available" : "unavailable",
@@ -1967,6 +1972,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const detailsGroup = createInventoryEditorGroup("Product Details", true);
         const stockGroup = createInventoryEditorGroup("Pricing & Quantities", false);
         const descriptionGroup = createInventoryEditorGroup("Description or Ingredients", false);
+        const popupGroup = createInventoryEditorGroup("Product Information Popup (optional)", false);
         const imagesGroup = createInventoryEditorGroup("Manage Images", false);
 
         const cardNameInput = createInventoryInput(
@@ -2088,6 +2094,58 @@ document.addEventListener("DOMContentLoaded", function () {
             "inventory-option-field-wide"
         ));
 
+        const popupFields = [
+            {
+                property: "aboutText",
+                className: "inventory-about-text",
+                label: product.category === "tea" ? "About This Blend" : "About This Product",
+                placeholder: product.category === "tea"
+                    ? "Describe the flavour, aroma, or character of the blend."
+                    : "Share a short product story or description."
+            },
+            {
+                property: "servingSuggestions",
+                className: "inventory-serving-suggestions",
+                label: product.category === "tea" ? "Flavour & Occasion" : "Ways to Enjoy",
+                placeholder: product.category === "tea"
+                    ? "Suggest an occasion for enjoying this blend without making a medical claim."
+                    : "Suggest meals, pairings, or ways to use the product."
+            },
+            {
+                property: "preparationInstructions",
+                className: "inventory-preparation-instructions",
+                label: "Preparation",
+                placeholder: "Optional preparation or serving instructions."
+            },
+            {
+                property: "storageInstructions",
+                className: "inventory-storage-instructions",
+                label: "Storage",
+                placeholder: "Optional storage instructions."
+            },
+            {
+                property: "importantInformation",
+                className: "inventory-important-information",
+                label: "Important Information",
+                placeholder: "Optional cautions, allergen notes, or other important information."
+            }
+        ];
+
+        popupFields.forEach(function (field) {
+            const input = document.createElement("textarea");
+            input.value = product[field.property] || "";
+            input.className = field.className;
+            input.rows = 3;
+            input.maxLength = 700;
+            input.placeholder = field.placeholder;
+            input.setAttribute("aria-label", product.name + " " + field.label.toLowerCase());
+            popupGroup.fields.appendChild(createInventoryField(
+                field.label,
+                input,
+                "inventory-option-field-wide"
+            ));
+        });
+
         const imageEditor = document.createElement("div");
         imageEditor.className = "inventory-image-editor";
         imageEditor.append(
@@ -2147,6 +2205,7 @@ document.addEventListener("DOMContentLoaded", function () {
             detailsGroup.group,
             stockGroup.group,
             descriptionGroup.group,
+            popupGroup.group,
             imagesGroup.group,
             productActions
         );
@@ -2506,6 +2565,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 cardName: row.querySelector(".inventory-card-name").value,
                 cardLabel: row.querySelector(".inventory-card-label").value,
                 description: row.querySelector(".inventory-description").value,
+                aboutText: row.querySelector(".inventory-about-text").value,
+                servingSuggestions: row.querySelector(".inventory-serving-suggestions").value,
+                preparationInstructions: row.querySelector(".inventory-preparation-instructions").value,
+                storageInstructions: row.querySelector(".inventory-storage-instructions").value,
+                importantInformation: row.querySelector(".inventory-important-information").value,
                 unit: row.querySelector(".inventory-unit").value,
                 priceCents: Math.round(price * 100),
                 quantity: quantityValue === "" ? null : Number(quantityValue),
