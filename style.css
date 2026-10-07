@@ -7214,3 +7214,39 @@ footer a:hover {
     }
 }
 /* End compact desktop Admin overrides. */
+
+/* ==========================================================
+   2026-10-06 — RESPONSIVE ADMIN IMAGE EDITORS
+   Let the three image editors wrap according to the workspace
+   width, including when browser zoom or display scaling reduces
+   the usable CSS viewport on a laptop.
+========================================================== */
+
+#inventoryPanel .inventory-option-images .inventory-image-editor {
+    grid-template-columns: repeat(
+        auto-fit,
+        minmax(min(100%, 275px), 1fr)
+    );
+}
+
+#inventoryPanel .inventory-image-slot {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+#inventoryPanel .inventory-image-slot > *,
+#inventoryPanel .inventory-image-control,
+#inventoryPanel .inventory-image-file,
+#inventoryPanel .inventory-image-fit,
+#inventoryPanel .inventory-image-position {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+#inventoryPanel .inventory-image-file,
+#inventoryPanel .inventory-image-fit,
+#inventoryPanel .inventory-image-position {
+    width: 100%;
+}

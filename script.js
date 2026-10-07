@@ -1254,7 +1254,7 @@ document.addEventListener("DOMContentLoaded", function () {
         appendProductInformationSection(content, "Ingredients", ingredientValues);
         appendProductInformationSection(
             content,
-            isTea ? "Flavour & Occasion" : "Ways to Enjoy",
+            isTea ? "Why You May Enjoy It" : "Ways to Enjoy",
             productInformationValues(products, "servingSuggestions")
         );
         appendProductInformationSection(

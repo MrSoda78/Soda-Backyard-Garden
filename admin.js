@@ -2106,7 +2106,7 @@ document.addEventListener("DOMContentLoaded", function () {
             {
                 property: "servingSuggestions",
                 className: "inventory-serving-suggestions",
-                label: product.category === "tea" ? "Flavour & Occasion" : "Ways to Enjoy",
+                label: product.category === "tea" ? "Why You May Enjoy It" : "Ways to Enjoy",
                 placeholder: product.category === "tea"
                     ? "Suggest an occasion for enjoying this blend without making a medical claim."
                     : "Suggest meals, pairings, or ways to use the product."
