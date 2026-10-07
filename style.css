@@ -7250,3 +7250,81 @@ footer a:hover {
 #inventoryPanel .inventory-image-position {
     width: 100%;
 }
+
+/* ==========================================================
+   2026-10-06 — RESPONSIVE PUBLIC PAGE HARDENING
+   Preserve the spacious storefront while improving containment,
+   horizontal category navigation, and touch targets.
+========================================================== */
+
+body:not(.admin-page) .product-grid,
+body:not(.admin-page) .shop-category-tiles,
+body:not(.admin-page) .journey-grid,
+body:not(.admin-page) .donate-options,
+body:not(.admin-page) .support-images {
+    min-width: 0;
+}
+
+body:not(.admin-page) .product-grid > *,
+body:not(.admin-page) .shop-category-tiles > *,
+body:not(.admin-page) .journey-grid > *,
+body:not(.admin-page) .donate-options > *,
+body:not(.admin-page) .support-images > * {
+    min-width: 0;
+    max-width: 100%;
+}
+
+body:not(.admin-page) .product-card h3,
+body:not(.admin-page) .journey-card h3,
+body:not(.admin-page) .shop-category-tile strong,
+body:not(.admin-page) .faq-question {
+    overflow-wrap: anywhere;
+}
+
+.shop-category-bar {
+    -ms-overflow-style: none;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+}
+
+.shop-category-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.shop-category-bar li {
+    scroll-snap-align: start;
+}
+
+.shop-category-bar a {
+    min-height: 44px;
+    box-sizing: border-box;
+}
+
+@media (max-width: 650px) {
+    .carousel-btn {
+        width: 44px;
+        height: 44px;
+    }
+
+    .product-details-toggle,
+    .product-information-button,
+    .order-product-group-toggle,
+    .basket-add-button {
+        min-height: 44px;
+    }
+
+    .basket-quantity-control {
+        min-height: 48px;
+    }
+
+    .basket-quantity-control > button:not(.basket-remove-button) {
+        width: 40px;
+        height: 40px;
+    }
+
+    .basket-remove-button {
+        min-height: 40px;
+    }
+}
