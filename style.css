@@ -6788,3 +6788,429 @@ footer a:hover {
         max-height: 260px;
     }
 }
+/* ==========================================================
+   2026-10-06 — COMPACT DESKTOP ADMIN DENSITY
+   Keep the phone layout roomy while making the desktop dashboard
+   feel like a practical workspace instead of a public landing page.
+========================================================== */
+
+@media (min-width: 901px) {
+    .admin-page {
+        font-size: 15px;
+    }
+
+    .admin-page > header {
+        padding: 14px 0 12px;
+    }
+
+    .admin-page > header h1 {
+        margin-bottom: 2px;
+        font-size: 1.75rem;
+        line-height: 1.15;
+    }
+
+    .admin-page > header .tagline {
+        font-size: 0.9rem;
+    }
+
+    .admin-page .button {
+        padding: 9px 15px;
+        font-size: 0.9rem;
+    }
+
+    .admin-page .button:hover {
+        transform: translateY(-1px);
+    }
+
+    .admin-page .admin-section {
+        padding: 28px 0 44px;
+    }
+
+    .admin-page .admin-section > .container {
+        width: min(96%, 1540px);
+    }
+
+    .admin-shell {
+        grid-template-columns: 238px minmax(0, 1fr);
+        gap: 18px;
+    }
+
+    .admin-sidebar-collapsed .admin-shell {
+        grid-template-columns: 68px minmax(0, 1fr);
+    }
+
+    .admin-sidebar {
+        padding: 10px;
+        border-radius: 12px;
+    }
+
+    .admin-sidebar-heading {
+        padding: 2px 3px 8px 6px;
+    }
+
+    .admin-sidebar-collapse {
+        width: 30px;
+        height: 30px;
+        border-radius: 7px;
+        font-size: 1.2rem;
+    }
+
+    .admin-sidebar .admin-tabs {
+        gap: 3px;
+    }
+
+    .admin-sidebar .admin-tab {
+        grid-template-columns: 25px minmax(0, 1fr);
+        gap: 7px;
+        padding: 8px 9px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+
+    .admin-tab-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        font-size: 0.82rem;
+    }
+
+    .admin-nav-group-label {
+        margin: 10px 9px 3px;
+        font-size: 0.63rem;
+    }
+
+    .admin-inventory-nav {
+        margin: 1px 0 5px 31px;
+        padding-left: 7px;
+    }
+
+    .admin-inventory-nav-button {
+        padding: 5px 7px;
+        font-size: 0.8rem;
+    }
+
+    .admin-inventory-nav-button span {
+        min-width: 21px;
+        height: 21px;
+        font-size: 0.68rem;
+    }
+
+    .admin-sidebar-help {
+        margin-top: 9px;
+        padding: 8px 9px;
+        font-size: 0.76rem;
+    }
+
+    .admin-sidebar-footer {
+        gap: 6px;
+        padding-top: 10px;
+    }
+
+    .admin-sidebar-footer .button {
+        padding: 7px 10px;
+    }
+
+    .admin-panel-header {
+        margin-bottom: 12px;
+        padding: 14px 16px;
+        border-radius: 11px;
+    }
+
+    .admin-panel-header h2 {
+        font-size: 1.45rem;
+    }
+
+    .admin-panel-header p:not(.admin-panel-kicker) {
+        max-width: 740px;
+        font-size: 0.9rem;
+        line-height: 1.45;
+    }
+
+    .admin-panel-kicker {
+        margin-bottom: 3px;
+        font-size: 0.68rem;
+    }
+
+    .admin-overview-stats {
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .admin-overview-stat {
+        gap: 3px;
+        padding: 13px 14px;
+        border-top-width: 4px;
+        border-radius: 11px;
+    }
+
+    .admin-overview-stat-label {
+        font-size: 0.74rem;
+    }
+
+    .admin-overview-stat strong {
+        font-size: clamp(1.45rem, 2.2vw, 1.9rem);
+    }
+
+    .admin-overview-grid {
+        gap: 12px;
+    }
+
+    .admin-overview-card {
+        padding: 15px;
+        border-radius: 11px;
+    }
+
+    .admin-overview-card-heading {
+        margin-bottom: 9px;
+    }
+
+    .admin-overview-card-heading h3 {
+        font-size: 1.12rem;
+    }
+
+    .admin-overview-list,
+    .admin-quick-actions {
+        gap: 7px;
+    }
+
+    .admin-overview-list-item,
+    .admin-overview-order,
+    .admin-quick-action {
+        gap: 9px;
+        padding: 9px 11px;
+        border-radius: 9px;
+    }
+
+    .admin-quick-action {
+        grid-template-columns: 30px minmax(0, 1fr);
+    }
+
+    .admin-quick-action > span {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        font-size: 0.95rem;
+    }
+
+    .admin-panel > .admin-search-bar,
+    .site-search,
+    .admin-search-bar {
+        margin: 12px 0 16px;
+        padding: 11px 12px;
+    }
+
+    .search-input-row input {
+        padding: 8px 10px;
+        font-size: 0.9rem;
+    }
+
+    #ordersPanel .order-status-filters {
+        padding: 9px;
+    }
+
+    .order-status-filter {
+        gap: 6px;
+        padding: 7px 10px;
+        font-size: 0.82rem;
+    }
+
+    .order-status-filter span {
+        min-width: 21px;
+        height: 21px;
+    }
+
+    .admin-orders {
+        gap: 12px;
+    }
+
+    .admin-order-summary {
+        gap: 10px 14px;
+        padding: 14px 18px;
+    }
+
+    .admin-order-body {
+        padding: 0 18px 18px;
+    }
+
+    .admin-offline-order {
+        margin-bottom: 18px;
+    }
+
+    .admin-offline-order summary {
+        padding: 13px 17px;
+        font-size: 0.95rem;
+    }
+
+    .admin-offline-order-form {
+        padding: 18px;
+    }
+
+    .admin-inventory-layout {
+        grid-template-columns: minmax(185px, 220px) minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    .inventory-command-bar {
+        gap: 9px;
+        margin-bottom: 11px;
+        padding: 9px;
+        border-radius: 11px;
+    }
+
+    .inventory-availability-tools summary {
+        padding: 7px 9px;
+        font-size: 0.85rem;
+    }
+
+    .inventory-product-directory {
+        border-radius: 11px;
+    }
+
+    .inventory-directory-heading {
+        padding: 11px 12px;
+    }
+
+    .inventory-directory-heading h3 {
+        font-size: 0.98rem;
+    }
+
+    .inventory-directory-count {
+        min-width: 25px;
+        height: 25px;
+        font-size: 0.8rem;
+    }
+
+    .inventory-directory-button {
+        padding: 8px 10px;
+        font-size: 0.86rem;
+    }
+
+    .inventory-directory-arrow {
+        font-size: 1.1rem;
+    }
+
+    .admin-inventory-cards {
+        gap: 14px;
+    }
+
+    .inventory-category-section {
+        gap: 9px;
+    }
+
+    .inventory-section-toggle {
+        padding: 10px 13px;
+        font-size: 0.9rem;
+    }
+
+    .inventory-admin-card {
+        border-radius: 12px;
+    }
+
+    #inventoryPanel .inventory-admin-card-header {
+        min-height: 160px;
+        grid-template-columns: minmax(200px, 280px) minmax(200px, 1fr);
+    }
+
+    #inventoryPanel .inventory-admin-card-gallery,
+    #inventoryPanel .inventory-admin-card-gallery img {
+        height: 160px;
+        min-height: 160px;
+        max-height: 160px;
+    }
+
+    #inventoryPanel .inventory-admin-card[data-inventory-category="pantry"] .inventory-admin-card-gallery,
+    #inventoryPanel .inventory-admin-card[data-inventory-category="pantry"] .inventory-admin-card-gallery img {
+        height: 180px;
+        min-height: 180px;
+        max-height: 180px;
+    }
+
+    .inventory-admin-card-heading {
+        gap: 7px;
+        padding: 13px 15px;
+    }
+
+    .inventory-card-name-field {
+        gap: 4px;
+        font-size: 0.86rem;
+    }
+
+    .inventory-card-name-field input {
+        padding: 7px 9px;
+        font-size: 1rem;
+    }
+
+    .inventory-card-option-count,
+    .button.secondary.inventory-card-add-option {
+        font-size: 0.84rem;
+    }
+
+    .inventory-product-option .inventory-mobile-product-toggle {
+        gap: 2px 9px;
+        padding: 9px 13px;
+    }
+
+    .inventory-product-option .inventory-mobile-product-name {
+        font-size: 0.95rem;
+    }
+
+    .inventory-product-option .inventory-mobile-product-summary {
+        font-size: 0.82rem;
+    }
+
+    .inventory-product-option .inventory-mobile-product-icon {
+        min-width: 50px;
+        min-height: 27px;
+        padding: 2px 8px;
+        font-size: 0.74rem;
+    }
+
+    .inventory-product-editor-body {
+        gap: 10px;
+        padding: 0 13px 14px;
+    }
+
+    .inventory-editor-group > summary {
+        padding: 8px 10px;
+        font-size: 0.88rem;
+    }
+
+    .inventory-editor-group > .inventory-option-fields {
+        padding: 1px 10px 10px;
+    }
+
+    .inventory-option-fields {
+        gap: 9px;
+    }
+
+    .inventory-option-field {
+        gap: 4px;
+    }
+
+    .inventory-option-field-label {
+        font-size: 0.84rem;
+    }
+
+    .inventory-option-field input[type="text"],
+    .inventory-option-field input[type="number"],
+    .inventory-option-field textarea,
+    .inventory-option-field select {
+        padding: 7px 8px;
+        font-size: 0.9rem;
+    }
+
+    .inventory-option-checkbox {
+        padding: 7px 9px;
+        border-radius: 8px;
+    }
+
+    .inventory-option-checkbox input[type="checkbox"] {
+        width: 19px;
+        height: 19px;
+    }
+
+    .inventory-option-images .inventory-image-preview {
+        height: clamp(135px, 13vw, 180px);
+    }
+}
+/* End compact desktop Admin overrides. */
